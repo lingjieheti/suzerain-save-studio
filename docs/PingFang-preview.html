@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>苹方字体预览 · Suzerain Save Studio</title>
+<style>
+  @font-face {
+    font-family: "Preview PingFang Regular";
+    src: local("PingFangSC-Regular"), local("PingFang SC Regular"),
+         local("苹方-简 常规体"), local("蘋方-簡 常規體"), local("PingFang SC");
+    font-style: normal;
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: "Preview PingFang Medium";
+    src: local("PingFangSC-Medium"), local("PingFang SC Medium"),
+         local("苹方-简 中黑体"), local("蘋方-簡 中黑體");
+    font-style: normal;
+    font-weight: 500;
+  }
+  :root {
+    --system: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", sans-serif;
+    --ink: #202d32;
+    --secondary: #52656b;
+    --rule: #dce4e3;
+    --accent: #235966;
+    font-family: var(--system);
+    color: var(--ink);
+    background: #f3f6f5;
+    -webkit-text-size-adjust: 100%;
+  }
+  * { box-sizing: border-box }
+  body { margin: 0; padding: 0 20px; }
+  main { width: min(100%, 640px); margin: clamp(30px, 7vh, 70px) auto 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 18px; }
+  h1 { margin: 0; font-size: 18px; font-weight: 600; }
+  .switch { display: inline-flex; gap: 2px; padding: 3px; background: #e7ebea; border-radius: 12px; }
+  [hidden] { display: none !important }
+  button { padding: 0 14px; min-height: 38px; font: 500 14px var(--system); border: 0; border-radius: 9px; color: var(--secondary); background: transparent; cursor: pointer; }
+  button[aria-pressed="true"] { color: var(--ink); background: white; box-shadow: 0 1px 3px #263e4314; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #status { margin: 12px 0 22px; color: var(--secondary); font-size: 14px; line-height: 1.6; }
+  .sample {
+    --body-face: var(--system);
+    --display-face: var(--system);
+    padding: clamp(20px, 5vw, 36px);
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 18px;
+    font-family: var(--body-face);
+    font-variant-numeric: tabular-nums;
+  }
+  .sample.pingfang { --body-face: "Preview PingFang Regular", var(--system); --display-face: var(--body-face); font-synthesis: none; }
+  .sample.pingfang.medium { --display-face: "Preview PingFang Medium", var(--body-face); }
+  .chapter { margin: 0 0 8px; color: var(--secondary); font-size: 14px; line-height: 1.5; }
+  h2 { font-family: var(--display-face); font-weight: 500; font-size: clamp(30px, 6vw, 38px); line-height: 1.24; margin: 0; }
+  dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 28px 0; padding: 20px 0; border-block: 1px solid var(--rule); }
+  dl div + div { border-inline-start: 1px solid var(--rule); padding-inline-start: clamp(8px, 2.6vw, 22px); }
+  dt { color: var(--secondary); font-size: 14px; line-height: 1.5; }
+  dd { margin: 4px 0 0; font-size: 30px; line-height: 1.25; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; line-height: 1.5; }
+  th, td { text-align: end; padding: 11px 0; }
+  :is(th, td):first-child { text-align: start; }
+  th { color: var(--secondary); font-size: 14px; font-weight: 400; padding-top: 0; }
+  tbody tr { border-top: 1px solid var(--rule); }
+  tbody tr:last-child td { padding-bottom: 0; }
+  .note { margin: 18px 0 0; font-size: 14px; line-height: 1.65; color: var(--secondary); }
+  @media (max-width: 360px) {
+    body { padding: 0 12px; }
+    main { margin-top: 22px; }
+    .sample { padding: 17px; }
+  }
+</style>
+<main>
+  <header>
+    <h1>中文字体预览</h1>
+    <div id="switcher" class="switch" role="group" aria-label="选择样张字体" hidden>
+      <button type="button" id="ping" aria-controls="sample" aria-pressed="false">苹方</button>
+      <button type="button" id="system" aria-controls="sample" aria-pressed="true">系统字体</button>
+    </div>
+  </header>
+  <p id="status" role="status">当前显示设备的系统字体。用浏览器打开此文件，可检测本机是否能显示苹方。</p>
+  <section class="sample" id="sample" aria-labelledby="sample-title">
+    <p class="chapter">里奇亚 · 第 3 回合</p>
+    <h2 id="sample-title">资源与经济</h2>
+    <dl>
+      <div><dt>当前预算</dt><dd>10</dd></div>
+      <div><dt>当前权威</dt><dd>6</dd></div>
+      <div><dt>当前能源</dt><dd>8</dd></div>
+    </dl>
+    <table aria-label="资源项目与原值">
+      <thead><tr><th scope="col">项目</th><th scope="col">原值</th></tr></thead>
+      <tbody>
+        <tr><td>预算上限</td><td>50</td></tr>
+        <tr><td>权威上限</td><td>50</td></tr>
+        <tr><td>能源上限</td><td>50</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <p class="note" id="note" hidden>如果设备的系统中文字体也是苹方，两种样张可能看起来相同。</p>
+</main>
+<script>
+  (async function () {
+    const status = document.getElementById("status");
+    const sample = document.getElementById("sample");
+    const ping = document.getElementById("ping");
+    const system = document.getElementById("system");
+    const unavailable = "当前浏览器未能调用本机苹方，样张使用系统字体。";
+    try {
+      if (!document.fonts || typeof FontFace === "undefined") {
+        status.textContent = unavailable;
+        return;
+      }
+      const localFaces = Array.from(document.fonts);
+      const faceNamed = name => localFaces.find(face => face.family.replace(/["']/g, "") === name);
+      const regular = faceNamed("Preview PingFang Regular");
+      if (!regular) throw new Error("unavailable");
+      await regular.load();
+      const medium = faceNamed("Preview PingFang Medium");
+      if (medium) {
+        try { await medium.load(); sample.classList.add("medium"); } catch (_) {}
+      }
+      function select(usePingFang) {
+        sample.classList.toggle("pingfang", usePingFang);
+        ping.setAttribute("aria-pressed", String(usePingFang));
+        system.setAttribute("aria-pressed", String(!usePingFang));
+        status.textContent = usePingFang ? "样张正使用本机的苹方简体。" : "样张正使用设备的系统字体。";
+      }
+      ping.addEventListener("click", () => select(true));
+      system.addEventListener("click", () => select(false));
+      document.getElementById("note").hidden = false;
+      document.getElementById("switcher").hidden = false;
+      select(true);
+    } catch (_) {
+      status.textContent = unavailable;
+    }
+  }());
+</script>
+</html>

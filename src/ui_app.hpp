@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.16.1";
+constexpr wchar_t APP_VERSION[] = L"0.16.2";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -96,9 +96,10 @@ LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
 void fonts(){
     HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber};
     const auto faces=typography::chooseFaces(i18n::language);
-    auto make=[](int dip,const wchar_t* face){return typography::make(g.dpi,dip,face);};
-    g.font=make(14,faces.text);g.small=make(13,faces.text);g.emphasis=make(14,faces.emphasis);
-    g.title=make(26,faces.emphasis);g.bold=make(17,faces.emphasis);
+    auto make=[](int dip,const wchar_t* face,LONG weight=FW_NORMAL){return typography::make(g.dpi,dip,face,weight);};
+    g.font=make(14,faces.text);g.small=make(13,faces.text);
+    g.emphasis=make(14,faces.emphasis,faces.emphasisWeight);
+    g.title=make(26,faces.emphasis,faces.emphasisWeight);g.bold=make(17,faces.emphasis,faces.emphasisWeight);
     g.large=make(32,typography::numbers);g.compactNumber=make(19,typography::numbers);
     g.tableNumber=make(15,typography::numbers);g.mono=make(20,typography::numbers);
     g.brand=make(21,L"Segoe UI Semibold");
@@ -145,7 +146,25 @@ void applyAppearance(int index) {
     }
     recolorWorkspace(index);
 }
-void syncAppearance() { recolorWorkspace(Theme::stored()); }
+void useChineseFont(typography::ChineseFont font) {
+    if(typography::selected==font)return;
+    typography::selected=font;
+    if(!g.win || !typography::isChinese(i18n::language))return;
+    fonts();layout();
+    RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
+}
+void applyAppearanceCommand(int command) {
+    if(command>=Theme::menuBase && command<fontHeadingCommand) {
+        applyAppearance(command-Theme::menuBase);
+    }else if(command>=firstFontCommand && command<firstFontCommand+typography::fontCount) {
+        const auto font=static_cast<typography::ChineseFont>(command-firstFontCommand);
+        if(!typography::isChinese(i18n::language) || font==typography::selected)return;
+        if(font!=typography::Automatic && !typography::chineseFamilies(i18n::language)[font].text)return;
+        if(typography::save(font))useChineseFont(font);
+        else message(i18n::language==0?L"无法保存字体设置。":L"無法儲存字體設定。",MB_ICONWARNING);
+    }
+}
+void syncAppearance() { recolorWorkspace(Theme::stored());useChineseFont(typography::stored()); }
 void updateStatus(){
     bool loaded=bool(g.doc),any=!pending().empty()||g.editingDirty;
     for(int id:std::initializer_list<int>{PRESET99,PRESET999,SAVE,PATCH_IMPORT,AUTOCAP,RELOAD})EnableWindow(ctl(id),loaded);
@@ -420,7 +439,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.16.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.16.2 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -624,7 +643,7 @@ void createControls(){
     enableHints();fonts();layout();refresh();
 }
 void command(int id,int code){
-    if(id==APPEARANCE&&code==BN_CLICKED){int selected=pickAppearance(g.win,ctl(APPEARANCE));if(selected>=0)applyAppearance(selected);return;}
+    if(id==APPEARANCE&&code==BN_CLICKED){applyAppearanceCommand(pickAppearance(g.win,ctl(APPEARANCE)));return;}
     if(id==LANGUAGE&&code==CBN_SELCHANGE){changeLanguage();return;}
     if(id==EDITVALUE&&code==EN_CHANGE&&!g.populating){g.editingDirty=true;toast(L"未保存");updateStatus();return;}
     if(id==SEARCH&&code==EN_CHANGE&&!g.populating&&g.tab<5){
@@ -747,6 +766,7 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
 }
 int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();Theme::load();
+    typography::selected=typography::stored();
     INITCOMMONCONTROLSEX ic{sizeof(ic),ICC_WIN95_CLASSES};InitCommonControlsEx(&ic);
     g.bg=CreateSolidBrush(Theme::bg);g.panel=CreateSolidBrush(Theme::panel);g.input=CreateSolidBrush(Theme::input);fonts();
     WNDCLASSEXW c{};c.cbSize=sizeof(c);c.style=CS_HREDRAW|CS_VREDRAW;c.lpfnWndProc=windowProc;c.hInstance=inst;c.hCursor=LoadCursor(nullptr,IDC_ARROW);c.lpszClassName=APP_CLASS;c.hIcon=LoadIconW(inst,MAKEINTRESOURCEW(101));c.hIconSm=c.hIcon;RegisterClassExW(&c);

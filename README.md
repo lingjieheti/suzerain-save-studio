@@ -8,11 +8,11 @@
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 
-**[下载 v0.16.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.1) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.16.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/SuzerainSaveStudio-0.16.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.2) · [♡ 赞助作者](SPONSOR.md)
 
-![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
+![Windows 桌面编辑器中的里奇亚示例，雾蓝主题和微软雅黑 UI](docs/images/rizia-workspace.png)
 
-[桌面编辑器大图](docs/images/rizia-workspace.png) · [存档选择器](docs/images/save-picker.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [游戏主菜单中的实时面板](docs/images/live-panel-preview.png)
+[四套主题对照（Noto Sans SC）](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [游戏主菜单中的实时面板](docs/images/live-panel-preview.png)
 
 ## 快速上手
 
@@ -32,7 +32,9 @@
 
 ## 选择外观
 
-桌面编辑器的四套外观采用相同的文字层级。简体中文优先使用电脑已有的 Noto Sans SC，缺少时使用微软雅黑 UI。桌面数值表格和输入框使用等宽数字，方便逐位核对原值和新值。[查看桌面字体调整前后对比](docs/images/typography.png)
+在简体或繁体中文界面，打开 **外观** 即可选择中文字体。选择 **自动** 时，编辑器先查找电脑上的苹方简体或苹方繁体，再选用对应的 Windows 中文界面字体。也可手动选择本机已有的 Noto Sans。选档器和编辑器会记住同一项选择。数字列保持等宽，方便逐位核对原值和新值。[查看 Windows 字体实机对比](docs/images/chinese-fonts.png)
+
+想先看看苹方的效果，可以在 iPhone 或 Mac 的浏览器打开里奇亚样张。页面会检测浏览器能否使用设备上的苹方，再显示切换按钮。[下载离线字体样张](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/PingFang-preview.html)
 
 存档列表第一行显示文件名，第二行显示自动、手动等档位类型和玩家的战役名称。编辑器并排显示库存、每回合变化和上限。游戏内的 Ctrl+F8 面板使用游戏自带字体显示中文和英文。标题和主按钮加粗，库存与确认前后的数值以较大字号显示。
 

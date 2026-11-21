@@ -183,6 +183,76 @@ double textContrast(COLORREF ink, COLORREF surface){
     return (std::max(a,b) + 0.05) / (std::min(a,b) + 0.05);
 }
 
+void testChineseFonts(const fs::path& path) {
+    using namespace typography;
+    AppearanceTestRegistry registry;
+    const auto originalLanguage=i18n::language;
+    const auto original=typography::selected;
+    check(stored()==Automatic,"Missing Chinese font preference uses automatic selection");
+    const DWORD invalid=90;
+    RegSetKeyValueW(HKEY_CURRENT_USER,Theme::settingsKey,L"ChineseUIFont",REG_DWORD,&invalid,sizeof(invalid));
+    check(stored()==Automatic,"Unknown Chinese font preference uses automatic selection");
+
+    ChineseFamilies simulated{};
+    check(effectiveFont(simulated,PingFang)==Automatic,"Missing all optional fonts uses the generic fallback");
+    for(auto font:{Noto,System,PingFang}){
+        simulated[font]={L"Test font",L"Test font"};
+        check(effectiveFont(simulated,Automatic)==font,"Automatic prioritizes PingFang, Windows UI, then Noto");
+        check(effectiveFont(simulated,Noto)==Noto,"An installed explicit choice takes priority");
+    }
+    i18n::setLanguage(0);useChineseFont(Automatic);
+    loadDocumentBytes(readFile(path),path,0);
+    SetWindowTextW(g.search,L"GovernmentBudget");
+    selectRow("BaseGame.GovernmentBudget");
+    SetWindowTextW(g.edit,L"79");
+    auto* session=g.session.get();
+    for(int language:{0,1,2}){
+        i18n::setLanguage(language);
+        const auto local=chineseFamilies(language);
+        auto menu=CreatePopupMenu();
+        AppearanceMenuMetrics metrics{96,g.font};
+        populateAppearanceMenu(menu,metrics);
+        if(!isChinese(language)){
+            check(GetMenuItemCount(menu)==Theme::count,"Other languages keep the theme-only menu");
+        }else{
+            check(GetMenuItemCount(menu)==Theme::count+1+fontCount,"Both Chinese languages expose a font section");
+            check(metrics.fontNames[Automatic].find(L'（')!=std::wstring::npos,
+                  "Automatic selection displays the current fallback");
+            for(auto font:{PingFang,Noto,System}){
+                const bool present=local[font].text!=nullptr;
+                const int cmd=firstFontCommand+font;
+                check(((GetMenuState(menu,cmd,MF_BYCOMMAND)&MF_DISABLED)==0)==present,
+                      "Menu only enables fonts installed for the selected written language");
+                const auto before=typography::selected;
+                applyAppearanceCommand(cmd);
+                check(typography::selected==(present?font:before) && stored()==typography::selected,
+                      "Installed selections persist and unavailable faces cannot be selected");
+                if(present){
+                    LOGFONTW chosen{};
+                    GetObjectW(g.font,sizeof(chosen),&chosen);
+                    check(std::wstring(chosen.lfFaceName)==local[font].text,"The editor uses the selected family");
+                }else{
+                    auto saved=typography::selected;
+                    typography::selected=font;
+                    auto fallback=CreatePopupMenu();
+                    populateAppearanceMenu(fallback,metrics);
+                    check((GetMenuState(fallback,firstFontCommand+Automatic,MF_BYCOMMAND)&MF_CHECKED)!=0 &&
+                          (GetMenuState(fallback,cmd,MF_BYCOMMAND)&MF_CHECKED)==0,
+                          "A previously selected missing face checks its actual automatic fallback");
+                    DestroyMenu(fallback);
+                    typography::selected=saved;
+                }
+            }
+            applyAppearanceCommand(firstFontCommand+Automatic);
+            check(stored()==Automatic,"Users can switch back to automatic");
+        }
+        DestroyMenu(menu);
+    }
+    check(g.session.get()==session && textOf(g.edit)==L"79" && g.editingDirty &&
+          textOf(g.search)==L"GovernmentBudget","Changing fonts preserves search, session and uncommitted input");
+    i18n::setLanguage(originalLanguage);typography::selected=original;fonts();layout();
+}
+
 void testTypography(const fs::path& path) {
     loadDocumentBytes(readFile(path),path,0);
     navigate(0);
@@ -497,6 +567,7 @@ int main(int argc,char** argv){
         testAppearance(fs::u8path(argv[1]));
         testFavorites(fs::u8path(argv[1]),fs::u8path(argv[2]));
         testInspectorLayout(fs::u8path(argv[2]));
+        testChineseFonts(fs::u8path(argv[1]));
         testTypography(fs::u8path(argv[2]));
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";

@@ -4,9 +4,11 @@
 
 這是我玩《Suzerain》時為自己做的存檔編輯器，平常用來查預算、調整資源。在這裡分享給同樣喜歡索德蘭和里奇亞的玩家。
 
-[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)
+[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/SuzerainSaveStudio-0.16.2-Live-Preview-win-x64.zip)
 
 ## 編輯存檔
+
+在選檔視窗或編輯器開啟「外觀」，即可更換中文字體。自動模式優先使用電腦上的蘋方繁體，其次為 Microsoft JhengHei UI。你也可以選擇已安裝的 Noto Sans TC。
 
 解壓縮後執行 `SuzerainSaveStudio.exe`。第一次使用可以先開啟內建的索德蘭或里奇亞範例，試著調整預算。要編輯自己的進度，請先在遊戲中存檔並退出。修改後先預覽新舊數值，再另存副本或寫回原檔。寫回前會自動備份。回到遊戲主選單，手動載入剛修改的存檔。
 

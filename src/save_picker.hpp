@@ -20,6 +20,7 @@ struct State {
     fs::path choice;
     fs::path beforeScan;
     int chosenDemo=0, appearanceIndex=-1;
+    typography::ChineseFont fontPreference=typography::Automatic;
     bool stacked=false;
     RECT library{}, practice{}, searchFrame{}, headingIcon{};
     int footerY=0;
@@ -42,10 +43,11 @@ inline HWND child(State& s,const wchar_t* cls,const wchar_t* text,DWORD style,in
 }
 inline void setFonts(State& s){
     const auto faces=typography::chooseFaces(i18n::language);
-    auto make=[&](int dip,const wchar_t* face){return typography::make(s.dpi,dip,face);};
+    auto make=[&](int dip,const wchar_t* face,LONG weight=FW_NORMAL){return typography::make(s.dpi,dip,face,weight);};
     HFONT old[]={s.font,s.small,s.bold,s.subheading,s.emphasis,s.number};
-    s.font=make(14,faces.text);s.small=make(13,faces.text);s.bold=make(27,faces.emphasis);
-    s.subheading=make(18,faces.emphasis);s.emphasis=make(14,faces.emphasis);
+    s.font=make(14,faces.text);s.small=make(13,faces.text);
+    s.bold=make(27,faces.emphasis,faces.emphasisWeight);s.subheading=make(18,faces.emphasis,faces.emphasisWeight);
+    s.emphasis=make(14,faces.emphasis,faces.emphasisWeight);
     s.number=make(14,typography::numbers);
     EnumChildWindows(s.win,[](HWND h,LPARAM p){auto&s=*reinterpret_cast<State*>(p);SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return TRUE;},(LPARAM)&s);
     for(auto h:{s.status,s.path,s.practiceHint})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)s.small,TRUE);
@@ -235,6 +237,7 @@ inline void accept(State& s){
 #include "picker_design.hpp"
 inline void applyPickerAppearance(State& s) {
     s.appearanceIndex=Theme::index();
+    s.fontPreference=typography::selected;
     Theme::caption(s.win);
     SetWindowTheme(s.list,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetBkColor(s.list,Theme::panel);
@@ -284,8 +287,8 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         switch(m){
         case WM_ACTIVATE:
             if(LOWORD(wp)!=WA_INACTIVE&&s.appearanceIndex>=0){
-                if(Theme::stored()!=Theme::index())syncAppearance();
-                if(s.appearanceIndex!=Theme::index())applyPickerAppearance(s);
+                syncAppearance();
+                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected)applyPickerAppearance(s);
             }
             break;
         case START_SCAN:start(s);return TRUE;
@@ -295,8 +298,8 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(id==BROWSE){auto picked=pickFile(false,0,w);if(!picked.empty()){s.choice=picked;s.stop();EndDialog(w,IDOK);}return TRUE;}
             if(id==LIVE_MODE){live_setup::show(w);return TRUE;}
             if(id==APPEARANCE){
-                const int index=pickAppearance(w,s.appearance);
-                if(index>=0&&index!=Theme::index()){applyAppearance(index);applyPickerAppearance(s);}
+                applyAppearanceCommand(pickAppearance(w,s.appearance));
+                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected)applyPickerAppearance(s);
                 return TRUE;
             }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}

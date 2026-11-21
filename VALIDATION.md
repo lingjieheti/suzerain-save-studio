@@ -1,6 +1,13 @@
-# v0.16.1 Preview — Windows validation
+# v0.16.2 Preview — Windows validation
 
-The Windows x64 package includes the 0.16.1 portable editor and optional 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+The Windows x64 package includes the 0.16.2 portable editor and the 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+
+## Chinese font selection in 0.16.2
+
+- Opened both the save picker and editor from the packaged executable on Windows. On this PC, both menus showed **自动（微软雅黑 UI）** checked, offered Noto Sans SC and displayed **苹方 SC（未安装）** disabled. PingFang rendering on a machine with the font installed has not been verified.
+- Compared six native views with the same campaign fixtures, window sizes and 200% scaling. Checked the editor and picker at two widths, review and guide search. The final executable reproduced all six candidate screenshots pixel for pixel. [Chinese font comparison](docs/images/chinese-fonts.png)
+- The offline PingFang specimen uses only device fonts. Edge checks on this Windows PC covered the missing-font case, disabled JavaScript and viewport widths of 320, 390 and 1024 pixels. The Apple-device sample awaits an on-device visual check.
+- The local suite passed 646 native editor checks and 233 read-only campaign checks. It covered retaining draft input and search text while switching fonts. One discovery check for creating a symbolic link was skipped on this local Windows account. The optional companion passed 73 simulated live-state checks and 296 simulated panel checks and matches the shipped 0.16.1 DLL byte for byte.
 
 ## Typography in 0.16.1
 
