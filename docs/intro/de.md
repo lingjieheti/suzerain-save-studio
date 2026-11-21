@@ -4,7 +4,7 @@
 
 Ich habe dieses kleine Werkzeug für meine eigenen *Suzerain*-Partien entwickelt. Damit behalte ich in Sordland den Staatshaushalt im Blick und sehe in Rizia, wie viel Energie ich habe und wie sich der Vorrat pro Runde verändert.
 
-**[Vorschauversion 0.17.3 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.3/SuzerainSaveStudio-0.17.3-Live-Preview-win-x64.zip)**
+**[Vorschauversion 0.17.5 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)**
 
 Aktiviere die Auswahlvorschau im **Ctrl+F8**-Panel und schließe das Panel. Zeige mit der Maus auf eine Option und drücke kurz die linke oder rechte **Strg**-Taste. Drücke sie erneut oder bewege den Mauszeiger von der Option weg, um die Vorschau zu schließen. Für eine andere Option drückst du dort erneut Strg. Die Funktion ist standardmäßig ausgeschaltet. Manche Folgen hängen vom späteren Spielverlauf ab.
 
@@ -22,4 +22,4 @@ Das optionale Zusatzmodul für die Steam-Version benötigt **BepInEx 6 IL2CPP**.
 
 Wenn dir der Editor Zeit gespart hat, kannst du mir gerne einen Kaffee spendieren. Vielen Dank!
 
-[PayPal](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2) · [USDT im TRON-Netzwerk (TRC20)](../../SPONSOR.md#usdttrc20)
+[Zahlungsarten ansehen](../../SPONSOR.md) — WeChat-Trinkgeldcode · PayPal · USDT

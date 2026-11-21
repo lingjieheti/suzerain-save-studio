@@ -12,13 +12,13 @@
 
 如果想在游戏运行时微调资源，请查阅[实时面板说明](../live/README.zh-CN.md)。
 
-想支持作者，可点选档窗口底部或编辑器侧栏的 **赞助作者**。选择 PayPal 或 USDT 即可扫码。PayPal 也可打开收款页。USDT 使用 TRON（TRC20）网络，地址可直接复制。
+想支持作者，可从选档窗口底部或编辑器侧栏打开 **赞助作者**，用微信「扫一扫」扫描赞赏码，也可以选择 PayPal 或 USDT。USDT 使用 TRON（TRC20）网络，可在窗口中复制地址。
 
 按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
 
-Open **Support the author** in the save picker or editor sidebar to scan a PayPal or USDT code. For USDT, choose the TRON (TRC20) network.
+Open **Support the author** in the save picker or editor sidebar. Scan the appreciation code with WeChat to tip the author, or choose PayPal or USDT. For USDT, use the TRON (TRC20) network.
 
 1. Extract the ZIP and open `SuzerainSaveStudio.exe`. Pick a Sordland or Rizia sample to try the editor.
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker and check the file name. In **Advanced**, search for a field name or paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate it.

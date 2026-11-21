@@ -1,6 +1,14 @@
-# v0.17.3 Preview — Windows validation
+# v0.17.5 Preview — Windows validation
 
-The Windows x64 archive includes the 0.17.3 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.17.5 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Support options in 0.17.5
+
+The editor and project support page offer a WeChat appreciation code, PayPal and USDT on TRON (TRC20). The GitHub page links to the original WeChat artwork. The editor embeds the full white code panel from that image for offline display.
+
+## Support options in 0.17.4
+
+The desktop editor and GitHub support page offer WeChat Pay, Alipay, PayPal and USDT on TRON (TRC20). The desktop Windows checks covered selecting all four methods with the keyboard in eleven languages and fitting the payment instructions and available actions into two compact window sizes. The original four images were decoded offline to verify their destinations.
 
 ## Compact support window and release packaging in 0.17.3
 

@@ -23,10 +23,6 @@ void selectRow(const std::string& key){
 void testSponsorDialog() {
     using sponsor_text::Key;
     const int originalLanguage=i18n::language;
-    const auto module=GetModuleHandleW(nullptr);
-    check(!FindResourceW(module,MAKEINTRESOURCEW(204),RT_BITMAP) &&
-          !FindResourceW(module,MAKEINTRESOURCEW(205),RT_BITMAP),
-          "Retired payment images are absent from the executable resources");
     struct alignas(DWORD) Template { DLGTEMPLATE dialog{}; WORD menu=0,cls=0,title=0; } form;
     form.dialog.style=WS_POPUP|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME;
     auto shown=[](HWND control){ return (GetWindowLongPtrW(control,GWL_STYLE)&WS_VISIBLE)!=0; };
@@ -55,16 +51,19 @@ void testSponsorDialog() {
               "The support window has a localized title that fits");
         check(fits(control(sponsor::Introduction),true),"The introduction fits the support dialog");
         check(SendMessageW(control(sponsor::FirstMethod),BM_GETCHECK,0,0)==BST_CHECKED,
-              "PayPal is selected on first open");
-        constexpr Key names[]={Key::PayPal,Key::USDT};
-        constexpr Key hints[]={Key::ScanPayPal,Key::ScanUSDT};
-        const HWND first=control(sponsor::FirstMethod),second=control(sponsor::FirstMethod+1);
-        check(GetNextDlgGroupItem(dialog,first,FALSE)==second &&
-              GetNextDlgGroupItem(dialog,second,FALSE)==first &&
-              GetNextDlgGroupItem(dialog,first,TRUE)==second,
-              "The keyboard radio group cycles between the two available methods");
-        for(int method=0;method<static_cast<int>(std::size(names));++method) {
+              "The WeChat appreciation code is selected on first open");
+        constexpr Key names[]={Key::WeChat,Key::PayPal,Key::USDT};
+        constexpr Key hints[]={Key::ScanWeChat,Key::ScanPayPal,Key::ScanUSDT};
+        constexpr int bitmapIds[]={204,206,207};
+        constexpr int count=static_cast<int>(std::size(names));
+        static_assert(count==sponsor::methodCount);
+        for(int method=0;method<count;++method) {
+            const auto& details=sponsor::methods[method];
+            const bool scanOnly=names[method]==Key::WeChat, hasAddress=names[method]==Key::USDT;
             auto radio=control(sponsor::FirstMethod+method);
+            check(GetNextDlgGroupItem(dialog,radio,FALSE)==control(sponsor::FirstMethod+(method+1)%count) &&
+                  GetNextDlgGroupItem(dialog,radio,TRUE)==control(sponsor::FirstMethod+(method+count-1)%count),
+                  "The keyboard radio group cycles through all three support methods");
             if(method)SendMessageW(radio,BM_CLICK,0,0);
             check(SendMessageW(radio,BM_GETCHECK,0,0)==BST_CHECKED &&
                   textOf(radio)==sponsor_text::get(names[method]) && fits(radio,false),
@@ -72,12 +71,15 @@ void testSponsorDialog() {
             check(textOf(control(sponsor::Hint))==sponsor_text::get(hints[method]) && fits(control(sponsor::Hint),true),
                   "The selected method shows its matching scan instructions");
             BITMAP qr{};
-            check(GetObjectW(state.bitmap,sizeof(qr),&qr)==sizeof(qr) && qr.bmWidth>0 && qr.bmWidth==qr.bmHeight,
-                  "Every payment method loads a square QR bitmap from the executable");
-            check(shown(control(sponsor::Action)) && shown(control(sponsor::Address))==(method==1),
-                  "Payment link and address actions are available only for the matching method");
-            const auto label=method==1?Key::CopyAddress:Key::OpenPage;
-            check(textOf(control(sponsor::Action))==sponsor_text::get(label) && fits(control(sponsor::Action),false),
+            check(GetObjectW(state.bitmap,sizeof(qr),&qr)==sizeof(qr) && qr.bmWidth>0 && qr.bmWidth==qr.bmHeight &&
+                  details.bitmapId==bitmapIds[method] && (!scanOnly || qr.bmBitsPixel>=24),
+                  "Each method loads its matching square bitmap, including the full-color appreciation code");
+            check(shown(control(sponsor::Action))==!scanOnly && shown(control(sponsor::Address))==hasAddress,
+                  "Only the current method's controls are available");
+            const auto expectedPage=names[method]==Key::PayPal?sponsor::paypalUrl:nullptr;
+            check(details.page==expectedPage,"Each web action targets its own payment page");
+            const auto caption=scanOnly?L"":sponsor_text::get(hasAddress?Key::CopyAddress:Key::OpenPage);
+            check(textOf(control(sponsor::Action))==caption && (scanOnly||fits(control(sponsor::Action),false)),
                   "The correct action fits in the current language");
 
             RECT frame{},client{};
@@ -91,11 +93,9 @@ void testSponsorDialog() {
                 MapWindowPoints(dialog,nullptr,reinterpret_cast<POINT*>(&viewport),2);
                 std::vector<RECT> visible;
                 bool separate=true;
-                for(int id: {int(sponsor::Heading),int(sponsor::Introduction),int(sponsor::FirstMethod),
-                             int(sponsor::LastMethod),int(sponsor::Qr),int(sponsor::MethodName),int(sponsor::Hint),
-                             int(sponsor::Address),int(sponsor::Action),IDCANCEL}){
-                    if(!shown(control(id)))continue;
-                    RECT area{};GetWindowRect(control(id),&area);
+                for(HWND child=GetWindow(dialog,GW_CHILD);child;child=GetWindow(child,GW_HWNDNEXT)){
+                    if(!shown(child))continue;
+                    RECT area{};GetWindowRect(child,&area);
                     separate=separate && area.right>area.left && area.bottom>area.top &&
                              area.left>=viewport.left && area.top>=viewport.top &&
                              area.right<=viewport.right && area.bottom<=viewport.bottom;
@@ -104,7 +104,8 @@ void testSponsorDialog() {
                     }
                     visible.push_back(area);
                 }
-                check(separate && fits(control(sponsor::Hint),true) && fits(control(sponsor::Action),false),
+                check(separate && fits(radio,false) && fits(control(sponsor::Hint),true) &&
+                      (scanOnly||fits(control(sponsor::Action),false)),
                       "Short work areas keep the instructions and every visible control distinct and in bounds");
             }
             SetWindowPos(dialog,nullptr,0,0,frame.right-frame.left,frame.bottom-frame.top,
@@ -147,9 +148,8 @@ void testSponsorDialog() {
             std::cout<<"SKIP: live clipboard check reserved for a GitHub-hosted Windows runner\n";
         }
         SendMessageW(control(sponsor::FirstMethod),BM_CLICK,0,0);
-        check(shown(control(sponsor::Action)) && !shown(control(sponsor::Address)) &&
-              textOf(control(sponsor::Action))==sponsor_text::get(Key::OpenPage),
-              "Returning to PayPal hides the crypto address and restores the payment link action");
+        check(!shown(control(sponsor::Action)) && !shown(control(sponsor::Address)),
+              "Returning to the WeChat appreciation code hides the previous address and action");
         DestroyWindow(dialog);
     }
     i18n::setLanguage(originalLanguage);

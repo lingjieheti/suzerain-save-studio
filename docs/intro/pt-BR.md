@@ -4,7 +4,7 @@
 
 Criei esta ferramenta para as minhas partidas de *Suzerain*. Uso o editor para conferir o orçamento de Sordland e acompanhar quanta energia Rizia tem em estoque e quanto esse total muda a cada turno.
 
-**[Baixar a versão preliminar 0.17.3 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.3/SuzerainSaveStudio-0.17.3-Live-Preview-win-x64.zip)**
+**[Baixar a versão preliminar 0.17.5 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)**
 
 Ative a prévia das escolhas no painel **Ctrl+F8** e feche o painel. Posicione o cursor sobre uma opção e pressione e solte a tecla **Ctrl** da esquerda ou da direita para ver os efeitos. Pressione a tecla novamente ou afaste o cursor para fechar a prévia. Para comparar outra opção, posicione o cursor sobre ela e pressione Ctrl. O recurso vem desativado. Algumas consequências dependem do desenrolar da história.
 
@@ -22,4 +22,4 @@ O complemento opcional para a versão da Steam requer **BepInEx 6 IL2CPP**. Depo
 
 Se o editor facilitou suas partidas e você quiser me pagar um café, agradeço o apoio!
 
-[PayPal](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2) · [USDT na rede TRON (TRC20)](../../SPONSOR.md#usdttrc20)
+[Ver formas de pagamento](../../SPONSOR.md) — Código de gorjeta do WeChat · PayPal · USDT
