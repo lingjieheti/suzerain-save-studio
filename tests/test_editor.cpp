@@ -51,9 +51,10 @@ void testSponsorDialog() {
               "The support window has a localized title that fits");
         check(fits(control(sponsor::Introduction),true),"The introduction fits the support dialog");
         check(SendMessageW(control(sponsor::FirstMethod),BM_GETCHECK,0,0)==BST_CHECKED,
-              "WeChat Pay is selected on first open");
-        constexpr Key names[]={Key::WeChat,Key::Alipay,Key::PayPal,Key::USDT};
-        constexpr Key hints[]={Key::ScanWeChat,Key::ScanAlipay,Key::ScanPayPal,Key::ScanUSDT};
+              "The WeChat appreciation code is selected on first open");
+        constexpr Key names[]={Key::WeChat,Key::PayPal,Key::USDT};
+        constexpr Key hints[]={Key::ScanWeChat,Key::ScanPayPal,Key::ScanUSDT};
+        constexpr int bitmapIds[]={204,206,207};
         constexpr int count=static_cast<int>(std::size(names));
         static_assert(count==sponsor::methodCount);
         for(int method=0;method<count;++method) {
@@ -62,7 +63,7 @@ void testSponsorDialog() {
             auto radio=control(sponsor::FirstMethod+method);
             check(GetNextDlgGroupItem(dialog,radio,FALSE)==control(sponsor::FirstMethod+(method+1)%count) &&
                   GetNextDlgGroupItem(dialog,radio,TRUE)==control(sponsor::FirstMethod+(method+count-1)%count),
-                  "The keyboard radio group cycles through all four payment methods");
+                  "The keyboard radio group cycles through all three support methods");
             if(method)SendMessageW(radio,BM_CLICK,0,0);
             check(SendMessageW(radio,BM_GETCHECK,0,0)==BST_CHECKED &&
                   textOf(radio)==sponsor_text::get(names[method]) && fits(radio,false),
@@ -71,12 +72,11 @@ void testSponsorDialog() {
                   "The selected method shows its matching scan instructions");
             BITMAP qr{};
             check(GetObjectW(state.bitmap,sizeof(qr),&qr)==sizeof(qr) && qr.bmWidth>0 && qr.bmWidth==qr.bmHeight &&
-                  details.bitmapId==204+method,
-                  "Every payment method loads a square QR bitmap from the executable");
+                  details.bitmapId==bitmapIds[method] && (!scanOnly || qr.bmBitsPixel>=24),
+                  "Each method loads its matching square bitmap, including the full-color appreciation code");
             check(shown(control(sponsor::Action))==!scanOnly && shown(control(sponsor::Address))==hasAddress,
                   "Only the current method's controls are available");
-            const auto expectedPage=names[method]==Key::Alipay?sponsor::alipayUrl:
-                                    names[method]==Key::PayPal?sponsor::paypalUrl:nullptr;
+            const auto expectedPage=names[method]==Key::PayPal?sponsor::paypalUrl:nullptr;
             check(details.page==expectedPage,"Each web action targets its own payment page");
             const auto caption=scanOnly?L"":sponsor_text::get(hasAddress?Key::CopyAddress:Key::OpenPage);
             check(textOf(control(sponsor::Action))==caption && (scanOnly||fits(control(sponsor::Action),false)),
@@ -93,11 +93,9 @@ void testSponsorDialog() {
                 MapWindowPoints(dialog,nullptr,reinterpret_cast<POINT*>(&viewport),2);
                 std::vector<RECT> visible;
                 bool separate=true;
-                for(int id: {int(sponsor::Heading),int(sponsor::Introduction),int(sponsor::FirstMethod),
-                             int(sponsor::FirstMethod+1),int(sponsor::FirstMethod+2),int(sponsor::LastMethod),int(sponsor::Qr),int(sponsor::MethodName),int(sponsor::Hint),
-                             int(sponsor::Address),int(sponsor::Action),IDCANCEL}){
-                    if(!shown(control(id)))continue;
-                    RECT area{};GetWindowRect(control(id),&area);
+                for(HWND child=GetWindow(dialog,GW_CHILD);child;child=GetWindow(child,GW_HWNDNEXT)){
+                    if(!shown(child))continue;
+                    RECT area{};GetWindowRect(child,&area);
                     separate=separate && area.right>area.left && area.bottom>area.top &&
                              area.left>=viewport.left && area.top>=viewport.top &&
                              area.right<=viewport.right && area.bottom<=viewport.bottom;
@@ -151,7 +149,7 @@ void testSponsorDialog() {
         }
         SendMessageW(control(sponsor::FirstMethod),BM_CLICK,0,0);
         check(!shown(control(sponsor::Action)) && !shown(control(sponsor::Address)),
-              "Returning to WeChat Pay hides the previous address and action");
+              "Returning to the WeChat appreciation code hides the previous address and action");
         DestroyWindow(dialog);
     }
     i18n::setLanguage(originalLanguage);

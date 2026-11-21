@@ -4,7 +4,7 @@
 
 I made this tool for my own *Suzerain* campaigns. I use it to check the government budget in Sordland, see how Rizia’s energy changes each turn, and keep the fields I edit most in one place.
 
-**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.4/SuzerainSaveStudio-0.17.4-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.4)
+**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.5)
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel, then close the panel. Point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. To preview another choice, point to it and tap Ctrl. The feature is off by default. Some later outcomes depend on how the story unfolds.
 
@@ -28,4 +28,4 @@ The panel is available in English and Chinese. Sordland budget and wealth change
 
 If this saves you a few trips through a save file, you’re welcome to buy me a coffee. Any amount is appreciated.
 
-[View payment options](../../SPONSOR.md) — WeChat Pay · Alipay · PayPal · USDT
+[View payment options](../../SPONSOR.md) — WeChat appreciation code · PayPal · USDT

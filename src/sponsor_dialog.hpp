@@ -6,7 +6,6 @@ using sponsor_text::Key;
 using sponsor_text::get;
 
 inline constexpr wchar_t tronAddress[]=L"TXE2VuxUSFsenJvmz3Z8oSm7dqPLAUWfRE";
-inline constexpr wchar_t alipayUrl[]=L"https://qr.alipay.com/fkx13023nip9yxdtfe6qqbe";
 inline constexpr wchar_t paypalUrl[]=L"https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2";
 struct Method {
     Key name, hint;
@@ -20,7 +19,6 @@ struct Method {
 };
 inline constexpr Method methods[]={
     {Key::WeChat,Key::ScanWeChat,204,nullptr},
-    {Key::Alipay,Key::ScanAlipay,205,alipayUrl},
     {Key::PayPal,Key::ScanPayPal,206,paypalUrl},
     {Key::USDT,Key::ScanUSDT,207,nullptr}
 };
@@ -205,14 +203,17 @@ inline void drawQr(const State& s,const DRAWITEMSTRUCT& item) {
     }
     BITMAP bm{};
     if(!GetObjectW(s.bitmap,sizeof(bm),&bm) || !bm.bmWidth || !bm.bmHeight)return;
-    // Keep every QR module square, including the four-module white border in the resource.
-    const int scale=std::min((box.right-box.left)/bm.bmWidth,(box.bottom-box.top)/bm.bmHeight);
-    const int side=scale>0?scale*bm.bmWidth:std::min(box.right-box.left,box.bottom-box.top);
+    const int available=std::min(box.right-box.left,box.bottom-box.top);
+    const bool appreciation=methods[s.method].name==Key::WeChat;
+    // Fill the square with the color artwork. Keep ordinary QR modules on integer pixel boundaries when possible.
+    const int scale=available/bm.bmWidth;
+    const int side=appreciation || scale==0?available:scale*bm.bmWidth;
     HDC source=CreateCompatibleDC(dc);
     if(!source)return;
     auto old=SelectObject(source,s.bitmap);
     int saved=SaveDC(dc);
-    SetStretchBltMode(dc,COLORONCOLOR);
+    SetStretchBltMode(dc,appreciation?HALFTONE:COLORONCOLOR);
+    if(appreciation)SetBrushOrgEx(dc,0,0,nullptr);
     SetTextColor(dc,RGB(0,0,0));SetBkColor(dc,RGB(255,255,255));
     StretchBlt(dc,(box.left+box.right-side)/2,(box.top+box.bottom-side)/2,side,side,
                source,0,0,bm.bmWidth,bm.bmHeight,SRCCOPY);

@@ -4,7 +4,7 @@
 
 Hice esta herramienta para mis propias partidas de *Suzerain*. La uso para consultar el presupuesto de Sordland o ver cuánta energía tiene Rizia y cuánto cambia esa reserva en cada turno.
 
-**[Descargar la versión preliminar 0.17.4 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.4/SuzerainSaveStudio-0.17.4-Live-Preview-win-x64.zip)**
+**[Descargar la versión preliminar 0.17.5 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)**
 
 Activa la vista previa de las opciones en el panel **Ctrl+F8** y cierra el panel. Coloca el cursor sobre una opción y pulsa brevemente la tecla **Ctrl** izquierda o derecha para ver sus efectos. Vuelve a pulsarla o retira el cursor para cerrar la vista previa. Para comparar otra opción, coloca el cursor sobre ella y pulsa Ctrl. La función está desactivada de forma predeterminada. Algunas consecuencias dependen de cómo avance la historia.
 
@@ -22,4 +22,4 @@ El complemento opcional para la versión de Steam requiere **BepInEx 6 IL2CPP**.
 
 Si el editor te ha ahorrado tiempo y te apetece invitarme a un café, puedes hacerlo aquí. ¡Gracias!
 
-[Ver formas de pago](../../SPONSOR.md) — WeChat Pay · Alipay · PayPal · USDT
+[Ver formas de pago](../../SPONSOR.md) — Código de propina de WeChat · PayPal · USDT
