@@ -414,6 +414,7 @@ void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resourc
     auto session=std::make_unique<rizia::EditSession>(*doc);
     activeStory=doc->story;
     g.session=std::move(session);g.doc=std::move(doc);g.file=path;g.demoResource=resource;
+    InvalidateRect(ctl(LATEST),nullptr,FALSE);
     resetFieldBrowser();
     g.selected.clear();g.editingDirty=false;g.backupDoc.reset();g.backups.clear();g.backupIndex=-1;
     g.populating=true;setText(g.search,L"");g.changedOnly=false;g.populating=false;
