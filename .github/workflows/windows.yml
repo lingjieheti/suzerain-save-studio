@@ -15,9 +15,15 @@ jobs:
         with:
           msystem: UCRT64
           install: mingw-w64-ucrt-x86_64-gcc
+      - name: Locate the compiler for PowerShell
+        shell: msys2 {0}
+        run: |
+          compiler_dir="$(cygpath -w /ucrt64/bin)"
+          echo "SUZERAIN_MINGW=$compiler_dir" >> "$GITHUB_ENV"
+          echo "$compiler_dir" >> "$GITHUB_PATH"
       - name: Build the portable editor
-        shell: msys2 {0}
-        run: pwsh.exe -NoProfile -File build.ps1 -CompilerKind GCC -Toolchain "$(cygpath -w /ucrt64/bin)"
+        shell: pwsh
+        run: ./build.ps1 -CompilerKind GCC -Toolchain $env:SUZERAIN_MINGW
       - name: Run synthetic tests
-        shell: msys2 {0}
-        run: pwsh.exe -NoProfile -File test.ps1 -Compiler "$(cygpath -w /ucrt64/bin/g++.exe)"
+        shell: pwsh
+        run: ./test.ps1 -Compiler (Join-Path $env:SUZERAIN_MINGW 'g++.exe')
