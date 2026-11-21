@@ -10,7 +10,7 @@ internal sealed class PanelAppearance
 {
     internal readonly string Chinese, English;
     internal readonly Color Background, Surface, Border, Text, Muted, Accent, AccentHover,
-        OnAccent, Selection, Hover, Success, SuccessSurface, Warning, WarningSurface;
+        OnAccent, Selection, TextSelection, Hover, Success, SuccessSurface, Warning, WarningSurface;
     internal readonly bool SerifHeadings;
 
     private static Color Shade(int rgb) =>
@@ -18,7 +18,7 @@ internal sealed class PanelAppearance
 
     private PanelAppearance(string chinese, string english, bool serifHeadings, int background,
         int surface, int border, int text, int muted, int accent, int accentHover, int onAccent,
-        int selection, int hover, int success, int successSurface, int warning, int warningSurface)
+        int selection, int textSelection, int hover, int success, int successSurface, int warning, int warningSurface)
     {
         Chinese = chinese;
         English = english;
@@ -32,6 +32,7 @@ internal sealed class PanelAppearance
         AccentHover = Shade(accentHover);
         OnAccent = Shade(onAccent);
         Selection = Shade(selection);
+        TextSelection = Shade(textSelection);
         Hover = Shade(hover);
         Success = Shade(success);
         SuccessSurface = Shade(successSurface);
@@ -42,14 +43,14 @@ internal sealed class PanelAppearance
     // Index is the stable preference shared with the Windows editor.
     internal static readonly PanelAppearance[] Choices =
     {
-        new("暖纸", "Paper", true, 0xF9F7F1, 0xFFFDF8, 0xD6D0C4, 0x312B25, 0x665E53,
-            0x9A442A, 0x863722, 0xFFFAF3, 0xF8E7DA, 0xF0EBE0, 0x375F44, 0xE8F0E5, 0x863E29, 0xF8E7DA),
-        new("林间", "Forest", true, 0xEFF4EC, 0xF8FAF4, 0xB5C5B5, 0x20372E, 0x425D4E,
-            0x346247, 0x28543A, 0xF5FAF1, 0xD3E5D4, 0xE3ECDD, 0x275A3C, 0xD8EAD7, 0x854121, 0xF3E5D3),
-        new("雾蓝", "Fjord", false, 0xEBF1F6, 0xF6F9FC, 0xB6C6D4, 0x1E3346, 0x465E72,
-            0x326480, 0x28546E, 0xF6FBFF, 0xD2E5F1, 0xDFE9EF, 0x275C52, 0xDBECE5, 0x7D4229, 0xF7E7D9),
-        new("午夜", "Midnight", false, 0x191C25, 0x222631, 0x454C63, 0xE8E9F3, 0xB1B7CA,
-            0xBBA8EE, 0xCAB9F9, 0x292235, 0x3B354E, 0x2F3443, 0xABE1B9, 0x273C31, 0xFFBB99, 0x452F2A)
+        new("暖纸", "Paper", true, 0xFAFAF8, 0xFFFFFF, 0xE0E3DD, 0x252B29, 0x59635F,
+            0xA64F35, 0x8D412C, 0xFFFFFF, 0xF7EDE7, 0xC49D8C, 0xF1F1EC, 0x38664C, 0xEDF5EF, 0x865034, 0xFAF0E9),
+        new("林间", "Forest", true, 0xF7FAF8, 0xFFFFFF, 0xDDE7E0, 0x24332C, 0x52645A,
+            0x327055, 0x275B44, 0xFFFFFF, 0xE3F1E8, 0x91B09C, 0xEEF4F0, 0x316446, 0xEBF5EE, 0x795332, 0xF8F2E9),
+        new("雾蓝", "Fjord", false, 0xF7FAFC, 0xFFFFFF, 0xDCE6EC, 0x263642, 0x506371,
+            0x356C8D, 0x2B5974, 0xFFFFFF, 0xE5F1F8, 0x95AFC0, 0xEEF4F7, 0x306658, 0xEAF4F0, 0x805137, 0xFAF0E8),
+        new("午夜", "Midnight", false, 0x1D2228, 0x242A32, 0x3E4753, 0xEBEFF2, 0xB2BBC5,
+            0xB8C8E9, 0xCDDAF0, 0x202733, 0x343E4A, 0x566A82, 0x2D353F, 0xACD8BD, 0x283B32, 0xE8BC9B, 0x40342D)
     };
 }
 

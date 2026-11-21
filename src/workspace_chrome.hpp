@@ -16,8 +16,9 @@ WorkspaceGeometry workspaceGeometry() {
     a.shortScreen = a.height < 610;
     a.compactRail = a.width < 1000 || a.height < 435;
     a.rail = a.compactRail ? 56 : (a.width < 1140 ? 174 : 194);
-    a.gap = a.width < 800 ? 9 : 18;
-    int margin = a.width < 900 ? 12 : 26;
+    const bool spacious = a.width >= 1140 && a.height >= 710;
+    a.gap = a.width < 800 ? 9 : spacious ? 24 : 18;
+    int margin = a.width < 900 ? 12 : spacious ? 32 : 26;
     a.left = a.rail + margin;
     a.content = a.width - a.left - margin;
     a.inspector = std::clamp(a.content / 3, 180, 286);
@@ -28,7 +29,7 @@ WorkspaceGeometry workspaceGeometry() {
         a.metricHeight = a.height < 710 ? 54 : 76;
     a.presetsY = a.headerBottom + (a.metricHeight ? a.metricHeight + 9 : 0);
     a.toolsY = g.tab == 0 ? a.presetsY + 39 : a.headerBottom;
-    a.listY = a.toolsY + 40;
+    a.listY = a.toolsY + (spacious ? 46 : 40);
     a.footer = a.height - (a.shortScreen ? 46 : 54);
     a.bottom = a.footer - 10;
     return a;
@@ -85,7 +86,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool check = id == AUTOCAP || id == FILTER_CHANGED;
     bool checked = id == AUTOCAP ? g.autoCap : g.changedOnly;
     bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue);
-    bool primary = id == LATEST || id == APPLY || (id == CONFIRM_SAVE && !g.demoResource) ||
+    bool primary = (id == LATEST && !g.doc) || id == APPLY || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
                    (id == SAVE && (!pending().empty() || g.editingDirty));
     bool quiet = id==FOLDER || id==RELOAD || id==HISTORY_UNDO || id==HISTORY_REDO;
@@ -195,7 +196,7 @@ void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
         if((col==2 && changed) || (col==0 && selected))ink=Theme::accentInk;
         literalText(dc,value,cell,col==3?g.small:g.font,ink,gridAlignment(col));
     }
-    RECT rule{0,r.bottom-1,r.right,r.bottom};fill(dc,rule,Theme::head);
+    RECT rule{0,r.bottom-1,r.right,r.bottom};fill(dc,rule,Theme::stripe);
     if((state&LVIS_FOCUSED) && GetFocus()==g.grid) {
         auto pen=CreatePen(PS_DOT,1,Theme::focus);auto old=SelectObject(dc,pen);
         auto brush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));

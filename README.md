@@ -2,7 +2,7 @@
 
 Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体与《Kingdom of Rizia》DLC。双击单文件程序，启动后可打开自己的存档，也可先用内置战役示例练习。
 
-**[下载 v0.13.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.1/SuzerainSaveStudio-0.13.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.1)
+**[下载 v0.13.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.2/SuzerainSaveStudio-0.13.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.2)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
@@ -18,7 +18,7 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 
 ## 选择外观
 
-在存档选择器或编辑器点 **外观**，即可切换 **暖纸、林间、雾蓝、午夜**。暖纸保留米色与陶土色，午夜提供深色界面。切换时可继续编辑当前字段。启动后的游戏内实时面板也有四种外观，两个程序共用本机的选择，下次打开会自动沿用。
+在存档选择器或编辑器点 **外观**，即可切换主题。默认的 **暖纸** 用暖白底和陶土色按钮。喜欢冷色可以选薄荷绿的 **林间** 或冰蓝的 **雾蓝**，夜间可选石墨灰的 **午夜**。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
 
 ## 功能
 

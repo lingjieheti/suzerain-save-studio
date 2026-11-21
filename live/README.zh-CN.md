@@ -7,7 +7,7 @@
 | 索德兰 | 政府预算、私人资产 |
 | 里奇亚 | 预算、权威、能源 |
 
-![游戏内面板布局预览，使用模拟数据离线渲染，示例为王国预算从 18 改为 30](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.13.1/docs/images/live-panel-preview.png)
+![游戏内面板布局预览，使用模拟数据离线渲染，示例为王国预算从 18 改为 30](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.13.2/docs/images/live-panel-preview.png)
 
 上图为离线布局预览。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。
 
@@ -26,7 +26,7 @@
 
 0.13.1 已在 Windows Steam 版索德兰战役副本中实测。政府预算从 16 改为 17，再恢复到 16。个人财富从 1 改为 2，再恢复到 1。四次操作后，游戏原生顶栏和实时面板均显示对应的新值。里奇亚的预算、权威和能源已通过模拟验证，仍待真实战役实测。
 
-0.13.1 通过了 61 项模拟战役状态检查，Windows 原生编辑器测试全部通过。若面板显示「等待读取战役存档」，请先从主菜单读取可玩战役。
+0.13.2 通过了 61 项模拟战役状态检查、37 项面板检查与 52 项文字配色对比度检查。若面板显示「等待读取战役存档」，请先从主菜单读取可玩战役。
 
 ## 从源码构建
 

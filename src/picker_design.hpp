@@ -198,7 +198,10 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
     RECT rowBox{};ListView_GetItemRect(s.list,row,&rowBox,LVIR_BOUNDS);
     const bool selected=(ListView_GetItemState(s.list,row,LVIS_SELECTED)&LVIS_SELECTED)!=0;
     ::fill(d.nmcd.hdc,rowBox,selected?Theme::select:Theme::panel);
-    if(selected){RECT stripe=rowBox;stripe.right=stripe.left+s.scale(3);::fill(d.nmcd.hdc,stripe,Theme::accent);}
+    if(selected){
+        RECT mark{rowBox.left,rowBox.top+s.scale(5),rowBox.left+s.scale(3),rowBox.bottom-s.scale(5)};
+        ::fill(d.nmcd.hdc,mark,Theme::accent);
+    }
     for(int column=0;column<5;++column){
         RECT cell{};Header_GetItemRect(ListView_GetHeader(s.list),column,&cell);
         if(cell.right<=cell.left)continue;
@@ -217,7 +220,8 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
             }
             SelectObject(d.nmcd.hdc,old);
         }
-        lettering(d.nmcd.hdc,caption,cell,column==0?s.emphasis:s.font,column==0?Theme::text:Theme::muted,DT_LEFT);
+        const auto ink=column==0 ? (selected?Theme::accentInk:Theme::text) : Theme::muted;
+        lettering(d.nmcd.hdc,caption,cell,column==0?s.emphasis:s.font,ink,DT_LEFT);
     }
     if(selected&&GetFocus()==s.list){RECT ring=rowBox;InflateRect(&ring,-s.scale(2),-s.scale(2));DrawFocusRect(d.nmcd.hdc,&ring);}
     return CDRF_SKIPDEFAULT;

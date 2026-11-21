@@ -53,6 +53,19 @@ public:
     AppearanceTestRegistry& operator=(const AppearanceTestRegistry&)=delete;
 };
 
+double textContrast(COLORREF ink, COLORREF surface){
+    auto linear = [](BYTE channel){
+        const double value = channel / 255.0;
+        return value <= 0.04045 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    auto luminance = [&](COLORREF color){
+        return 0.2126 * linear(GetRValue(color)) + 0.7152 * linear(GetGValue(color)) +
+               0.0722 * linear(GetBValue(color));
+    };
+    const double a = luminance(ink), b = luminance(surface);
+    return (std::max(a,b) + 0.05) / (std::min(a,b) + 0.05);
+}
+
 void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
@@ -77,6 +90,11 @@ void testAppearance(const fs::path& path){
     for(int index:{1,2,3,0}){
         applyAppearance(index);
         check(Theme::index()==index,"The selected appearance applies immediately");
+        check(textContrast(Theme::muted,Theme::head)>=4.5,"Column headings stay readable");
+        check(textContrast(Theme::accentInk,Theme::select)>=4.5,"Selected rows stay readable");
+        check(textContrast(Theme::sideText,Theme::sideHover)>=4.5,"Hovered sidebar labels stay readable");
+        check(textContrast(Theme::onAccent,Theme::accent)>=4.5 &&
+              textContrast(Theme::onAccent,Theme::accentHover)>=4.5,"Primary button text stays readable");
         check(g.session.get()==session && pending().at(budget)=="43" && g.session->canUndo(),
               "Switching appearance preserves edits and undo history");
         check(g.selected==budget && textOf(g.search)==L"GovernmentBudget" &&

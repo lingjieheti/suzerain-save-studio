@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using Il2CppInterop.Runtime.Attributes;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace SuzerainSaveStudio.Live
 {
@@ -25,6 +26,9 @@ namespace SuzerainSaveStudio.Live
         private string focused = "", activate = "";
         private GUIStyle title, number, fieldName, body, caption, rightCaption, action, primaryAction, themeLabel, input;
         private Font panelFont, displayFont;
+        private GameObject pointerCanvas;
+        private RectTransform pointerTarget;
+        private int targetWidth, targetHeight;
 
         public LivePanel(IntPtr ptr) : base(ptr) { }
 
@@ -42,8 +46,64 @@ namespace SuzerainSaveStudio.Live
 
         public void OnDestroy()
         {
+            if (pointerCanvas != null) UnityEngine.Object.Destroy(pointerCanvas);
             if (panelFont != null) UnityEngine.Object.Destroy(panelFont);
             if (displayFont != null) UnityEngine.Object.Destroy(displayFont);
+        }
+
+        public void OnDisable() => ClosePanel();
+
+        [HideFromIl2Cpp]
+        private void ClosePanel()
+        {
+            visible = false;
+            confirming = false;
+            focused = "";
+            if (pointerCanvas != null) pointerCanvas.SetActive(false);
+        }
+
+        [HideFromIl2Cpp]
+        private void SyncPointerTarget(Rect area, float scale)
+        {
+            // IMGUI consumes its own events; the game's EventSystem raycasts separately.
+            if (pointerCanvas == null)
+            {
+                pointerCanvas = new GameObject("Suzerain Save Studio - pointer canvas");
+                try
+                {
+                    pointerCanvas.SetActive(false);
+                    UnityEngine.Object.DontDestroyOnLoad(pointerCanvas);
+                    var canvas = pointerCanvas.AddComponent<Canvas>();
+                    canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                    canvas.sortingOrder = short.MaxValue;
+                    pointerCanvas.AddComponent<GraphicRaycaster>();
+                    var target = new GameObject("Panel");
+                    target.transform.SetParent(pointerCanvas.transform, false);
+                    var image = target.AddComponent<Image>();
+                    image.color = Color.clear;
+                    image.raycastTarget = true;
+                    image.canvasRenderer.cullTransparentMesh = false;
+                    pointerTarget = image.rectTransform;
+                    var topLeft = new Vector2(0, 1);
+                    pointerTarget.anchorMin = pointerTarget.anchorMax = pointerTarget.pivot = topLeft;
+                    targetWidth = targetHeight = 0;
+                }
+                catch
+                {
+                    ClosePanel();
+                    UnityEngine.Object.Destroy(pointerCanvas);
+                    pointerCanvas = null;
+                    throw;
+                }
+            }
+            if (targetWidth != Screen.width || targetHeight != Screen.height)
+            {
+                pointerTarget.anchoredPosition = new Vector2(area.x * scale, -area.y * scale);
+                pointerTarget.sizeDelta = new Vector2(area.width * scale, area.height * scale);
+                targetWidth = Screen.width;
+                targetHeight = Screen.height;
+            }
+            if (!pointerCanvas.activeSelf) pointerCanvas.SetActive(true);
         }
 
         public void OnGUI()
@@ -55,13 +115,13 @@ namespace SuzerainSaveStudio.Live
             {
                 if (!hotkeyHeld) {
                     hotkeyHeld = true;
-                    visible = !visible;
-                    if (visible) {
+                    if (!visible) {
+                        visible = true;
                         appearance = AppearancePreference.Read();
                         palette = PanelAppearance.Choices[appearance];
                         Refresh();
                     }
-                    else confirming = false;
+                    else ClosePanel();
                 }
                 ev.Use();
             }
@@ -69,7 +129,7 @@ namespace SuzerainSaveStudio.Live
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape)
             {
                 if (confirming) { confirming = false; focused = "value"; GUI.FocusControl("value"); }
-                else visible = false;
+                else ClosePanel();
                 ev.Use();
                 if (!visible) return;
             }
@@ -80,6 +140,7 @@ namespace SuzerainSaveStudio.Live
                 Math.Min(Screen.width / (MinWidth+16), Screen.height / (Height+16)));
             width = Math.Min(MaxWidth, Screen.width/scale-16);
             var area = new Rect(Math.Max(8f,Screen.width/scale-width-16),8,width,Height);
+            SyncPointerTarget(area, scale);
             var previousMatrix = GUI.matrix;
             int previousDepth = GUI.depth;
             var previousColor = GUI.color;
@@ -355,12 +416,13 @@ namespace SuzerainSaveStudio.Live
         }
 
         [HideFromIl2Cpp]
-        private bool Button(Rect r,string id,string text,bool primary = false)
+        private bool Button(Rect r,string id,string text,bool primary = false,bool quiet = false)
         {
             bool hovered = r.Contains(Event.current.mousePosition);
             bool focus = focused == id;
             Color face = primary ? (hovered ? palette.AccentHover : palette.Accent) : (hovered ? palette.Hover : palette.Surface);
-            PaperBox(r,face,focus ? palette.Text : (primary ? face : palette.Border),7,focus ? 2 : 1);
+            if (!quiet || focus || hovered)
+                PaperBox(r,face,focus ? palette.Text : (primary || quiet ? face : palette.Border),7,focus ? 2 : 1);
             return Press(r,id,text,primary ? primaryAction : action);
         }
 
@@ -380,11 +442,11 @@ namespace SuzerainSaveStudio.Live
             bool known = snapshot?.Story=="StoryPack_Main" || snapshot?.Story=="StoryPack_Rizia";
             PaperBox(new Rect(0,0,width,Height),palette.Background,palette.Border,13);
             GUI.Label(new Rect(Inset,10,content-129,37),T("实时编辑","Live editor"),title);
-            if (Button(new Rect(width-Inset-133,15,70,29),"language",T("English","简体中文")))
+            if (Button(new Rect(width-Inset-133,15,70,29),"language",T("English","简体中文"),quiet:true))
                 chinese = !chinese;
-            if (Button(new Rect(width-Inset-57,15,57,29),"close",T("关闭","Close")))
+            if (Button(new Rect(width-Inset-57,15,57,29),"close",T("关闭","Close"),quiet:true))
             {
-                visible = false; confirming = false; focused = ""; return;
+                ClosePanel(); return;
             }
             string campaign = known
                 ? (snapshot.Story=="StoryPack_Main"?T("索德兰","Sordland"):T("里奇亚","Rizia"))+
@@ -392,7 +454,7 @@ namespace SuzerainSaveStudio.Live
                 : T("等待战役","Waiting for a campaign");
             Fill(new Rect(Inset,59,7,7),ready ? palette.Success : palette.Muted,3.5f);
             GUI.Label(new Rect(Inset+14,49,content-97,26),campaign,caption);
-            if (Button(new Rect(width-Inset-74,49,74,26),"refresh",T("刷新","Refresh"))) Refresh();
+            if (Button(new Rect(width-Inset-74,49,74,26),"refresh",T("刷新","Refresh"),quiet:true)) Refresh();
             Fill(new Rect(Inset,83,content,1),palette.Border);
 
             bool hasFields = snapshot != null && snapshot.Fields.Count > 0;
@@ -483,7 +545,7 @@ namespace SuzerainSaveStudio.Live
             try
             {
                 settings.cursorColor=palette.Text;
-                settings.selectionColor=palette.Selection;
+                settings.selectionColor=palette.TextSelection;
                 entered=GUI.TextField(edit,draft,12,input);
             }
             finally { settings.cursorColor=oldCursor; settings.selectionColor=oldSelection; }
@@ -520,9 +582,10 @@ namespace SuzerainSaveStudio.Live
                 var choice = PanelAppearance.Choices[i];
                 var rect = new Rect(Inset+labelWidth+i*(choiceWidth+4),335,choiceWidth,30);
                 bool selected = i == appearance, focus = focused == ThemeControls[i];
-                Color face = selected ? palette.Selection : rect.Contains(Event.current.mousePosition) ? palette.Hover : palette.Surface;
-                Color border = focus ? palette.Text : selected ? palette.Accent : palette.Border;
-                PaperBox(rect,face,border,6,focus || selected ? 2 : 1);
+                bool hovered = rect.Contains(Event.current.mousePosition);
+                Color face = selected ? palette.Selection : hovered ? palette.Hover : palette.Surface;
+                if (selected || focus || hovered)
+                    PaperBox(rect,face,focus ? palette.Text : selected ? palette.Accent : face,6,focus ? 2 : 1);
                 if (choiceWidth >= 89) Fill(new Rect(rect.x+10,rect.y+11.5f,7,7),choice.Accent,3.5f);
                 if (Press(rect,ThemeControls[i],T(choice.Chinese,choice.English),themeLabel) && !selected)
                 {
