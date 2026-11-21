@@ -6,11 +6,11 @@
 
 // The picker owns its controls and fonts. Discovery never touches the editor or files.
 namespace save_picker {
-enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, START_SCAN=WM_APP+44 };
+enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, APPEARANCE, START_SCAN=WM_APP+44 };
 inline std::vector<fs::path> extraRoots;
 struct State {
     HWND win{}, list{}, filter{}, campaign{}, status{}, path{}, add{}, refresh{}, open{}, cancelButton{}, heading{};
-    HWND browse{}, live{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
+    HWND browse{}, live{}, appearance{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
     UINT dpi=96;
     HFONT font{}, small{}, bold{}, subheading{}, emphasis{};
     HIMAGELIST rowHeight{};
@@ -19,7 +19,7 @@ struct State {
     std::vector<size_t> rows;
     fs::path choice;
     fs::path beforeScan;
-    int chosenDemo=0;
+    int chosenDemo=0, appearanceIndex=-1;
     bool stacked=false;
     RECT library{}, practice{}, searchFrame{}, headingIcon{};
     int footerY=0;
@@ -41,15 +41,18 @@ inline HWND child(State& s,const wchar_t* cls,const wchar_t* text,DWORD style,in
     SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return h;
 }
 inline void setFonts(State& s){
-    auto make=[&](int size,int weight,const wchar_t* face=L"Segoe UI"){return CreateFontW(-s.scale(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
-    const wchar_t* serif=i18n::language<=1?L"SimSun":i18n::language==3?L"Yu Mincho":i18n::language==4?L"Batang":L"Georgia";
+    auto make=[&](int size,int weight,const wchar_t* face=nullptr){return CreateFontW(-s.scale(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face?face:Theme::bodyFace());};
     HFONT old[]={s.font,s.small,s.bold,s.subheading,s.emphasis};
-    s.font=make(14,FW_NORMAL);s.small=make(12,FW_NORMAL);s.bold=make(32,FW_NORMAL,serif);
-    s.subheading=make(21,FW_NORMAL,serif);s.emphasis=make(14,FW_SEMIBOLD);
+    s.font=make(14,FW_NORMAL);s.small=make(12,FW_NORMAL);s.bold=make(32,FW_NORMAL,Theme::headingFace());
+    s.subheading=make(21,FW_NORMAL,Theme::headingFace());s.emphasis=make(14,FW_SEMIBOLD);
     EnumChildWindows(s.win,[](HWND h,LPARAM p){auto&s=*reinterpret_cast<State*>(p);SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return TRUE;},(LPARAM)&s);
     for(auto h:{s.status,s.path,s.practiceHint})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)s.small,TRUE);
     if(s.heading)SendMessageW(s.heading,WM_SETFONT,(WPARAM)s.bold,TRUE);
     if(s.practiceTitle)SendMessageW(s.practiceTitle,WM_SETFONT,(WPARAM)s.subheading,TRUE);
+    if(s.campaign){
+        SendMessageW(s.campaign,CB_SETITEMHEIGHT,static_cast<WPARAM>(-1),s.scale(23));
+        SendMessageW(s.campaign,CB_SETITEMHEIGHT,0,s.scale(26));
+    }
     for(auto f:old)if(f)DeleteObject(f);
     if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(38),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
 }
@@ -75,9 +78,19 @@ inline void layout(State& s){
     const int filterW=cardW-pad*2-campaignW-8;
     s.library=s.box(margin,bodyY,cardW,cardBottom-bodyY);
     s.searchFrame=s.box(filterX,filterY,filterW,30);
-    s.headingIcon=s.box(margin,top+(compact?4:8),35,35);
-    s.move(s.heading,margin+47,top,inner-218,headerH);
-    s.move(s.browse,w-margin-158,top+(compact?3:8),158,35);
+    const bool narrowHeader=w<660;
+    const int headingX=margin+(narrowHeader?0:47);
+    const int browseWidth=narrowHeader?103:143;
+    const int appearanceWidth=narrowHeader?138:179;
+    const int browseX=w-margin-browseWidth;
+    const int appearanceX=browseX-8-appearanceWidth;
+    const int actionY=top+(compact?3:8);
+    s.headingIcon=narrowHeader?RECT{}:s.box(margin,top+(compact?4:8),35,35);
+    SendMessageW(s.heading,WM_SETFONT,(WPARAM)(narrowHeader?s.subheading:s.bold),FALSE);
+    const int headingOffset=narrowHeader?8:0;
+    s.move(s.heading,headingX,top+headingOffset,appearanceX-headingX-9,headerH-headingOffset);
+    s.move(s.appearance,appearanceX,actionY,appearanceWidth,35);
+    s.move(s.browse,browseX,actionY,browseWidth,35);
     s.move(s.filter,filterX+29,filterY+4,filterW-36,22);
     s.move(s.campaign,filterX+filterW+8,filterY+1,campaignW,210);
     s.move(s.list,tableX,tableTop,tableWidth,std::max(28,tableBottom-tableTop));
@@ -194,20 +207,32 @@ inline void accept(State& s){
     s.choice=s.result.saves[s.rows[i]].path;EndDialog(s.win,IDOK);
 }
 #include "picker_design.hpp"
+inline void applyPickerAppearance(State& s) {
+    s.appearanceIndex=Theme::index();
+    Theme::caption(s.win);
+    SetWindowTheme(s.list,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
+    ListView_SetBkColor(s.list,Theme::panel);
+    ListView_SetTextBkColor(s.list,Theme::panel);
+    ListView_SetTextColor(s.list,Theme::text);
+    rawText(s.appearance,std::wstring(Theme::label())+L" · "+Theme::name(Theme::index()));
+    setFonts(s);
+    layout(s);
+    RedrawWindow(s.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ERASE|RDW_FRAME|RDW_ALLCHILDREN);
+}
 inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
+    if(themeMenuMessage(m,wp,lp))return TRUE;
     State* p=state(w);
     try{
         if(m==WM_INITDIALOG){p=reinterpret_cast<State*>(lp);SetWindowLongPtrW(w,DWLP_USER,(LONG_PTR)p);auto&s=*p;s.win=w;SetWindowTextW(w,APP_TITLE);s.dpi=GetDpiForWindow(w);if(!s.dpi)s.dpi=96;setFonts(s);
-            BOOL dark=FALSE;DwmSetWindowAttribute(w,DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof(dark));COLORREF caption=Theme::bg;DwmSetWindowAttribute(w,DWMWA_CAPTION_COLOR,&caption,sizeof(caption));
-            COLORREF captionText=Theme::text;DwmSetWindowAttribute(w,DWMWA_TEXT_COLOR,&captionText,sizeof(captionText));
             s.heading=child(s,L"STATIC",L"选择存档",SS_ENDELLIPSIS,0);
             s.filter=child(s,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,FILTER);auto cue=tr(L"搜索文件名或战役");SendMessageW(s.filter,EM_SETCUEBANNER,TRUE,(LPARAM)cue.c_str());SendMessageW(s.filter,EM_SETLIMITTEXT,160,0);
-            s.campaign=child(s,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,CAMPAIGN_FILTER);
+            SetWindowSubclass(s.filter,filterCueProc,1,(DWORD_PTR)&s);
+            s.campaign=child(s,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,CAMPAIGN_FILTER);
+            SetWindowSubclass(s.campaign,campaignFaceProc,1,(DWORD_PTR)&s);
             for(const auto* name:{L"All campaigns",L"Sordland",L"Rizia"}){auto text=tr(name);SendMessageW(s.campaign,CB_ADDSTRING,0,(LPARAM)text.c_str());}SendMessageW(s.campaign,CB_SETCURSEL,0,0);
             s.add=child(s,L"BUTTON",L"添加文件夹",WS_TABSTOP|BS_OWNERDRAW,ADD_FOLDER);s.refresh=child(s,L"BUTTON",L"刷新",WS_TABSTOP|BS_OWNERDRAW,RESCAN);
             s.list=child(s,WC_LISTVIEWW,L"存档列表",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,LIST);
-            ListView_SetExtendedListViewStyle(s.list,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);SetWindowTheme(s.list,L"Explorer",nullptr);
-            ListView_SetBkColor(s.list,Theme::panel);ListView_SetTextBkColor(s.list,Theme::panel);ListView_SetTextColor(s.list,Theme::text);
+            ListView_SetExtendedListViewStyle(s.list,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
             const wchar_t* cols[]={L"文件名",L"Campaign",L"战役",L"回合",L"修改时间"};for(int i=0;i<5;++i){LVCOLUMNW c{};c.mask=LVCF_TEXT|LVCF_WIDTH;auto title=tr(cols[i]);c.pszText=title.data();c.cx=s.scale(120);ListView_InsertColumn(s.list,i,&c);}
             SetWindowSubclass(ListView_GetHeader(s.list),header,1,(DWORD_PTR)&s);
             s.path=child(s,L"STATIC",L"",SS_PATHELLIPSIS|SS_NOPREFIX,PATH);
@@ -217,23 +242,35 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             s.mainDemo=child(s,L"BUTTON",L"索德兰示例",WS_TABSTOP|BS_OWNERDRAW,DEMO_MAIN);
             s.riziaDemo=child(s,L"BUTTON",L"里奇亚示例",WS_TABSTOP|BS_OWNERDRAW,DEMO_RIZIA);
             s.browse=child(s,L"BUTTON",L"手动打开",WS_TABSTOP|BS_OWNERDRAW,BROWSE);
+            s.appearance=child(s,L"BUTTON",L"",WS_TABSTOP|BS_OWNERDRAW,APPEARANCE);
             s.live=child(s,L"BUTTON",L"实时模式",WS_TABSTOP|BS_OWNERDRAW,LIVE_MODE);
             s.open=child(s,L"BUTTON",L"打开所选",WS_TABSTOP|BS_OWNERDRAW,IDOK);s.cancelButton=child(s,L"BUTTON",L"取消",WS_TABSTOP|BS_OWNERDRAW,IDCANCEL);
             s.empty=child(s,L"STATIC",L"正在搜索…",SS_CENTER|SS_CENTERIMAGE|SS_ENDELLIPSIS,0);
-            for(auto button:{s.add,s.refresh,s.mainDemo,s.riziaDemo,s.browse,s.live,s.open,s.cancelButton})SetWindowSubclass(button,buttonProc,1,0);
-            setFonts(s);RECT owner{},area{};GetWindowRect(g.win,&owner);MONITORINFO mi{};mi.cbSize=sizeof(mi);GetMonitorInfoW(MonitorFromWindow(g.win,MONITOR_DEFAULTTONEAREST),&mi);area=mi.rcWork;
+            for(auto button:{s.add,s.refresh,s.mainDemo,s.riziaDemo,s.appearance,s.browse,s.live,s.open,s.cancelButton})SetWindowSubclass(button,buttonProc,1,0);
+            applyPickerAppearance(s);RECT owner{},area{};GetWindowRect(g.win,&owner);MONITORINFO mi{};mi.cbSize=sizeof(mi);GetMonitorInfoW(MonitorFromWindow(g.win,MONITOR_DEFAULTTONEAREST),&mi);area=mi.rcWork;
             int width=std::min(s.scale(1010),(int)(area.right-area.left)),height=std::min(s.scale(624),(int)(area.bottom-area.top));
             int x=std::max((int)area.left,std::min((int)area.right-width,(int)(owner.left+owner.right-width)/2));int y=std::max((int)area.top,std::min((int)area.bottom-height,(int)(owner.top+owner.bottom-height)/2));
             SetWindowPos(w,nullptr,x,y,width,height,SWP_NOZORDER);layout(s);EnableWindow(s.open,FALSE);PostMessageW(w,START_SCAN,0,0);return TRUE;
         }
         if(!p)return FALSE;auto&s=*p;
         switch(m){
+        case WM_ACTIVATE:
+            if(LOWORD(wp)!=WA_INACTIVE&&s.appearanceIndex>=0){
+                if(Theme::stored()!=Theme::index())syncAppearance();
+                if(s.appearanceIndex!=Theme::index())applyPickerAppearance(s);
+            }
+            break;
         case START_SCAN:start(s);return TRUE;
         case WM_TIMER:if(wp==1&&s.done.load(std::memory_order_acquire)){KillTimer(w,1);if(s.worker.joinable())s.worker.join();s.busy=false;for(auto h:{s.refresh,s.add,s.filter,s.campaign})EnableWindow(h,TRUE);fill(s);}return TRUE;
         case WM_COMMAND:{int id=LOWORD(wp);if(id==IDCANCEL){s.stop();EndDialog(w,IDCANCEL);return TRUE;}if(id==IDOK){accept(s);return TRUE;}
             if(id==DEMO_MAIN||id==DEMO_RIZIA){s.chosenDemo=id==DEMO_MAIN?demo::sordland:demo::rizia;s.stop();EndDialog(w,IDOK);return TRUE;}
             if(id==BROWSE){auto picked=pickFile(false,0,w);if(!picked.empty()){s.choice=picked;s.stop();EndDialog(w,IDOK);}return TRUE;}
             if(id==LIVE_MODE){live_setup::show(w);return TRUE;}
+            if(id==APPEARANCE){
+                const int index=pickAppearance(w,s.appearance);
+                if(index>=0&&index!=Theme::index()){applyAppearance(index);applyPickerAppearance(s);}
+                return TRUE;
+            }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}
             if(id==FILTER&&HIWORD(wp)==EN_CHANGE&&!s.busy&&s.list&&s.status&&s.path){fill(s);return TRUE;}
             if(id==CAMPAIGN_FILTER&&HIWORD(wp)==CBN_SELCHANGE&&!s.busy){fill(s);return TRUE;}
@@ -252,9 +289,18 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(known){width=std::min(width,(int)(info.rcWork.right-info.rcWork.left));height=std::min(height,(int)(info.rcWork.bottom-info.rcWork.top));}
             i->ptMinTrackSize={width,height};return TRUE;}
         case WM_DPICHANGED:{s.dpi=HIWORD(wp);auto*r=reinterpret_cast<RECT*>(lp);setFonts(s);SetWindowPos(w,nullptr,r->left,r->top,r->right-r->left,r->bottom-r->top,SWP_NOZORDER|SWP_NOACTIVATE);layout(s);return TRUE;}
-        case WM_DRAWITEM:drawButton(s,*reinterpret_cast<DRAWITEMSTRUCT*>(lp));return TRUE;
+        case WM_MEASUREITEM:{
+            auto& item=*reinterpret_cast<MEASUREITEMSTRUCT*>(lp);
+            if(item.CtlType==ODT_COMBOBOX&&item.CtlID==CAMPAIGN_FILTER){item.itemHeight=s.scale(24);return TRUE;}
+            break;}
+        case WM_DRAWITEM:{
+            const auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(lp);
+            if(item.CtlType==ODT_COMBOBOX&&item.CtlID==CAMPAIGN_FILTER){drawCampaignItem(s,item);return TRUE;}
+            if(item.CtlType==ODT_BUTTON){drawButton(s,item);return TRUE;}
+            break;}
         case WM_CTLCOLORDLG:return (INT_PTR)g.bg;
         case WM_PAINT:{PAINTSTRUCT paint{};auto dc=BeginPaint(w,&paint);FillRect(dc,&paint.rcPaint,g.bg);paintFrame(s,dc);EndPaint(w,&paint);return TRUE;}
+        case WM_CTLCOLORLISTBOX:{auto dc=(HDC)wp;SetTextColor(dc,Theme::text);SetBkColor(dc,Theme::input);return (INT_PTR)g.input;}
         case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;
             SetTextColor(dc,h==s.path||h==s.status||h==s.practiceHint||h==s.empty?Theme::muted:Theme::text);
             bool panel=h==s.status||h==s.practiceTitle||h==s.practiceHint||h==s.empty;

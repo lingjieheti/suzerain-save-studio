@@ -95,7 +95,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     COLORREF surface = nav ? Theme::sidebar : inspector ? Theme::panel : Theme::bg;
     COLORREF bg = quiet ? surface : Theme::input, border = quiet ? surface : Theme::line, fg = Theme::text;
     if (nav) {
-        bg = activeNav ? Theme::select : hover ? Theme::hover : Theme::sidebar;
+        bg = activeNav ? Theme::select : hover ? Theme::sideHover : Theme::sidebar;
         border = bg; fg = activeNav ? Theme::accentInk : Theme::sideText;
     } else if (primary) {
         bg = border = hover || down ? Theme::accentHover : Theme::accent; fg = Theme::onAccent;
@@ -118,6 +118,18 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             tx.left += px(42); tx.right -= px(5);
             drawText(d->hDC, textOf(d->hwndItem), tx, g.font, fg);
         }
+    } else if(id==APPEARANCE) {
+        const bool compact=workspaceGeometry().compactRail;
+        const int cy=(r.top+r.bottom)/2;
+        RECT mark{px(9),cy-px(5),px(19),cy+px(5)};
+        rounded(d->hDC,mark,Theme::accent,Theme::accent,5);
+        tx.left=px(26);tx.right-=px(17);
+        auto caption=compact?std::wstring(Theme::name(Theme::index())):textOf(d->hwndItem);
+        drawText(d->hDC,caption,tx,g.small,fg);
+        int x=r.right-px(11);
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),Theme::muted);auto old=SelectObject(d->hDC,pen);
+        MoveToEx(d->hDC,x-px(3),cy-px(2),nullptr);LineTo(d->hDC,x,cy+px(1));LineTo(d->hDC,x+px(3),cy-px(2));
+        SelectObject(d->hDC,old);DeleteObject(pen);
     } else {
         if (check) {
             int y = (r.bottom - px(15)) / 2;

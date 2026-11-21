@@ -25,7 +25,10 @@ void layout() {
         place(ctl(item.first), tx, a.shortScreen ? 7 : 14, bw, 32);
         tx += bw + 6;
     }
-    int pathWidth = a.content - (a.compactRail ? 125 : 0);
+    int themeWidth=a.compactRail?116:145;
+    int themeRight=toolbarEnd-(a.compactRail?121:0);
+    place(ctl(APPEARANCE),themeRight-themeWidth,a.shortScreen?44:55,themeWidth,29);
+    int pathWidth=themeRight-themeWidth-a.left-8;
     place(g.meta, a.left, a.shortScreen ? 39 : 54, pathWidth, 20);
     place(g.path, a.left, a.shortScreen ? 57 : 75, pathWidth, 19);
     if (a.compactRail) place(ctl(LANGUAGE), toolbarEnd-116, a.shortScreen ? 43 : 57,116,300);

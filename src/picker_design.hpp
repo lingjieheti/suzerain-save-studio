@@ -4,7 +4,8 @@ inline void surface(const State& s,HDC dc,RECT box,COLORREF color,COLORREF edge,
     HBRUSH brush=CreateSolidBrush(color);
     HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(weight)),edge);
     auto oldBrush=SelectObject(dc,brush),oldPen=SelectObject(dc,pen);
-    RoundRect(dc,box.left,box.top,box.right,box.bottom,s.scale(radius),s.scale(radius));
+    const int diameter=s.scale(Theme::radius(radius));
+    RoundRect(dc,box.left,box.top,box.right,box.bottom,diameter,diameter);
     SelectObject(dc,oldPen);SelectObject(dc,oldBrush);DeleteObject(pen);DeleteObject(brush);
 }
 inline void lettering(HDC dc,const std::wstring& caption,RECT box,HFONT font,COLORREF color,UINT align){
@@ -47,11 +48,21 @@ inline void paintFrame(State& s,HDC dc){
     surface(s,dc,s.practice,Theme::panel,Theme::line,14);
     surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,10);
     symbol(s,dc,FILTER,s.searchFrame.left+s.scale(8),s.searchFrame.top+s.scale(6),Theme::muted);
-    surface(s,dc,s.headingIcon,Theme::select,Theme::select,12);
-    symbol(s,dc,0,s.headingIcon.left+s.scale(8),s.headingIcon.top+s.scale(9),Theme::accentInk);
+    if(!IsRectEmpty(&s.headingIcon)){
+        surface(s,dc,s.headingIcon,Theme::select,Theme::select,12);
+        symbol(s,dc,0,s.headingIcon.left+s.scale(8),s.headingIcon.top+s.scale(9),Theme::accentInk);
+    }
     RECT client{};GetClientRect(s.win,&client);
     RECT divider{0,s.scale(s.footerY),client.right,s.scale(s.footerY)+1};
     ::fill(dc,divider,Theme::line);
+}
+inline void chevron(const State& s,HDC dc,int x,int y,COLORREF color){
+    HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),color);
+    auto old=SelectObject(dc,pen);
+    MoveToEx(dc,x-s.scale(4),y-s.scale(2),nullptr);
+    LineTo(dc,x,y+s.scale(2));
+    LineTo(dc,x+s.scale(4),y-s.scale(2));
+    SelectObject(dc,old);DeleteObject(pen);
 }
 inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     const int id=d.CtlID;
@@ -77,7 +88,18 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     auto label=textOf(d.hwndItem);
     RECT textBox=box;
     HFONT font=primary||demo||live?s.emphasis:s.font;
-    if(live&&!s.stacked){
+    if(id==APPEARANCE){
+        const int x=box.left+s.scale(12),r=s.scale(5);
+        RECT swatch{x,hmid-r,x+2*r,hmid+r};
+        surface(s,d.hDC,swatch,Theme::accent,Theme::accent,10);
+        textBox.left=x+2*r+s.scale(8);textBox.right-=s.scale(24);
+        SIZE extent{};auto old=SelectObject(d.hDC,font);
+        GetTextExtentPoint32W(d.hDC,label.c_str(),(int)label.size(),&extent);
+        SelectObject(d.hDC,old);
+        if(extent.cx>textBox.right-textBox.left)label=Theme::name(Theme::index());
+        lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
+        chevron(s,d.hDC,box.right-s.scale(13),hmid,Theme::muted);
+    }else if(live&&!s.stacked){
         int iconX=box.left+s.scale(13);
         symbol(s,d.hDC,id,iconX,hmid-s.scale(8),Theme::accentInk);
         textBox.left=iconX+s.scale(28);textBox.right-=s.scale(7);
@@ -96,6 +118,59 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         RECT ring=box;InflateRect(&ring,-s.scale(4),-s.scale(4));
         DrawFocusRect(d.hDC,&ring);
     }
+}
+inline void paintCampaignFace(const State& s,HWND h,HDC dc){
+    RECT box{};GetClientRect(h,&box);
+    ::fill(dc,box,Theme::panel);
+    --box.right;--box.bottom;
+    const bool enabled=IsWindowEnabled(h)!=FALSE;
+    const bool focus=GetFocus()==h;
+    surface(s,dc,box,enabled?Theme::input:Theme::head,focus?Theme::focus:Theme::line,9,focus?2:1);
+    RECT caption=box;caption.left+=s.scale(9);caption.right-=s.scale(23);
+    lettering(dc,textOf(h),caption,s.font,enabled?Theme::text:Theme::dim,DT_LEFT);
+    chevron(s,dc,box.right-s.scale(13),(box.top+box.bottom)/2,Theme::muted);
+}
+inline LRESULT CALLBACK campaignFaceProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
+    auto& s=*reinterpret_cast<State*>(data);
+    if(m==WM_PAINT){
+        PAINTSTRUCT ps{};auto dc=BeginPaint(h,&ps);paintCampaignFace(s,h,dc);EndPaint(h,&ps);return 0;
+    }
+    if(m==WM_PRINTCLIENT){paintCampaignFace(s,h,(HDC)wp);return 0;}
+    if(m==WM_ERASEBKGND)return 1;
+    const auto result=DefSubclassProc(h,m,wp,lp);
+    if(m==CB_SETCURSEL||m==WM_SETFOCUS||m==WM_KILLFOCUS||m==WM_ENABLE)InvalidateRect(h,nullptr,FALSE);
+    return result;
+}
+inline void drawCampaignItem(const State& s,const DRAWITEMSTRUCT& d){
+    if(d.itemState&ODS_COMBOBOXEDIT){paintCampaignFace(s,d.hwndItem,d.hDC);return;}
+    const bool selected=(d.itemState&ODS_SELECTED)!=0;
+    ::fill(d.hDC,d.rcItem,selected?Theme::select:Theme::input);
+    const auto length=SendMessageW(d.hwndItem,CB_GETLBTEXTLEN,d.itemID,0);
+    if(length==CB_ERR)return;
+    std::wstring label((size_t)length+1,L'\0');
+    SendMessageW(d.hwndItem,CB_GETLBTEXT,d.itemID,(LPARAM)label.data());label.resize((size_t)length);
+    RECT caption=d.rcItem;caption.left+=s.scale(9);caption.right-=s.scale(5);
+    lettering(d.hDC,label,caption,s.font,selected?Theme::accentInk:Theme::text,DT_LEFT);
+    if(d.itemState&ODS_FOCUS)DrawFocusRect(d.hDC,&d.rcItem);
+}
+inline LRESULT CALLBACK filterCueProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
+    if(m==WM_IME_STARTCOMPOSITION)SetPropW(h,L"PickerComposition",reinterpret_cast<HANDLE>(1));
+    if(m==WM_IME_ENDCOMPOSITION)RemovePropW(h,L"PickerComposition");
+    if((m==WM_PAINT||m==WM_PRINTCLIENT)&&GetWindowTextLengthW(h)==0&&!GetPropW(h,L"PickerComposition")){
+        auto& s=*reinterpret_cast<State*>(data);
+        PAINTSTRUCT ps{};HDC dc=m==WM_PAINT?BeginPaint(h,&ps):reinterpret_cast<HDC>(wp);
+        RECT bounds{},text{};GetClientRect(h,&bounds);SendMessageW(h,EM_GETRECT,0,(LPARAM)&text);
+        ::fill(dc,bounds,Theme::input);
+        wchar_t cue[192]{};
+        SendMessageW(h,EM_GETCUEBANNER,(WPARAM)cue,192);
+        lettering(dc,cue,text,s.font,Theme::muted,DT_LEFT);
+        if(m==WM_PAINT)EndPaint(h,&ps);
+        return 0;
+    }
+    const auto result=DefSubclassProc(h,m,wp,lp);
+    if(m==WM_SETTEXT||m==WM_KILLFOCUS||m==WM_SETFOCUS||m==WM_IME_ENDCOMPOSITION)
+        InvalidateRect(h,nullptr,FALSE);
+    return result;
 }
 inline LRESULT CALLBACK header(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
     auto&s=*reinterpret_cast<State*>(data);

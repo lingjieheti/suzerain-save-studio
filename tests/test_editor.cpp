@@ -1,5 +1,5 @@
 // Exercise the real list, edit control, preview and history in a hidden window.
-// The two inputs are synthetic demos; this test performs no disk writes.
+// Both inputs are read-only synthetic demos. Appearance tests use an isolated registry key.
 #define wWinMain UnusedEditorGuiEntry
 #include "../src/main.cpp"
 #undef wWinMain
@@ -27,6 +27,78 @@ void CALLBACK dismissValidationWarning(HWND,UINT,UINT_PTR,DWORD){
         if(std::wstring(kind)==L"#32770")EndDialog(popup,IDOK);
         return TRUE;
     },0);
+}
+
+// Keep the application code on its normal registry path while isolating every test run.
+class AppearanceTestRegistry {
+    std::wstring path_ = L"Software\\SuzerainSaveStudio-Tests-" + writeId();
+    HKEY root_ = nullptr;
+public:
+    AppearanceTestRegistry(){
+        if(RegCreateKeyExW(HKEY_CURRENT_USER,path_.c_str(),0,nullptr,REG_OPTION_NON_VOLATILE,
+                           KEY_ALL_ACCESS,nullptr,&root_,nullptr)!=ERROR_SUCCESS)
+            throw std::runtime_error("Create temporary appearance test key");
+        if(RegOverridePredefKey(HKEY_CURRENT_USER,root_)!=ERROR_SUCCESS){
+            RegCloseKey(root_);
+            RegDeleteKeyW(HKEY_CURRENT_USER,path_.c_str());
+            throw std::runtime_error("Isolate appearance preferences");
+        }
+    }
+    ~AppearanceTestRegistry(){
+        RegOverridePredefKey(HKEY_CURRENT_USER,nullptr);
+        RegCloseKey(root_);
+        RegDeleteTreeW(HKEY_CURRENT_USER,path_.c_str());
+    }
+    AppearanceTestRegistry(const AppearanceTestRegistry&)=delete;
+    AppearanceTestRegistry& operator=(const AppearanceTestRegistry&)=delete;
+};
+
+void testAppearance(const fs::path& path){
+    AppearanceTestRegistry registry;
+    Theme::load();
+    check(Theme::index()==0,"A new user starts with Paper");
+    const int languageBefore=i18n::language;
+    for(int lang=0;lang<static_cast<int>(std::size(i18n::names));++lang){
+        i18n::setLanguage(lang);
+        std::set<std::wstring> names;
+        for(int index=0;index<Theme::count;++index)names.insert(Theme::name(index));
+        check(*Theme::label() && names.size()==Theme::count && !names.count(L""),
+              "Each supported language has four distinct named appearances");
+    }
+    i18n::setLanguage(languageBefore);
+    loadDocumentBytes(readFile(path),path,0);
+    SetWindowTextW(g.search,L"GovernmentBudget");
+    const std::string budget="BaseGame.GovernmentBudget";
+    selectRow(budget);
+    SetWindowTextW(g.edit,L"43");
+    check(applyInput(),"Stage a budget edit before changing the appearance");
+    SetWindowTextW(g.edit,L"unfinished");
+    auto* session=g.session.get();
+    for(int index:{1,2,3,0}){
+        applyAppearance(index);
+        check(Theme::index()==index,"The selected appearance applies immediately");
+        check(g.session.get()==session && pending().at(budget)=="43" && g.session->canUndo(),
+              "Switching appearance preserves edits and undo history");
+        check(g.selected==budget && textOf(g.search)==L"GovernmentBudget" &&
+              textOf(g.edit)==L"unfinished" && g.editingDirty,
+              "Switching appearance preserves the search, selection and uncommitted draft");
+        DWORD saved=99,size=sizeof(saved);
+        check(RegGetValueW(HKEY_CURRENT_USER,L"Software\\SuzerainSaveStudio",L"Appearance",
+                           RRF_RT_REG_DWORD,nullptr,&saved,&size)==ERROR_SUCCESS && saved==DWORD(index),
+              "The desktop and game panel share the appearance preference");
+        Theme::use((index+1)%Theme::count);
+        Theme::load();
+        check(Theme::index()==index,"Reopening uses the saved appearance");
+    }
+    const DWORD invalid=99;
+    RegSetKeyValueW(HKEY_CURRENT_USER,L"Software\\SuzerainSaveStudio",L"Appearance",REG_DWORD,&invalid,sizeof(invalid));
+    Theme::load();
+    check(Theme::index()==0,"An unsupported saved theme falls back to Paper");
+    const wchar_t wrongType[]=L"3";
+    RegSetKeyValueW(HKEY_CURRENT_USER,L"Software\\SuzerainSaveStudio",L"Appearance",
+                    REG_SZ,wrongType,sizeof(wrongType));
+    Theme::load();
+    check(Theme::index()==0,"An invalid preference type falls back to Paper");
 }
 
 void testSearch(const fs::path& path){
@@ -128,6 +200,7 @@ int main(int argc,char** argv){
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testSearch(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));
+        testAppearance(fs::u8path(argv[1]));
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";
         return 0;

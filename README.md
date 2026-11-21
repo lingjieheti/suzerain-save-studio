@@ -2,11 +2,11 @@
 
 Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体与《Kingdom of Rizia》DLC。双击单文件程序，启动后可打开自己的存档，也可先用内置战役示例练习。
 
-**[下载 v0.12.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.12.1/SuzerainSaveStudio-0.12.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.12.1)
+**[下载 v0.13.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.0/SuzerainSaveStudio-0.13.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.0)
 
-![里奇亚存档编辑器，展示资源概览、字段搜索和当前选中字段的编辑面板](docs/images/rizia-workspace.png)
+![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
-[存档选择器](docs/images/save-picker.png) · [修改前后对照](docs/images/change-review.png) · [实时面板离线预览](docs/images/live-panel-preview.png)
+[桌面编辑器大图](docs/images/rizia-workspace.png) · [存档选择器](docs/images/save-picker.png) · [修改前后对照](docs/images/change-review.png) · [实时面板离线预览](docs/images/live-panel-preview.png)
 
 ## 快速上手
 
@@ -15,6 +15,10 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 1. 在游戏中保存并退出。启动修改器，选择自动发现的存档，或点“手动打开”。首次使用可以先选“索德兰示例”或“里奇亚示例”。
 2. 选择左侧分类，按中文名称或原始字段名查找项目。比如在索德兰经济页搜索“政府 预算”，选中后输入新值并点“应用修改”。
 3. 打开“修改预览”，核对原值与新值。可以单独撤回某项，也可以撤销或重做。选择“另存为”输出副本，或保存到原档，再回游戏读档。
+
+## 选择外观
+
+在存档选择器或编辑器点 **外观**，即可切换 **暖纸、林间、雾蓝、午夜**。暖纸保留米色与陶土色，午夜提供深色界面。切换时可继续编辑当前字段。启动后的游戏内实时面板也有四种外观，两个程序共用本机的选择，下次打开会自动沿用。
 
 ## 功能
 
@@ -34,6 +38,8 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 已对 15 个索德兰和 6 个里奇亚存档进行只读验证，并在 Windows 桌面使用合成数据测试实际保存与恢复。已检查的真实存档版本为 `3.1.0.1.175` 和 `3.1.0.1.137`。目前尚未在游戏内载入改后存档，故按预览版发布。字段修改可能影响后续剧情判定。内置示例用于练习编辑流程，无法作为完整游戏存档使用。[验证记录](VALIDATION.md) · [字段依据](docs/FIELD-EVIDENCE.md) · [语言覆盖](docs/LANGUAGES.md)
 
 ## English quick start
+
+Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
 
 Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. Testing covers the Windows editor, simulated game states and compilation against local game assemblies. Live writes inside an actual campaign remain unverified.
 

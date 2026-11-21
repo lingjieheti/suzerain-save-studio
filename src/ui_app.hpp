@@ -2,20 +2,11 @@
 #include "demo_resources.hpp"
 #include "field_search.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.12.1";
+constexpr wchar_t APP_VERSION[] = L"0.13.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
-       BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT };
-namespace Theme {
-constexpr COLORREF bg=RGB(249,247,241), sidebar=RGB(240,236,226), panel=RGB(253,251,246),
-    input=RGB(255,253,249), line=RGB(217,211,199), text=RGB(48,43,38),
-    muted=RGB(97,88,78), dim=RGB(112,102,91), select=RGB(245,224,209),
-    accent=RGB(165,77,48), accentHover=RGB(139,62,38), accentInk=RGB(132,59,38),
-    onAccent=RGB(255,250,243), focus=RGB(171,88,57), sideText=RGB(55,48,41),
-    sideMuted=RGB(101,90,77), sideLine=RGB(216,208,192), stripe=RGB(249,246,239),
-    head=RGB(242,238,228), hover=RGB(236,231,220), status=RGB(91,111,87),
-    gold=accent, goldDark=accentInk, blue=RGB(89,104,117), green=status, red=RGB(150,63,49);
-}
+       BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE };
+#include "appearance.hpp"
 struct BackupItem { fs::path path; fs::file_time_type time; uintmax_t size=0; };
 struct FieldPageState {
     std::wstring query;
@@ -60,7 +51,8 @@ void drawText(HDC dc,const std::wstring&s,RECT r,HFONT font,COLORREF color,UINT 
 RECT rect(int x,int y,int w,int h){return {px(x),px(y),px(x+w),px(y+h)};}
 void rounded(HDC dc,RECT r,COLORREF fill,COLORREF border,int radius=10){
     auto b=CreateSolidBrush(fill);auto p=CreatePen(PS_SOLID,1,border);auto ob=SelectObject(dc,b),op=SelectObject(dc,p);
-    RoundRect(dc,r.left,r.top,r.right,r.bottom,px(radius),px(radius));SelectObject(dc,ob);SelectObject(dc,op);DeleteObject(b);DeleteObject(p);
+    int corner=px(Theme::radius(radius));
+    RoundRect(dc,r.left,r.top,r.right,r.bottom,corner,corner);SelectObject(dc,ob);SelectObject(dc,op);DeleteObject(b);DeleteObject(p);
 }
 const wchar_t* pageTitle(int);void updateCampaign();
 void layout();void refresh();void updateStatus();void showSelected();void loadDocument(const fs::path&,bool=true);
@@ -79,6 +71,7 @@ HWND control(const wchar_t*cls,const wchar_t*txt,DWORD style,int id=0){
 }
 HWND button(const wchar_t*txt,int id){auto h=control(L"BUTTON",txt,WS_TABSTOP|BS_OWNERDRAW,id);SetWindowSubclass(h,buttonProc,1,0);return h;}
 #include "workspace_chrome.hpp"
+#include "appearance_menu.hpp"
 LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
     if(m==WM_ERASEBKGND)return 1;
     if(m==HDM_LAYOUT){
@@ -96,11 +89,12 @@ LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
 void fonts(){
     HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand};
     auto f=[](int size,int weight,const wchar_t*face=L"Microsoft YaHei UI"){return CreateFontW(-px(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
-    const wchar_t* body=i18n::language<=1?L"Microsoft YaHei UI":i18n::language==3?L"Yu Gothic UI":i18n::language==4?L"Malgun Gothic":L"Segoe UI";
-    const wchar_t* titleFace=i18n::language<=1?L"SimSun":i18n::language==3?L"Yu Mincho":i18n::language==4?L"Batang":L"Georgia";
-    g.font=f(14,FW_NORMAL,body);g.small=f(13,FW_NORMAL,body);g.title=f(29,FW_NORMAL,titleFace);
-    g.large=f(32,FW_NORMAL,L"Georgia");g.bold=f(18,FW_SEMIBOLD,body);g.mono=f(22,FW_NORMAL,L"Segoe UI");
-    g.brand=f(22,FW_NORMAL,L"Georgia");
+    const wchar_t* body=Theme::bodyFace();
+    const wchar_t* numberFace=Theme::index()>=2?L"Segoe UI":L"Georgia";
+    g.font=f(14,FW_NORMAL,body);g.small=f(13,FW_NORMAL,body);
+    g.title=f(29,Theme::index()>=2?FW_SEMIBOLD:FW_NORMAL,Theme::headingFace());
+    g.large=f(32,FW_NORMAL,numberFace);g.bold=f(18,FW_SEMIBOLD,body);g.mono=f(22,FW_NORMAL,L"Segoe UI");
+    g.brand=f(22,FW_NORMAL,numberFace);
     if(g.win)EnumChildWindows(g.win,[](HWND h,LPARAM){SendMessageW(h,WM_SETFONT,(WPARAM)g.font,TRUE);return TRUE;},0);
     for(HWND h:{g.path,g.meta,g.desc,g.notice,g.oldValue,g.valueLabel})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)g.small,TRUE);
     if(g.name)SendMessageW(g.name,WM_SETFONT,(WPARAM)g.bold,TRUE);
@@ -111,6 +105,40 @@ void fonts(){
     }
     for(auto h:old)if(h)DeleteObject(h);
 }
+
+void updateAppearanceLabel() {
+    rawText(ctl(APPEARANCE),std::wstring(Theme::label())+L" · "+Theme::name(Theme::index()));
+}
+void recolorWorkspace(int index) {
+    if(index==Theme::index())return;
+    Theme::use(index);
+    if(!g.win)return;
+    auto replaceBrush=[](HBRUSH& brush,COLORREF color) {
+        auto fresh=CreateSolidBrush(color);
+        if(fresh){auto old=brush;brush=fresh;if(old)DeleteObject(old);}
+    };
+    replaceBrush(g.bg,Theme::bg);replaceBrush(g.panel,Theme::panel);replaceBrush(g.input,Theme::input);
+    Theme::caption(g.win);
+    if(g.grid) {
+        SetWindowTheme(g.grid,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
+        ListView_SetBkColor(g.grid,Theme::panel);
+        ListView_SetTextBkColor(g.grid,Theme::panel);
+        ListView_SetTextColor(g.grid,Theme::text);
+    }
+    for(HWND h:{g.desc,g.helpText,ctl(LANGUAGE)})if(h)SetWindowTheme(h,Theme::dark()?L"DarkMode_Explorer":nullptr,nullptr);
+    fonts();
+    updateAppearanceLabel();
+    RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
+}
+void applyAppearance(int index) {
+    if(!Theme::valid(index))return;
+    if(!Theme::save(index)) {
+        message(i18n::language<=1?L"无法保存外观设置。":L"The appearance setting could not be saved.",MB_ICONWARNING);
+        return;
+    }
+    recolorWorkspace(index);
+}
+void syncAppearance() { recolorWorkspace(Theme::stored()); }
 void updateStatus(){
     bool loaded=bool(g.doc),any=!pending().empty()||g.editingDirty;
     for(int id:std::initializer_list<int>{PRESET99,PRESET999,SAVE,PATCH_IMPORT,AUTOCAP,RELOAD})EnableWindow(ctl(id),loaded);
@@ -362,7 +390,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.12.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.13.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -507,6 +535,7 @@ void changeLanguage(){
     g.populating=true;
     for(const auto& item:uiText)if(IsWindow(item.first)&&IsChild(g.win,item.first)&&item.first!=g.edit&&item.first!=g.search&&item.first!=g.path&&item.first!=g.meta&&item.first!=ctl(LANGUAGE))SetWindowTextW(item.first,tr(item.second).c_str());
     g.populating=false;
+    updateAppearanceLabel();
     updateCampaign();if(g.doc){rawText(g.path,documentTitle());rawText(g.meta,campaignLabel(g.doc->story)+L" / "+wide(g.doc->version)+L" / "+tr(L"回合")+L" "+wide(g.doc->turn)+L" / "+wide(g.doc->campaignName));}
     if(g.tab==7)setHelp();refresh();
 }
@@ -533,6 +562,7 @@ LRESULT CALLBACK searchProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
 void createControls(){
     auto languages=control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,LANGUAGE);for(const auto*name:i18n::names)SendMessageW(languages,CB_ADDSTRING,0,(LPARAM)name);SendMessageW(languages,CB_SETCURSEL,i18n::language,0);
     SetWindowSubclass(languages,languageFaceProc,1,0);
+    button(L"",APPEARANCE);updateAppearanceLabel();
     button(L"手动打开",OPEN);button(L"选择存档",LATEST);button(L"文件夹",FOLDER);button(L"重新载入",RELOAD);
     const wchar_t*nav[]={L"资源与经济",L"军备库存",L"家族与人物",L"外交谈判",L"高级字段",L"修改预览",L"备份管理",L"使用指南"};
     for(int i=0;i<8;++i)button(nav[i],NAV_BASE+i);
@@ -540,7 +570,7 @@ void createControls(){
     g.search=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,SEARCH);SendMessageW(g.search,EM_SETLIMITTEXT,160,0);SetWindowSubclass(g.search,searchProc,1,0);
     button(L"只看待保存",FILTER_CHANGED);button(L"导入方案",PATCH_IMPORT);
     g.grid=control(WC_LISTVIEWW,L"",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,GRID);
-    SetWindowTheme(g.grid,L"Explorer",nullptr);
+    SetWindowTheme(g.grid,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetExtendedListViewStyle(g.grid,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
     ListView_SetBkColor(g.grid,Theme::panel);ListView_SetTextBkColor(g.grid,Theme::panel);ListView_SetTextColor(g.grid,Theme::text);
     
@@ -556,9 +586,12 @@ void createControls(){
     button(L"撤销",HISTORY_UNDO);button(L"重做",HISTORY_REDO);button(L"检查修改 →",SAVE);
     button(L"使用指南",HELP_USAGE);button(L"组件许可",HELP_LICENSES);
     g.helpText=control(L"EDIT",L"",WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL,0);SendMessageW(g.helpText,EM_SETMARGINS,EC_LEFTMARGIN|EC_RIGHTMARGIN,MAKELPARAM(px(6),px(6)));
-    g.notice=control(L"STATIC",g.noticeText.c_str(),SS_ENDELLIPSIS|SS_NOPREFIX);enableHints();fonts();layout();refresh();
+    g.notice=control(L"STATIC",g.noticeText.c_str(),SS_ENDELLIPSIS|SS_NOPREFIX);
+    if(Theme::dark())for(HWND h:{g.desc,g.helpText,languages})SetWindowTheme(h,L"DarkMode_Explorer",nullptr);
+    enableHints();fonts();layout();refresh();
 }
 void command(int id,int code){
+    if(id==APPEARANCE&&code==BN_CLICKED){int selected=pickAppearance(g.win,ctl(APPEARANCE));if(selected>=0)applyAppearance(selected);return;}
     if(id==LANGUAGE&&code==CBN_SELCHANGE){changeLanguage();return;}
     if(id==EDITVALUE&&code==EN_CHANGE&&!g.populating){g.editingDirty=true;toast(L"未保存");updateStatus();return;}
     if(id==SEARCH&&code==EN_CHANGE&&!g.populating&&g.tab<5){
@@ -600,13 +633,17 @@ void command(int id,int code){
     }
 }
 LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
-    try{switch(m){
+    try{
+    if(themeMenuMessage(m,wp,lp))return TRUE;
+    switch(m){
     case WM_CREATE:g.win=w;g.dpi=GetDpiForWindow(w);if(!g.dpi)g.dpi=96;createControls();DragAcceptFiles(w,TRUE);return 0;
     case WM_SIZE:layout();return 0;
+    case WM_ACTIVATE:if(LOWORD(wp)!=WA_INACTIVE&&g.grid)syncAppearance();break;
     case WM_GETMINMAXINFO:{auto*i=(MINMAXINFO*)lp;RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);i->ptMinTrackSize={std::min<LONG>(px(680),area.right-area.left),std::min<LONG>(px(485),area.bottom-area.top)};return 0;}
     case WM_DPICHANGED:g.dpi=HIWORD(wp);{auto*r=(RECT*)lp;SetWindowPos(w,nullptr,r->left,r->top,r->right-r->left,r->bottom-r->top,SWP_NOZORDER|SWP_NOACTIVATE);}fonts();layout();return 0;
     case WM_PAINT:paint();return 0;case WM_ERASEBKGND:return 1;
     case WM_DRAWITEM:if(((DRAWITEMSTRUCT*)lp)->CtlType==ODT_BUTTON){drawButton((DRAWITEMSTRUCT*)lp);return TRUE;}break;
+    case WM_CTLCOLORLISTBOX:SetTextColor((HDC)wp,Theme::text);SetBkColor((HDC)wp,Theme::input);return (LRESULT)g.input;
     case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.path||h==g.meta||h==g.notice||h==g.desc||h==g.valueLabel?Theme::muted:Theme::text);
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
@@ -648,16 +685,14 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     }}catch(const std::exception&e){message(L"操作没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}catch(...){message(L"操作没有完成。请重新打开存档后重试。",MB_OK|MB_ICONERROR);}return DefWindowProcW(w,m,wp,lp);
 }
 int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();Theme::load();
     INITCOMMONCONTROLSEX ic{sizeof(ic),ICC_WIN95_CLASSES};InitCommonControlsEx(&ic);
     g.bg=CreateSolidBrush(Theme::bg);g.panel=CreateSolidBrush(Theme::panel);g.input=CreateSolidBrush(Theme::input);fonts();
-    WNDCLASSEXW c{};c.cbSize=sizeof(c);c.style=CS_HREDRAW|CS_VREDRAW;c.lpfnWndProc=windowProc;c.hInstance=inst;c.hCursor=LoadCursor(nullptr,IDC_ARROW);c.hbrBackground=g.bg;c.lpszClassName=APP_CLASS;c.hIcon=LoadIconW(inst,MAKEINTRESOURCEW(101));c.hIconSm=c.hIcon;RegisterClassExW(&c);
+    WNDCLASSEXW c{};c.cbSize=sizeof(c);c.style=CS_HREDRAW|CS_VREDRAW;c.lpfnWndProc=windowProc;c.hInstance=inst;c.hCursor=LoadCursor(nullptr,IDC_ARROW);c.lpszClassName=APP_CLASS;c.hIcon=LoadIconW(inst,MAKEINTRESOURCEW(101));c.hIconSm=c.hIcon;RegisterClassExW(&c);
     RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);UINT dpi=GetDpiForSystem();int width=std::min<int>(MulDiv(1280,dpi,96),area.right-area.left),height=std::min<int>(MulDiv(900,dpi,96),area.bottom-area.top);
     HWND w=CreateWindowExW(WS_EX_ACCEPTFILES,APP_CLASS,APP_TITLE,WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,area.left+(area.right-area.left-width)/2,area.top+(area.bottom-area.top-height)/2,width,height,nullptr,nullptr,inst,nullptr);
     if(!w)return 1;
-    BOOL dark=FALSE;DwmSetWindowAttribute(w,DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof(dark));
-    COLORREF caption=Theme::bg,captionText=Theme::text;
-    DwmSetWindowAttribute(w,DWMWA_CAPTION_COLOR,&caption,sizeof(caption));DwmSetWindowAttribute(w,DWMWA_TEXT_COLOR,&captionText,sizeof(captionText));
+    Theme::caption(w);
     ShowWindow(w,show);UpdateWindow(w);
     int argc=0;auto argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(argv&&argc>1){if(std::wstring(argv[1])==L"--licenses"){g.licenseMode=true;navigate(7);}else loadDocument(fs::path(argv[1]),false);}else PostMessageW(w,WM_APP+2,0,0);if(argv)LocalFree(argv);
     MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){

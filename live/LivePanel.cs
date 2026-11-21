@@ -7,19 +7,10 @@ namespace SuzerainSaveStudio.Live
 {
     public sealed class LivePanel : MonoBehaviour
     {
-        private const float MaxWidth = 526, MinWidth = 316, Height = 354, Inset = 17;
-        private static readonly Color Paper = new Color32(249,247,241,255);
-        private static readonly Color Card = new Color32(255,253,248,255);
-        private static readonly Color Line = new Color32(214,208,196,255);
-        private static readonly Color Ink = new Color32(49,43,37,255);
-        private static readonly Color Muted = new Color32(102,94,83,255);
-        private static readonly Color Clay = new Color32(154,68,42,255);
-        private static readonly Color ClayHover = new Color32(134,55,34,255);
-        private static readonly Color Blush = new Color32(248,231,218,255);
-        private static readonly Color Hover = new Color32(240,235,224,255);
-        private static readonly Color Pine = new Color32(55,95,68,255);
-        private static readonly Color MossTint = new Color32(232,240,229,255);
-        private static readonly Color Warning = new Color32(134,62,41,255);
+        private const float MaxWidth = 526, MinWidth = 316, Height = 392, Inset = 17;
+        private static readonly string[] ThemeControls = { "theme-paper", "theme-forest", "theme-fjord", "theme-midnight" };
+        private int appearance, styledAppearance = -1;
+        private PanelAppearance palette = PanelAppearance.Choices[0];
         private enum Feedback { Info, Success, Warning }
 
         private bool visible, hotkeyHeld, chinese;
@@ -32,7 +23,7 @@ namespace SuzerainSaveStudio.Live
         private float width;
         private Feedback feedback;
         private string focused = "", activate = "";
-        private GUIStyle title, number, fieldName, body, caption, rightCaption, action, onClay, input;
+        private GUIStyle title, number, fieldName, body, caption, rightCaption, action, primaryAction, themeLabel, input;
         private Font panelFont, displayFont;
 
         public LivePanel(IntPtr ptr) : base(ptr) { }
@@ -65,7 +56,11 @@ namespace SuzerainSaveStudio.Live
                 if (!hotkeyHeld) {
                     hotkeyHeld = true;
                     visible = !visible;
-                    if (visible) Refresh();
+                    if (visible) {
+                        appearance = AppearancePreference.Read();
+                        palette = PanelAppearance.Choices[appearance];
+                        Refresh();
+                    }
                     else confirming = false;
                 }
                 ev.Use();
@@ -261,6 +256,7 @@ namespace SuzerainSaveStudio.Live
                     foreach (var field in snapshot.Fields) order.Add(field.Key);
                     order.Add("value"); order.Add("preview");
                 }
+                order.AddRange(ThemeControls);
                 int index = order.IndexOf(focused);
                 if (index < 0) index = ev.shift ? 0 : -1;
                 focused = order[(index+(ev.shift?-1:1)+order.Count)%order.Count];
@@ -279,36 +275,57 @@ namespace SuzerainSaveStudio.Live
         [HideFromIl2Cpp]
         private void EnsureStyles()
         {
-            if (title != null) return;
-            panelFont = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Microsoft YaHei" },16);
-            displayFont = Font.CreateDynamicFontFromOSFont(new[] { "Georgia", "SimSun", "Microsoft YaHei" },25);
-            title = Style(25,Ink,displayFont);
-            number = Style(24,Ink,displayFont);
-            fieldName = Style(13,Muted,panelFont);
-            body = Style(16,Ink,panelFont);
-            caption = Style(13,Muted,panelFont);
-            caption.wordWrap = true;
-            rightCaption = Style(13,Muted,panelFont,TextAnchor.MiddleRight);
-            action = Style(14,Ink,panelFont,TextAnchor.MiddleCenter);
-            onClay = Style(14,Color.white,panelFont,TextAnchor.MiddleCenter);
-            input = Style(20,Ink,panelFont);
-            input.padding = new RectOffset(9,8,0,0);
-            input.contentOffset = Vector2.zero;
+            if (styledAppearance == appearance) return;
+            if (title == null)
+            {
+                panelFont = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Microsoft YaHei" },16);
+                displayFont = Font.CreateDynamicFontFromOSFont(new[] { "Georgia", "SimSun", "Microsoft YaHei" },25);
+                title = Style(25,displayFont);
+                number = Style(24,displayFont);
+                fieldName = Style(13,panelFont);
+                body = Style(16,panelFont);
+                caption = Style(13,panelFont);
+                caption.wordWrap = true;
+                rightCaption = Style(13,panelFont,TextAnchor.MiddleRight);
+                action = Style(14,panelFont,TextAnchor.MiddleCenter);
+                primaryAction = Style(14,panelFont,TextAnchor.MiddleCenter);
+                themeLabel = Style(13,panelFont,TextAnchor.MiddleCenter);
+                input = Style(20,panelFont);
+                input.padding = new RectOffset(9,8,0,0);
+                input.contentOffset = Vector2.zero;
+            }
+            title.font = number.font = palette.SerifHeadings ? displayFont : panelFont;
+            SetInk(title,palette.Text);
+            SetInk(number,palette.Text);
+            SetInk(body,palette.Text);
+            SetInk(action,palette.Text);
+            SetInk(input,palette.Text);
+            SetInk(themeLabel,palette.Text);
+            SetInk(fieldName,palette.Muted);
+            SetInk(caption,palette.Muted);
+            SetInk(rightCaption,palette.Muted);
+            SetInk(primaryAction,palette.OnAccent);
+            styledAppearance = appearance;
         }
 
         [HideFromIl2Cpp]
-        private static GUIStyle Style(int size,Color color,Font font,TextAnchor align = TextAnchor.MiddleLeft)
+        private static GUIStyle Style(int size,Font font,TextAnchor align = TextAnchor.MiddleLeft)
         {
             var style = new GUIStyle();
             style.fontSize = size;
             style.font = font;
             style.alignment = align;
             style.clipping = TextClipping.Clip;
+            return style;
+        }
+
+        [HideFromIl2Cpp]
+        private static void SetInk(GUIStyle style,Color color)
+        {
             style.normal.textColor = color;
             style.hover.textColor = color;
             style.active.textColor = color;
             style.focused.textColor = color;
-            return style;
         }
 
         [HideFromIl2Cpp]
@@ -342,9 +359,9 @@ namespace SuzerainSaveStudio.Live
         {
             bool hovered = r.Contains(Event.current.mousePosition);
             bool focus = focused == id;
-            Color face = primary ? (hovered ? ClayHover : Clay) : (hovered ? Hover : Card);
-            PaperBox(r,face,focus ? Ink : (primary ? face : Line),7,focus ? 2 : 1);
-            return Press(r,id,text,primary ? onClay : action);
+            Color face = primary ? (hovered ? palette.AccentHover : palette.Accent) : (hovered ? palette.Hover : palette.Surface);
+            PaperBox(r,face,focus ? palette.Text : (primary ? face : palette.Border),7,focus ? 2 : 1);
+            return Press(r,id,text,primary ? primaryAction : action);
         }
 
         [HideFromIl2Cpp]
@@ -361,7 +378,7 @@ namespace SuzerainSaveStudio.Live
             float content = width-2*Inset;
             bool ready = snapshot?.CanEdit == true;
             bool known = snapshot?.Story=="StoryPack_Main" || snapshot?.Story=="StoryPack_Rizia";
-            PaperBox(new Rect(0,0,width,Height),Paper,Line,13);
+            PaperBox(new Rect(0,0,width,Height),palette.Background,palette.Border,13);
             GUI.Label(new Rect(Inset,10,content-129,37),T("实时编辑","Live editor"),title);
             if (Button(new Rect(width-Inset-133,15,70,29),"language",T("English","简体中文")))
                 chinese = !chinese;
@@ -373,17 +390,17 @@ namespace SuzerainSaveStudio.Live
                 ? (snapshot.Story=="StoryPack_Main"?T("索德兰","Sordland"):T("里奇亚","Rizia"))+
                     "  ·  "+T("回合 ","Turn ")+snapshot.Turn+"  ·  "+T("步骤 ","Step ")+snapshot.Step
                 : T("等待战役","Waiting for a campaign");
-            Fill(new Rect(Inset,59,7,7),ready ? Pine : Muted,3.5f);
+            Fill(new Rect(Inset,59,7,7),ready ? palette.Success : palette.Muted,3.5f);
             GUI.Label(new Rect(Inset+14,49,content-97,26),campaign,caption);
             if (Button(new Rect(width-Inset-74,49,74,26),"refresh",T("刷新","Refresh"))) Refresh();
-            Fill(new Rect(Inset,83,content,1),Line);
+            Fill(new Rect(Inset,83,content,1),palette.Border);
 
             bool hasFields = snapshot != null && snapshot.Fields.Count > 0;
             if (hasFields) DrawFields(content,ready);
             if (!ready || !hasFields)
             {
                 float top = hasFields ? 171 : 96;
-                PaperBox(new Rect(Inset,top,content,280-top),Card,Line,9);
+                PaperBox(new Rect(Inset,top,content,280-top),palette.Surface,palette.Border,9);
                 GUI.Label(new Rect(Inset+14,top+9,content-28,30),
                     hasFields ? T("只读","Read only") : T("当前没有可编辑的战役","No editable campaign"),body);
                 string detail = LocalStatus(snapshot?.Status);
@@ -406,8 +423,8 @@ namespace SuzerainSaveStudio.Live
                 bool selected = field.Key == key;
                 bool enabled = !confirming && ready;
                 bool focus = enabled && focused == field.Key;
-                Color fill = selected ? Blush : enabled && r.Contains(Event.current.mousePosition) ? Hover : Card;
-                PaperBox(r,fill,focus ? Ink : (selected ? Clay : Line),8,focus ? 2 : 1);
+                Color fill = selected ? palette.Selection : enabled && r.Contains(Event.current.mousePosition) ? palette.Hover : palette.Surface;
+                PaperBox(r,fill,focus ? palette.Text : (selected ? palette.Accent : palette.Border),8,focus ? 2 : 1);
                 if (enabled && Press(r,field.Key,"",action) && !selected)
                 {
                     Select(field);
@@ -432,7 +449,7 @@ namespace SuzerainSaveStudio.Live
         [HideFromIl2Cpp]
         private void DrawEditor(LiveField selected,float content)
         {
-            PaperBox(new Rect(Inset,170,content,110),Card,confirming ? Clay : Line,9);
+            PaperBox(new Rect(Inset,170,content,110),palette.Surface,confirming ? palette.Accent : palette.Border,9);
             float x = Inset+13, inside = content-26;
             if (confirming)
             {
@@ -457,7 +474,7 @@ namespace SuzerainSaveStudio.Live
             Rect edit = new Rect(x,215,inside-buttonW-8,42);
             if (Event.current.type==EventType.MouseDown && edit.Contains(Event.current.mousePosition)) focused="value";
             bool editing = focused == "value";
-            PaperBox(edit,Paper,editing ? Clay : Line,6,editing ? 2 : 1);
+            PaperBox(edit,palette.Background,editing ? palette.Accent : palette.Border,6,editing ? 2 : 1);
             GUI.SetNextControlName("value");
             var settings = GUI.skin.settings;
             var oldCursor = settings.cursorColor;
@@ -465,8 +482,8 @@ namespace SuzerainSaveStudio.Live
             string entered;
             try
             {
-                settings.cursorColor=Ink;
-                settings.selectionColor=new Color32(224,178,145,204);
+                settings.cursorColor=palette.Text;
+                settings.selectionColor=palette.Selection;
                 entered=GUI.TextField(edit,draft,12,input);
             }
             finally { settings.cursorColor=oldCursor; settings.selectionColor=oldSelection; }
@@ -488,14 +505,34 @@ namespace SuzerainSaveStudio.Live
             {
                 bool signal = feedback != Feedback.Info;
                 if (signal)
-                    Fill(new Rect(Inset,286,content,39),feedback==Feedback.Success?MossTint:Blush,6);
+                    Fill(new Rect(Inset,286,content,39),feedback==Feedback.Success?palette.SuccessSurface:palette.WarningSurface,6);
                 Color old = caption.normal.textColor;
-                caption.normal.textColor = feedback==Feedback.Success ? Pine : feedback==Feedback.Warning ? Warning : Muted;
+                caption.normal.textColor = feedback==Feedback.Success ? palette.Success : feedback==Feedback.Warning ? palette.Warning : palette.Muted;
                 GUI.Label(new Rect(Inset+(signal?9:0),286,content-(signal?18:0),39),details,caption);
                 caption.normal.textColor = old;
             }
-            Fill(new Rect(Inset,329,content,1),Line);
-            GUI.Label(new Rect(Inset,330,content,21),T("Ctrl+F8  显示或隐藏面板","Ctrl+F8  Show or hide panel"),rightCaption);
+            Fill(new Rect(Inset,329,content,1),palette.Border);
+            GUI.Label(new Rect(Inset,336,41,28),T("外观","Theme"),caption);
+            float labelWidth = content >= 345 ? 57 : 43;
+            float choiceWidth = (content - labelWidth - 12) / 4;
+            for (int i = 0; i < ThemeControls.Length; i++)
+            {
+                var choice = PanelAppearance.Choices[i];
+                var rect = new Rect(Inset+labelWidth+i*(choiceWidth+4),335,choiceWidth,30);
+                bool selected = i == appearance, focus = focused == ThemeControls[i];
+                Color face = selected ? palette.Selection : rect.Contains(Event.current.mousePosition) ? palette.Hover : palette.Surface;
+                Color border = focus ? palette.Text : selected ? palette.Accent : palette.Border;
+                PaperBox(rect,face,border,6,focus || selected ? 2 : 1);
+                if (choiceWidth >= 89) Fill(new Rect(rect.x+10,rect.y+11.5f,7,7),choice.Accent,3.5f);
+                if (Press(rect,ThemeControls[i],T(choice.Chinese,choice.English),themeLabel) && !selected)
+                {
+                    appearance = i;
+                    palette = choice;
+                    if (!AppearancePreference.Write(i))
+                        Notice("外观已切换，本次选择未能保存。","Theme applied for this session only.","",Feedback.Warning);
+                }
+            }
+            GUI.Label(new Rect(Inset,367,content,22),T("Ctrl+F8  显示或隐藏面板","Ctrl+F8  Show or hide panel"),rightCaption);
         }
     }
 }
