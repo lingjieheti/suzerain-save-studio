@@ -29,7 +29,7 @@ class PackagingTests(unittest.TestCase):
     def test_guide_links_work_on_github_and_offline(self):
         guide = self.root / "docs/QUICKSTART.md"
         online_target = re.search(r"\[实时面板说明\]\(([^)]+)\)", guide.read_text("utf-8")).group(1)
-        self.assertEqual((guide.parent / online_target).resolve(), self.root / "live/README.zh-CN.md")
+        self.assertTrue((guide.parent / online_target).samefile(self.root / "live/README.zh-CN.md"))
         archive = package(self.output, root=self.root)
         with ZipFile(archive) as bundle:
             offline_guide = bundle.read("使用说明.md").decode("utf-8")
