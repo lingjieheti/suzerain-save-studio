@@ -527,14 +527,21 @@ void saveDocument(bool as){
         fs::path dest=(as||g.demoResource)?pickFile(true):g.file;if(dest.empty())return;
         if(g.demoResource){
             auto bytes=g.doc->render(changes);
-            atomicSave(dest,bytes,nullptr,true);
+            atomicSave(dest,bytes,nullptr);
             loadDocumentBytes(bytes,{},g.demoResource);
             toast(L"示例副本已保存。");
             return;
         }
-        bool original=samePath(dest,g.file);
-        if(!original&&fs::exists(dest)){auto d=rizia::Document::parse(readFile(dest));if(d.story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");}
-        auto bytes=g.doc->render(changes);auto bak=atomicSave(dest,bytes,original?&g.doc->original:nullptr);
+        std::string destinationBytes;
+        const std::string* expected=nullptr;
+        if(samePath(dest,g.file)){
+            expected=&g.doc->original;
+        }else if(fs::exists(dest)){
+            destinationBytes=readFile(dest);
+            expected=&destinationBytes;
+        }
+        auto bytes=g.doc->render(changes);
+        atomicSave(dest,bytes,expected);
         loadDocument(dest,false);toast(as?L"已另存。游戏未显示自定义文件名时，请使用原存档名称和位置。":L"已保存并校验备份。请回到游戏主菜单，手动读取这份存档。");
     }catch(const std::exception&e){message(L"保存没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }

@@ -31,6 +31,7 @@ inline const std::map<std::wstring,Entry>& dictionary(){
     static const auto rows=[](){std::map<std::wstring,Entry> out;
         const wchar_t* data[]={
 // Chinese, English, Japanese, Korean, German, French, Spanish, Brazilian Portuguese, Russian, Turkish.
+L"目标文件已存在。请选择其他文件名。|The destination file already exists. Choose a different filename.|保存先のファイルは既に存在します。別のファイル名を選んでください。|대상 파일이 이미 있습니다. 다른 파일 이름을 선택하세요.|Die Zieldatei existiert bereits. Wähle einen anderen Dateinamen.|Le fichier de destination existe déjà. Choisissez un autre nom.|El archivo de destino ya existe. Elige otro nombre.|O arquivo de destino já existe. Escolha outro nome.|Файл с таким именем уже существует. Выберите другое имя.|Hedef dosya zaten var. Başka bir dosya adı seçin.",
 L"实时模式|Live mode|リアルタイム|실시간 모드|Live-Modus|Mode en direct|Modo en vivo|Modo ao vivo|В игре|Canlı mod",
 L"选择存档|Select save|セーブ選択|저장 선택|Spielstand wählen|Choisir une sauvegarde|Elegir partida|Escolher jogo salvo|Выбрать сохранение|Kayıt seç",
 L"内置练习示例|Practice saves|練習用サンプル|연습용 예제|Übungsbeispiele|Exemples intégrés|Ejemplos de práctica|Exemplos de prática|Учебные примеры|Alıştırma örnekleri",

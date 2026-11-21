@@ -37,10 +37,10 @@ int main(int argc,char** argv){
                   "Concurrent save was not blocked before backup/write");
         }
         const auto practiceCopy=root/"practice.json";
-        check(atomicSave(practiceCopy,mainNew,nullptr,true).empty()&&readFile(practiceCopy)==mainNew,"Practice copy was not created");
-        rejects([&]{atomicSave(mainPath,mainNew,nullptr,true);},"Practice save overwrote an existing file");
+        check(atomicSave(practiceCopy,mainNew,nullptr).empty()&&readFile(practiceCopy)==mainNew,"Practice copy was not created");
+        rejects([&]{atomicSave(mainPath,mainNew,nullptr);},"Practice save overwrote an existing file");
         check(readFile(mainPath)==mainOld&&!fs::exists(root/".rizia-backups"),"Rejected practice save changed the destination");
-        rejects([&]{atomicSave(mainPath,riziaNew,nullptr);},"Cross-story overwrite accepted");
+        rejects([&]{atomicSave(mainPath,riziaNew,&mainOld);},"Cross-story overwrite accepted");
         check(readFile(mainPath)==mainOld&&!fs::exists(root/".rizia-backups"),"Rejected cross-story overwrite changed files");
         rejects([&]{atomicSave(riziaPath,mainNew,&riziaOld);},"Cross-story overwrite with expected bytes accepted");
         check(readFile(riziaPath)==riziaOld,"Rizia changed on mismatch");
@@ -50,6 +50,24 @@ int main(int argc,char** argv){
         std::string stale=mainOld+" ";
         rejects([&]{atomicSave(mainPath,mainNew,&stale);},"Stale opened bytes accepted");
         check(readFile(mainPath)==mainOld,"Stale rejection changed save");
+        const auto copyTarget=root/"alternate-slot.json";
+        const auto otherProgress=save("StoryPack_Main","BaseGame.",9);
+        // Another writer creates, changes or removes the chosen slot while
+        // Studio is rendering the edits from mainPath.
+        write(copyTarget,mainOld);
+        rejects([&]{atomicSave(copyTarget,mainNew,nullptr);},"Save As overwrote a newly created slot");
+        check(readFile(copyTarget)==mainOld,"Newly created slot changed");
+        const auto chosenBytes=readFile(copyTarget);
+        write(copyTarget,otherProgress);
+        rejects([&]{atomicSave(copyTarget,mainNew,&chosenBytes);},"Save As overwrote newer progress");
+        check(readFile(copyTarget)==otherProgress,"External progress was lost");
+        fs::remove(copyTarget);
+        rejects([&]{atomicSave(copyTarget,mainNew,&chosenBytes);},"Save As recreated a removed slot");
+        check(!fs::exists(copyTarget)&&!fs::exists(root/".rizia-backups"),"Conflicts wrote a slot or a backup");
+        write(copyTarget,chosenBytes);
+        const auto copyBackup=atomicSave(copyTarget,mainNew,&chosenBytes);
+        check(readFile(copyTarget)==mainNew&&readFile(copyBackup)==chosenBytes&&readFile(mainPath)==mainOld,
+              "An unchanged Save As destination must keep its own exact backup and leave the source alone");
         const auto mainBackup=atomicSave(mainPath,mainNew,&mainOld);
         check(readFile(mainPath)==mainNew&&readFile(mainBackup)==mainOld,"Main save/backup not byte-exact");
         const auto branchPath=root/"main.json.branch.json";
@@ -83,10 +101,10 @@ int main(int argc,char** argv){
               "Writing a recovery point changed its bytes or created nested backups");
         fs::create_directories(archive/"subfolder");
         const auto protectedCopy=archive/"subfolder"/"export.json";
-        rejects([&]{atomicSave(protectedCopy,mainOld,nullptr,true);},"New save created inside a backup subfolder");
+        rejects([&]{atomicSave(protectedCopy,mainOld,nullptr);},"New save created inside a backup subfolder");
         check(!fs::exists(protectedCopy),"Rejected nested destination was created");
         const auto recovered=root/"recovered.json";
-        check(atomicSave(recovered,readFile(mainBackup),nullptr,true).empty()&&readFile(recovered)==mainOld,
+        check(atomicSave(recovered,readFile(mainBackup),nullptr).empty()&&readFile(recovered)==mainOld,
               "Saving a separate copy from a protected backup failed");
         const auto riziaBackup=atomicSave(riziaPath,riziaNew,&riziaOld);
         check(readFile(riziaPath)==riziaNew&&readFile(riziaBackup)==riziaOld,"Rizia save/backup not byte-exact");
