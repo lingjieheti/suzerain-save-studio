@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可以用手机扫描 PayPal 或 USDT 收款码。收款码内置在程序中，离线也能显示。USDT 使用 **TRON（TRC20）** 网络，地址可直接复制。
 
-**[下载 v0.17.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.1/SuzerainSaveStudio-0.17.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.1) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.17.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.2/SuzerainSaveStudio-0.17.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.2) · [♡ 赞助作者](SPONSOR.md)
 
 ![Windows 桌面编辑器中的里奇亚示例，雾蓝主题和微软雅黑 UI](docs/images/rizia-workspace.png)
 

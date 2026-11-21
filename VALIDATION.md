@@ -1,6 +1,11 @@
-# v0.17.1 Preview — Windows validation
+# v0.17.2 Preview — Windows validation
 
-The Windows x64 archive includes the 0.17.1 editor and optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.17.2 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## In-app support in 0.17.2
+
+- The desktop editor passed 860 local checks. All eleven interface languages offered two payment methods, PayPal and USDT on TRON (TRC20). The two retired bitmap resource IDs were absent from the built executable.
+- A local QR scan of the documentation found no codes in the ten product screenshots. Each of the two sponsor images decoded to its listed payment destination.
 
 ## Ctrl-triggered choice previews in 0.17.1
 
