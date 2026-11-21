@@ -4,7 +4,7 @@
 
 Bu aracı kendi Suzerain kayıtlarımı düzenlemek için yaptım. Sordland'da devlet bütçesini kontrol etmek, Rizia'da ise elimdeki enerjiyi ve tur başına ne kadar değiştiğini görmek için kullanıyorum.
 
-**[Windows 10/11 x64 için 0.17.3 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.3/SuzerainSaveStudio-0.17.3-Live-Preview-win-x64.zip)**
+**[Windows 10/11 x64 için 0.17.4 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.4/SuzerainSaveStudio-0.17.4-Live-Preview-win-x64.zip)**
 
 **Ctrl+F8** panelinde seçenek önizlemesini açıp paneli kapatın. İmleci bir seçeneğin üzerine getirin ve etkilerini görmek için sol veya sağ **Ctrl** tuşuna bir kez basıp bırakın. Tekrar bastığınızda veya imleci uzaklaştırdığınızda ipucu kapanır. Başka bir seçeneği incelemek için imleci üzerine getirip Ctrl tuşuna basın. Özellik varsayılan olarak kapalıdır. Bazı sonuçlar hikâyenin ilerleyişine bağlıdır.
 
@@ -22,4 +22,4 @@ Kaynakları oyun sırasında değiştirmek için düzenleyiciden isteğe bağlı
 
 Bu araç işinize yaradıysa bana bir kahve ısmarlayabilirsiniz. Desteğiniz için teşekkür ederim!
 
-[PayPal](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2) · [TRON (TRC20) ağında USDT](../../SPONSOR.md#usdttrc20)
+[Destek seçeneklerini görüntüle](../../SPONSOR.md) — WeChat Pay · Alipay · PayPal · USDT

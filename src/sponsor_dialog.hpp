@@ -6,14 +6,23 @@ using sponsor_text::Key;
 using sponsor_text::get;
 
 inline constexpr wchar_t tronAddress[]=L"TXE2VuxUSFsenJvmz3Z8oSm7dqPLAUWfRE";
+inline constexpr wchar_t alipayUrl[]=L"https://qr.alipay.com/fkx13023nip9yxdtfe6qqbe";
 inline constexpr wchar_t paypalUrl[]=L"https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2";
 struct Method {
-    Key name, hint, action;
+    Key name, hint;
     int bitmapId;
+    const wchar_t* page;
+
+    const wchar_t* actionLabel() const {
+        if(page)return get(Key::OpenPage);
+        return name==Key::USDT?get(Key::CopyAddress):L"";
+    }
 };
 inline constexpr Method methods[]={
-    {Key::PayPal,Key::ScanPayPal,Key::OpenPage,206},
-    {Key::USDT,Key::ScanUSDT,Key::CopyAddress,207}
+    {Key::WeChat,Key::ScanWeChat,204,nullptr},
+    {Key::Alipay,Key::ScanAlipay,205,alipayUrl},
+    {Key::PayPal,Key::ScanPayPal,206,paypalUrl},
+    {Key::USDT,Key::ScanUSDT,207,nullptr}
 };
 inline constexpr int methodCount=static_cast<int>(std::size(methods));
 enum Control { FirstMethod=610, LastMethod=FirstMethod+methodCount-1, Qr, MethodName, Hint, Address, Action, Heading, Introduction };
@@ -78,8 +87,10 @@ inline void layout(const State& s) {
         move(FirstMethod+i,x,tabs,next-x-5,34);
     }
     move(Qr,pad,bodyTop+(bodyEnd-bodyTop-code)/2,code,code);
-    const int titleHeight=textHeight(get(methods[s.method].name),s.methodFont,detailWidth)+1;
-    const int hintHeight=textHeight(get(methods[s.method].hint),s.body,detailWidth)+1;
+    const auto& method=methods[s.method];
+    const auto actionLabel=method.actionLabel();
+    const int titleHeight=textHeight(get(method.name),s.methodFont,detailWidth)+1;
+    const int hintHeight=textHeight(get(method.hint),s.body,detailWidth)+1;
     const int addressLine=textHeight(L"A",s.addressFont,detailWidth);
     int addressHeight=2*addressLine+4;
     const int closeWidth=104, footerY=h-(compact?37:43);
@@ -89,16 +100,15 @@ inline void layout(const State& s) {
         const int addressWidth=typography::width(dc,s.addressFont,tronAddress);
         const int innerWidth=std::max(1,s.scale(detailWidth-5));
         addressHeight=((addressWidth+innerWidth-1)/innerWidth)*addressLine+4;
-        auto label=get(methods[s.method].action);
-        int labelWidth=typography::width(dc,s.body,label);
-        if(methods[s.method].action==Key::CopyAddress)labelWidth=std::max(labelWidth,typography::width(dc,s.body,get(Key::Copied)));
+        int labelWidth=typography::width(dc,s.body,actionLabel);
+        if(method.name==Key::USDT)labelWidth=std::max(labelWidth,typography::width(dc,s.body,get(Key::Copied)));
         actionWidth=std::min(maxActionWidth,std::max(116,MulDiv(labelWidth,96,s.dpi)+28));
         ReleaseDC(s.win,dc);
     }
     const int spacing=compact?4:8;
     int groupHeight=hintHeight;
-    if(methods[s.method].action==Key::CopyAddress)groupHeight+=spacing+addressHeight;
-    if(!compact)groupHeight+=spacing+4+32;
+    if(method.name==Key::USDT)groupHeight+=spacing+addressHeight;
+    if(!compact && *actionLabel)groupHeight+=spacing+4+32;
     // The selected radio already names the method on short work areas.
     const bool showName=!compact || titleHeight+spacing+groupHeight<=bodyEnd-bodyTop;
     if(showName)groupHeight+=titleHeight+spacing;
@@ -110,7 +120,7 @@ inline void layout(const State& s) {
     }
     move(Hint,col,y,detailWidth,hintHeight);
     y+=hintHeight;
-    if(methods[s.method].action==Key::CopyAddress){
+    if(method.name==Key::USDT){
         y+=spacing;
         move(Address,col,y,detailWidth,addressHeight);
         y+=addressHeight;
@@ -143,8 +153,10 @@ inline void selectMethod(State& s,int method) {
     SetDlgItemTextW(s.win,MethodName,get(methods[method].name));
     SetDlgItemTextW(s.win,Hint,get(methods[method].hint));
     SetDlgItemTextW(s.win,Qr,get(methods[method].name));
-    SetDlgItemTextW(s.win,Action,get(methods[method].action));
-    ShowWindow(GetDlgItem(s.win,Address),methods[method].action==Key::CopyAddress?SW_SHOW:SW_HIDE);
+    const auto actionLabel=methods[method].actionLabel();
+    SetDlgItemTextW(s.win,Action,actionLabel);
+    ShowWindow(GetDlgItem(s.win,Action),*actionLabel?SW_SHOW:SW_HIDE);
+    ShowWindow(GetDlgItem(s.win,Address),methods[method].name==Key::USDT?SW_SHOW:SW_HIDE);
     layout(s);
     RedrawWindow(s.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
@@ -167,13 +179,14 @@ inline bool copyAddress(HWND owner) {
 }
 
 inline void act(State& s) {
-    if(methods[s.method].action==Key::CopyAddress){
+    const auto& method=methods[s.method];
+    if(method.name==Key::USDT){
         if(copyAddress(s.win)){
             SetDlgItemTextW(s.win,Action,get(Key::Copied));
             layout(s);
         }else MessageBoxW(s.win,get(Key::CopyFailed),get(Key::Title),MB_OK|MB_ICONWARNING);
-    }else{
-        const auto result=ShellExecuteW(s.win,L"open",paypalUrl,
+    }else if(method.page){
+        const auto result=ShellExecuteW(s.win,L"open",method.page,
                                         nullptr,nullptr,SW_SHOWNORMAL);
         if(reinterpret_cast<INT_PTR>(result)<=32)
             MessageBoxW(s.win,get(Key::OpenFailed),get(Key::Title),MB_OK|MB_ICONWARNING);

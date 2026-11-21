@@ -4,7 +4,7 @@
 
 『Suzerain』を遊ぶときに使っている、自作のセーブエディターです。ソードランドでもリジアでも、予算を確認したり、資源の値を少し調整したりできます。
 
-[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.3/SuzerainSaveStudio-0.17.3-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.4/SuzerainSaveStudio-0.17.4-Live-Preview-win-x64.zip)
 
 選択肢の効果を事前に見るには、**Ctrl+F8** でパネルを開き、選択肢のプレビューを有効にしてからパネルを閉じます。選択肢にカーソルを合わせ、左右どちらかの **Ctrl** キーを軽く押すと効果が表示されます。もう一度押すか、カーソルを外すと閉じます。別の選択肢を確認するときは、その上で再度 Ctrl を押してください。初期設定はオフです。その後の展開によって決まる結果は表示できない場合があります。
 
@@ -22,4 +22,4 @@ ZIP を展開し、`SuzerainSaveStudio.exe` を起動します。まずは同梱
 
 セーブデータを探し回る手間が少しでも省けたら、コーヒー一杯分の応援をいただけるとうれしいです。
 
-[PayPal](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2) · [USDT（TRON／TRC20）](../../SPONSOR.md#usdttrc20)
+[支援方法を見る](../../SPONSOR.md) — WeChat Pay · Alipay · PayPal · USDT
