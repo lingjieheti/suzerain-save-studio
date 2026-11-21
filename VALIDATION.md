@@ -1,6 +1,6 @@
-# v0.13.0 Preview — Windows validation
+# v0.13.1 Preview — Windows validation
 
-The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.13.0 and it runs independently of the plugin.
+The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.13.1 and it runs independently of the plugin.
 
 ## Native editor and files
 
@@ -18,9 +18,10 @@ The Windows x64 archive contains the portable editor and its optional in-game pl
 ## In-game plugin
 
 - Compiled the .NET 6 IL2CPP plugin against a local Steam installation and BepInEx 6.0.0-be.755 with zero warnings and zero errors. The release includes only the project's plugin DLL.
-- Ran 44 simulated campaign checks on field selection, resource limits, stale sessions and readback after writing. Another 25 offline checks covered panel display, keyboard input, confirmation, refresh and live appearance changes. The panel image in the guide is an offline rendering with synthetic values.
+- All 61 simulated campaign checks and the Windows native test suites passed for v0.13.1. The 25 offline panel checks in v0.13.0 covered panel display, keyboard input, confirmation, refresh and appearance changes. The panel image in the guide is an offline rendering with synthetic values.
 - Exercised the installer's present/missing-DLL dialogs. From the packaged layout, selected a synthetic game executable through the Windows file chooser and verified the installed plugin bytes.
-- Live writes and HUD refresh inside a running campaign still need an in-game test.
+- In v0.13.0, the plugin ran inside the Windows Steam game with a copy of a real Sordland campaign. The operator changed the government budget from 16 to 17 and restored it to 16. The panel read back both values from the active campaign.
+- In a live Sordland campaign, v0.13.1 changed the government budget from 16 to 17 and personal wealth from 1 to 2, and restored both original values. After each of the four writes, the game's native top bar and the Ctrl+F8 panel showed the expected value. The Rizia budget, authority and energy checks used simulated campaigns only.
 
 ## Automated and read-only coverage
 
@@ -37,7 +38,7 @@ The Windows x64 archive contains the portable editor and its optional in-game pl
 
 For the read-only run, edits and patch round trips were rendered in memory. SHA-256 values before and after matched for every original player save. The published repository includes synthetic fixtures and key/type inventories. Actual player saves are excluded.
 
-The observed game versions were 3.1.0.1.175 and 3.1.0.1.137. Edited saves have not been loaded inside the game. In-game event outcomes, unobserved formats and Wine are unverified. The executable is unsigned.
+The observed save versions were 3.1.0.1.175 and 3.1.0.1.137. Loading numeric changes made with the desktop save editor, in-game event outcomes, unobserved formats and Wine remain unverified. The executable is unsigned.
 
 ## Reproduce
 

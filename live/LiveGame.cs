@@ -152,6 +152,22 @@ public static class LiveGame
         }
     }
 
+    private static void RefreshHudStat(string key)
+    {
+        // The game retains its own text, formatting and display limits on each HUD slot.
+        // Some scenes have a live campaign but do not have a HUD.
+        var panels = Panels.Instance;
+        var hud = panels ? panels.HUDPanel : null;
+        var slots = hud ? hud.instantiatedHUDStats : null;
+        if (slots == null) return;
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var slot = slots[i];
+            if (slot && slot.currentHUDStatData?.HUDStatProperties?.StatVariable == key)
+                slot.Setup();
+        }
+    }
+
     public static bool TrySet(Snapshot expected, string key, int value, out string message)
     {
         message = Stale;
@@ -195,7 +211,16 @@ public static class LiveGame
                 message = "未确认写入结果，请刷新。 / Write unconfirmed. Refresh.";
                 return false;
             }
-            message = "已写入并回读。 / Applied and verified.";
+            try
+            {
+                RefreshHudStat(key);
+                message = "已写入并回读。 / Applied and verified.";
+            }
+            catch (Exception)
+            {
+                // A HUD being unloaded cannot invalidate a successful campaign readback.
+                message = "已写入并回读，资源栏等待刷新。 / Applied and verified. HUD refresh pending.";
+            }
             return true;
         }
         catch (Exception)

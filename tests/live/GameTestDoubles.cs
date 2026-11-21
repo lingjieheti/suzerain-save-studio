@@ -14,6 +14,26 @@ public class Managers : EngineObject
     public GameFlowManager GameFlowManager;
 }
 
+public class Panels : EngineObject
+{
+    public static Panels Instance;
+    public HUDPanel HUDPanel;
+}
+
+public class HUDPanel : EngineObject
+{
+    public List<TemplateHUDStat> instantiatedHUDStats = new();
+}
+
+public class HUDStatProperties { public string StatVariable; }
+public class HUDStatData { public HUDStatProperties HUDStatProperties; }
+public class TemplateHUDStat : EngineObject
+{
+    public HUDStatData currentHUDStatData;
+    public Action OnSetup;
+    public void Setup() => OnSetup();
+}
+
 public class GameFlowManager : EngineObject
 {
     public StepEntry currentStep = new();

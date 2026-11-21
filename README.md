@@ -2,7 +2,7 @@
 
 Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体与《Kingdom of Rizia》DLC。双击单文件程序，启动后可打开自己的存档，也可先用内置战役示例练习。
 
-**[下载 v0.13.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.0/SuzerainSaveStudio-0.13.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.0)
+**[下载 v0.13.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.1/SuzerainSaveStudio-0.13.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.1)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
@@ -35,13 +35,15 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 
 ## 兼容性与验证
 
-已对 15 个索德兰和 6 个里奇亚存档进行只读验证，并在 Windows 桌面使用合成数据测试实际保存与恢复。已检查的真实存档版本为 `3.1.0.1.175` 和 `3.1.0.1.137`。目前尚未在游戏内载入改后存档，故按预览版发布。字段修改可能影响后续剧情判定。内置示例用于练习编辑流程，无法作为完整游戏存档使用。[验证记录](VALIDATION.md) · [字段依据](docs/FIELD-EVIDENCE.md) · [语言覆盖](docs/LANGUAGES.md)
+已对 15 个索德兰和 6 个里奇亚存档进行只读验证，并在 Windows 桌面使用合成数据测试保存与恢复。已检查的真实存档版本为 `3.1.0.1.175` 和 `3.1.0.1.137`。桌面编辑器改动数值后重新进游戏读档的效果仍待验证。内置示例用于练习编辑流程。[字段依据](docs/FIELD-EVIDENCE.md) · [语言覆盖](docs/LANGUAGES.md)
+
+在真实索德兰战役副本中，0.13.1 完成了政府预算 **16 → 17 → 16** 和个人财富 **1 → 2 → 1** 两组测试。四次操作后，游戏原生顶栏和 Ctrl+F8 面板显示的数值均一致。里奇亚的预算、权威和能源已通过模拟验证，仍待真实战役实测。[验证记录](VALIDATION.md)
 
 ## English quick start
 
 Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
 
-Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. Testing covers the Windows editor, simulated game states and compilation against local game assemblies. Live writes inside an actual campaign remain unverified.
+Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. In a live Sordland campaign, v0.13.1 changed the government budget from 16 to 17 and personal wealth from 1 to 2, and restored both original values. The game's top bar and the panel agreed after all four writes. Rizia’s three resources have been tested in simulation only. [HUD verification and test coverage](VALIDATION.md)
 
 ## 从源码构建
 

@@ -16,6 +16,7 @@ internal static class Program
     private static void Game(string story)
     {
         Managers.Instance = new Managers { GameFlowManager = new GameFlowManager() };
+        Panels.Instance = null;
         Flow.currentGameFlowData.StoryPack = story;
         PersistenceManager.Instance = new PersistenceManager
         {
@@ -134,11 +135,55 @@ internal static class Program
         Check(!LiveGame.TrySet(LiveGame.Read(), Budget, 10, out text) && text.Contains("unconfirmed"), "Reload during write");
     }
 
+    private static TemplateHUDStat Slot(string key, Action redraw) => new()
+    {
+        currentHUDStatData = new HUDStatData { HUDStatProperties = new HUDStatProperties { StatVariable = key } },
+        OnSetup = redraw
+    };
+
+    private static void Hud()
+    {
+        foreach (var story in new[] { Sordland, Rizia })
+        {
+            Game(story);
+            var hud = new HUDPanel();
+            Panels.Instance = new Panels { HUDPanel = hud };
+            var repainted = new System.Collections.Generic.List<string>();
+            hud.instantiatedHUDStats.Add(null);
+            hud.instantiatedHUDStats.Add(new TemplateHUDStat());
+            foreach (var field in LiveGame.Read().Fields)
+                hud.instantiatedHUDStats.Add(Slot(field.Key, () => repainted.Add(field.Key)));
+            foreach (var field in LiveGame.Read().Fields)
+            {
+                repainted.Clear();
+                var before = LiveGame.Read();
+                Check(LiveGame.TrySet(before, field.Key, field.Value + 1, out _) &&
+                      repainted.SequenceEqual(new[] { field.Key }), "Refresh only the matching HUD slot");
+                repainted.Clear();
+                Reject(before, field.Key, field.Value, "Reject stale write with a live HUD");
+                Check(!repainted.Any(), "Rejected write does not touch any HUD slot");
+            }
+        }
+        Game(Sordland);
+        var budgetSlot = Slot(Budget, () => throw new InvalidOperationException());
+        Panels.Instance = new Panels { HUDPanel = new HUDPanel() };
+        Panels.Instance.HUDPanel.instantiatedHUDStats.Add(budgetSlot);
+        Check(LiveGame.TrySet(LiveGame.Read(), Budget, 11, out var message) &&
+              LiveGame.Read().Find(Budget).Value == 11 && DialogueLua.Writes.SequenceEqual(new[] { Budget }) &&
+              message.Contains("HUD refresh pending"), "A failed HUD refresh never retries or rejects the verified write");
+        DialogueLua.OnSet = (_, _) => {};
+        int redraws = 0;
+        budgetSlot.OnSetup = () => redraws++;
+        Check(!LiveGame.TrySet(LiveGame.Read(), Budget, 12, out _) && redraws == 0,
+              "An unconfirmed write never repaints the HUD");
+    }
+
     private static void Main()
     {
         ActivityAndIdentity();
         Values();
         Readback();
+        Hud();
         Console.WriteLine($"{checks} live state checks passed (in-memory game API doubles).");
     }
 }
