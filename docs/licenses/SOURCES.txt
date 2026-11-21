@@ -1,0 +1,17 @@
+Official license sources (retrieved 2026-10-30; files retained verbatim):
+GCC-COPYING3.txt: https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-13.2.0/COPYING3
+GCC-COPYING.RUNTIME.txt: https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-13.2.0/COPYING.RUNTIME
+MinGW-w64-11.0.1.txt: https://raw.githubusercontent.com/mingw-w64/mingw-w64/v11.0.1/COPYING.MinGW-w64/COPYING.MinGW-w64.txt
+MinGW-w64-runtime-11.0.1.txt: https://raw.githubusercontent.com/mingw-w64/mingw-w64/v11.0.1/COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt
+Winpthreads-11.0.1.txt: https://raw.githubusercontent.com/mingw-w64/mingw-w64/v11.0.1/mingw-w64-libraries/winpthreads/COPYING
+
+Build identification:
+GCC 13.2.0; MinGW-w64 11.0.1; winlibs gcc-13.2.0-mingw-w64ucrt-11.0.1-r8.
+The standalone application does not redistribute compiler executables.
+
+SHA-256:
+9D6B43CE4D8DE0C878BF16B54D8E7A10D9BD42B75178153E3AF6A815BDC90F74  GCC-COPYING.RUNTIME.txt
+8CEB4B9EE5ADEDDE47B31E975C1D90C73AD27B6B165A1DCD80C7C545EB65B903  GCC-COPYING3.txt
+F38E6194BD3BFA1B654F118E5ACEFE0AEAD437BBE669EEE43957CCC65A7127F1  MinGW-w64-11.0.1.txt
+E9B2DC02451EA29092A1F25FA0F3C07207ED421F1807DFFB0C4E6DCE69DEE7BD  MinGW-w64-runtime-11.0.1.txt
+63263614CDD29F2F93CBA85E992F041B31F9FC7B4033692F31269489A8A1B177  Winpthreads-11.0.1.txt

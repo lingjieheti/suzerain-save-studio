@@ -1,0 +1,4 @@
+/build/
+/.rizia-backups/
+*.bak
+*.tmp

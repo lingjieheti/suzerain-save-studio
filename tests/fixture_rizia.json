@@ -1,0 +1,62 @@
+{
+  "saveFileType": 0,
+  "campaignName": "示例战役 · 合成测试",
+  "currentStoryPack": "StoryPack_Rizia",
+  "turnNo": 3,
+  "saveFileName": "Synthetic Turn 3",
+  "sceneBuildIndex": 2,
+  "lastModified": "01-01-2000_12-00-00",
+  "version": "3.1.0.1.175",
+  "isVersionMismatched": false,
+  "isTorporModeOn": false,
+  "notes": "Synthetic fixture for parser and GUI tests. Contains no user data. Not a playable game save.",
+  "warSaveData": {
+    "active": false,
+    "turn": 0,
+    "units": [
+      {
+        "id": "synthetic_unit_01",
+        "owner": "test",
+        "position": {
+          "x": 2,
+          "y": 3
+        },
+        "health": 100,
+        "orders": []
+      }
+    ],
+    "unknownFutureField": {
+      "version": 99,
+      "values": [
+        null,
+        true,
+        -2.5,
+        "preserve"
+      ]
+    }
+  },
+  "variables": "Variable={\n  [\"BaseGame.GovernmentBudget\"]=3,\n  [\"BaseGame.ExampleFlag\"]=false,\n  [\"RiziaDLC.Resources_Budget\"]=12,\n  [\"RiziaDLC.Resources_Authority\"]=8,\n  [\"RiziaDLC.Resources_Energy\"]=14,\n  [\"RiziaDLC.Rizia_HUDStat_Budget_Max\"]=50,\n  [\"RiziaDLC.Rizia_HUDStat_Authority_Max\"]=15,\n  [\"RiziaDLC.Rizia_HUDStat_Energy_Max\"]=15,\n  [\"RiziaDLC.Resources_BudgetModifiersTotal\"]=2,\n  [\"RiziaDLC.Resources_AuthorityModifiersTotal\"]=-1,\n  [\"RiziaDLC.Resources_EnergyModifiersTotal\"]=3,\n  [\"RiziaDLC.Resources_Military_Manpower\"]=1200,\n  [\"RiziaDLC.Resources_Military_Equipment\"]=250,\n  [\"RiziaDLC.Resources_Military_Trucks\"]=40,\n  [\"RiziaDLC.Resources_Military_Tanks\"]=20,\n  [\"RiziaDLC.Resources_Military_Ships\"]=2,\n  [\"RiziaDLC.Resources_Military_Submarines\"]=1,\n  [\"RiziaDLC.Resources_Military_FighterPlanes\"]=4,\n  [\"RiziaDLC.Resources_Military_BomberPlanes\"]=2,\n  [\"RiziaDLC.Country_HouseToras\"]=5,\n  [\"RiziaDLC.Country_HouseAzaro\"]=-2,\n  [\"RiziaDLC.Country_HouseSazon\"]=3,\n  [\"RiziaDLC.Country_PublicOpinion\"]=10,\n  [\"RiziaDLC.Country_WruhecistOpinion\"]=2,\n  [\"RiziaDLC.Country_GolcondistOpinion\"]=1,\n  [\"RiziaDLC.Country_DastnuristOpinion\"]=0,\n  [\"RiziaDLC.Relations_Vina\"]=7,\n  [\"RiziaDLC.Relations_Hugo\"]=1,\n  [\"RiziaDLC.Relations_Pabel\"]=0,\n  [\"RiziaDLC.Relations_Estela\"]=3,\n  [\"RiziaDLC.Relations_Sal\"]=-1,\n  [\"RiziaDLC.Relations_Titus\"]=4,\n  [\"RiziaDLC.Relations_Lucita_Romance\"]=2,\n  [\"RiziaDLC.Diplomacy_Pales_NegotiatingPower\"]=2,\n  [\"RiziaDLC.Diplomacy_Wehlen_NegotiatingPower\"]=-3,\n  [\"RiziaDLC.Diplomacy_Morella_NegotiatingPower\"]=1,\n  [\"RiziaDLC.Diplomacy_Derdia_NegotiatingPower\"]=0,\n  [\"RiziaDLC.Diplomacy_Sordland_NegotiatingPower\"]=1,\n  [\"RiziaDLC.Diplomacy_Rumburg_NegotiatingPower\"]=2,\n  [\"RiziaDLC.Diplomacy_Valgsland_NegotiatingPower\"]=0,\n  [\"RiziaDLC.Diplomacy_Lespia_NegotiatingPower\"]=-1,\n  [\"RiziaDLC.Test_Enabled\"]=true,\n  [\"RiziaDLC.Test_Disabled\"]=false,\n  [\"RiziaDLC.Test_Scientific\"]=1.25e2,\n  [\"RiziaDLC.Test_NegativeDecimal\"]=-3.5e-1,\n  [\"RiziaDLC.Test_UnknownNumeric\"]=6,\n  [\"RiziaDLC.Test_Text\"]=\"Synthetic string; fake assignment: [\\\"RiziaDLC.FakeInString\\\"]=999; 中文 😀\",\n  [\"RiziaDLC.Test_Table\"]={[\"RiziaDLC.FakeInNestedTable\"]=888, note=\"preserve exactly\", nested={active=true, count=2}}\n}; ",
+  "entityUpdates": [
+    {
+      "entityId": "synthetic_entity_01",
+      "property": "caption",
+      "value": "合成战棋数据：请原样保留"
+    },
+    {
+      "entityId": "synthetic_entity_02",
+      "payload": {
+        "enabled": true,
+        "count": 2
+      }
+    }
+  ],
+  "unknownTopLevel": {
+    "description": "Unknown metadata must survive edits unchanged.",
+    "values": [
+      1,
+      false,
+      null,
+      "quotes: \" ; slashes: \\ ; UTF-8: 中文 😀"
+    ]
+  }
+}
