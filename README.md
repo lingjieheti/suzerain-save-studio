@@ -2,7 +2,7 @@
 
 Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体与《Kingdom of Rizia》DLC。双击单文件程序，启动后可打开自己的存档，也可先用内置战役示例练习。
 
-**[下载 v0.13.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.13.2/SuzerainSaveStudio-0.13.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.13.2)
+**[下载 v0.14.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.14.0/SuzerainSaveStudio-0.14.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.14.0)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
@@ -14,7 +14,15 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 
 1. 在游戏中保存并退出。启动修改器，选择自动发现的存档，或点“手动打开”。首次使用可以先选“索德兰示例”或“里奇亚示例”。
 2. 选择左侧分类，按中文名称或原始字段名查找项目。比如在索德兰经济页搜索“政府 预算”，选中后输入新值并点“应用修改”。
-3. 打开“修改预览”，核对原值与新值。可以单独撤回某项，也可以撤销或重做。选择“另存为”输出副本，或保存到原档，再回游戏读档。
+3. 打开“修改预览”，核对原值与新值。可以单独撤回某项，也可以撤销或重做。选择“另存为”输出副本，或保存到原档。回到游戏主菜单，手动读取刚修改的存档。
+
+## 常用数值和收藏
+
+- **收藏字段**。选中常用或高级字段，在右侧点“收藏字段”。换同一战役的存档后，到“高级字段”点“只看收藏”，可继续编辑这些数值。索德兰和里奇亚各用一份收藏。
+- **查里奇亚资源**。在资源页核对库存与上限，按“每回合能源”等词查找回合数据。净变化是存档记下的汇总值，游戏结算时可能重新计算。
+- **在游戏里微调**。按 **Ctrl+F8**，选中资源后可点 **−5、−1、+1、+5**，看清目标值再预览和确认。如果操作期间游戏已更新该资源，请按面板提示重新核对。
+
+[查看收藏界面](docs/images/field-favorites.png) · [玩家反馈与五款同类工具对照](docs/PLAYER-RESEARCH.zh-CN.md)
 
 ## 选择外观
 
@@ -40,6 +48,8 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 在真实索德兰战役副本中，0.13.1 完成了政府预算 **16 → 17 → 16** 和个人财富 **1 → 2 → 1** 两组测试。四次操作后，游戏原生顶栏和 Ctrl+F8 面板显示的数值均一致。里奇亚的预算、权威和能源已通过模拟验证，仍待真实战役实测。[验证记录](VALIDATION.md)
 
 ## English quick start
+
+Bookmark any available field in its inspector and find it again under **Advanced** with the favorites filter. Sordland and Rizia keep separate lists. In the live panel, use **−5, −1, +1, +5** to prepare a change, then preview and confirm it.
 
 Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
 

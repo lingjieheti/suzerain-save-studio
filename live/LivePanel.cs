@@ -10,6 +10,8 @@ namespace SuzerainSaveStudio.Live
     {
         private const float MaxWidth = 526, MinWidth = 316, Height = 392, Inset = 17;
         private static readonly string[] ThemeControls = { "theme-paper", "theme-forest", "theme-fjord", "theme-midnight" };
+        private static readonly int[] Steps = { -5, -1, 1, 5 };
+        private static readonly string[] StepLabels = { "-5", "-1", "+1", "+5" };
         private int appearance, styledAppearance = -1;
         private PanelAppearance palette = PanelAppearance.Choices[0];
         private enum Feedback { Info, Success, Warning }
@@ -19,6 +21,7 @@ namespace SuzerainSaveStudio.Live
         private string key = "", draft = "", noticeZh = "", noticeEn = "";
         private bool confirming, draftEdited;
         private Snapshot previewBasis;
+        private LiveField stepBasis;
         private float nextPollAt;
         private int proposed, original;
         private float width;
@@ -198,6 +201,7 @@ namespace SuzerainSaveStudio.Live
             draftEdited = false;
             confirming = false;
             previewBasis = null;
+            stepBasis = null;
             focused = "";
             GUI.FocusControl("");
         }
@@ -235,6 +239,12 @@ namespace SuzerainSaveStudio.Live
             snapshot = latest;
             if (previous != null && previous.SameSession(latest) && field != null)
             {
+                if (stepBasis != null && (stepBasis.Value != field.Value || stepBasis.Cap != field.Cap))
+                {
+                    Select(field);
+                    Notice("数值或上限已变化，请重新调整。","Value or cap changed. Adjust again.","",Feedback.Warning);
+                    return;
+                }
                 // A running game can spend resources while this panel is open.
                 // Keep a user's input and the exact snapshot on which they previewed.
                 if (!draftEdited && !confirming)
@@ -261,6 +271,25 @@ namespace SuzerainSaveStudio.Live
         }
 
         [HideFromIl2Cpp]
+        private void Adjust(LiveField field, int delta)
+        {
+            if (!int.TryParse(draft,NumberStyles.Integer,CultureInfo.InvariantCulture,out var start))
+            {
+                Notice("请输入有效的整数。","Enter a valid whole number.","",Feedback.Warning);
+                return;
+            }
+            if (!LiveAdjustment.TryStep(field,start,delta,out var next))
+            {
+                Notice("数值超出该资源的可用范围。","The number is outside this resource’s range.","",Feedback.Warning);
+                return;
+            }
+            draft = next.ToString(CultureInfo.InvariantCulture);
+            draftEdited = next != field.Value;
+            stepBasis = draftEdited ? field : null;
+            Notice("","");
+        }
+
+        [HideFromIl2Cpp]
         private void Preview(LiveField field)
         {
             if (field == null || snapshot == null || !snapshot.CanEdit) return;
@@ -268,8 +297,7 @@ namespace SuzerainSaveStudio.Live
                 Notice("请输入有效的整数。","Enter a valid whole number.","",Feedback.Warning); return;
             }
             if (proposed == field.Value) { Notice("新值与当前值相同。","The value is unchanged."); return; }
-            if ((key != "BaseGame.GovernmentBudget" && proposed < 0) ||
-                (field.Cap.HasValue && proposed > field.Cap.Value)) {
+            if (!LiveAdjustment.InRange(field,proposed)) {
                 Notice("数值超出该资源的可用范围。","The number is outside this resource’s range.","",Feedback.Warning); return;
             }
             original = field.Value;
@@ -315,7 +343,9 @@ namespace SuzerainSaveStudio.Live
                 else if (snapshot?.CanEdit == true)
                 {
                     foreach (var field in snapshot.Fields) order.Add(field.Key);
-                    order.Add("value"); order.Add("preview");
+                    order.Add("value");
+                    order.AddRange(StepLabels);
+                    order.Add("preview");
                 }
                 order.AddRange(ThemeControls);
                 int index = order.IndexOf(focused);
@@ -528,12 +558,11 @@ namespace SuzerainSaveStudio.Live
                 return;
             }
 
-            GUI.Label(new Rect(x,182,inside*.55f,23),T("新值","New value"),body);
+            GUI.Label(new Rect(x,173,inside*.40f,22),T("新值","New value"),body);
             if (selected.Cap.HasValue)
-                GUI.Label(new Rect(x+inside*.5f,182,inside*.5f,23),
+                GUI.Label(new Rect(x+inside*.40f,173,inside*.60f,22),
                     T("资源上限 ","Resource cap ")+selected.Cap.Value,rightCaption);
-            float buttonW = Math.Min(145,inside*.45f);
-            Rect edit = new Rect(x,215,inside-buttonW-8,42);
+            Rect edit = new Rect(x,197,inside,33);
             if (Event.current.type==EventType.MouseDown && edit.Contains(Event.current.mousePosition)) focused="value";
             bool editing = focused == "value";
             PaperBox(edit,palette.Background,editing ? palette.Accent : palette.Border,6,editing ? 2 : 1);
@@ -553,9 +582,16 @@ namespace SuzerainSaveStudio.Live
             {
                 draft=entered;
                 draftEdited=draft!=selected.Value.ToString(CultureInfo.InvariantCulture);
+                stepBasis=null;
                 Notice("","");
             }
-            if (Button(new Rect(x+inside-buttonW,215,buttonW,42),"preview",T("预览修改","Preview change"),true))
+            float buttonW = Math.Min(145,inside*.43f);
+            const float gap = 4;
+            float stepWidth = Math.Min(50,(inside-buttonW-8-(Steps.Length-1)*gap)/Steps.Length);
+            for (int i=0;i<Steps.Length;i++)
+                if (Button(new Rect(x+i*(stepWidth+gap),237,stepWidth,32),StepLabels[i],StepLabels[i]))
+                    Adjust(selected,Steps[i]);
+            if (Button(new Rect(x+inside-buttonW,237,buttonW,32),"preview",T("预览修改","Preview change"),true))
                 Preview(selected);
         }
 

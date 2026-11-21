@@ -1,6 +1,12 @@
-# v0.13.2 Preview — Windows validation
+# v0.14.0 Preview — Windows validation
 
-The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.13.2 and it runs independently of the plugin.
+The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.14.0 and it runs independently of the plugin.
+
+## Player-requested changes in 0.14.0
+
+- The Windows executable opened the built-in Rizia campaign on a private desktop. Searching for “每回合能源” identified the energy net-change field. At two window sizes, the resource overview displayed current stocks, turn totals and caps. Pending cap adjustments are included in the preview.
+- Bookmarked two fields, opened the same campaign in another editor process, filtered the favorites, removed one and checked campaign isolation against the Sordland example. Fifteen isolated registry tests cover persistence, multi-window writes and missing or malformed data. Original game saves were not used for these checks.
+- Ran 73 live state checks and 182 panel checks against simulated campaigns and Unity controls. Keyboard and pointer tests exercise all four adjustment buttons, repeated steps, confirmation, in-game value changes, cap changes and integer bounds. The panel tests run in Windows CI at three screen sizes and in four themes. The new relative controls have been exercised in simulation. The earlier live Steam checks are documented below.
 
 ## Native editor and files
 
@@ -8,7 +14,7 @@ The Windows x64 archive contains the portable editor and its optional in-game pl
 - Used multi-word Chinese and raw-key queries on common and advanced pages, including an empty result. Verified selection memory, invalid-input handling, individual reversion, undo/redo and the counts for linked Rizia resource caps.
 - Inspected the wide and compact editor layouts in Chinese and English at 200% Windows scaling. The editor screenshots use embedded examples. The save library screenshot uses six synthetic campaign files. Its search, empty results, keyboard focus and campaign choices were exercised in a native Windows dialog.
 - Opened a scratch copy of a synthetic save through the executable, applied a budget increase and confirmed that only the expected numeric bytes changed. The pre-save backup matched the original byte for byte. Restoring through the Backups page reproduced the original and kept the modified version as a second backup.
-- All 30 synthetic file I/O and setup checks and 94 native editor checks passed, including external modifications, concurrent saves, campaign isolation, the sample overwrite guard, existing plugin handling and theme changes during an active edit.
+- All 30 synthetic file I/O and setup checks and 119 native editor checks passed, including external modifications, concurrent saves, campaign isolation, the sample overwrite guard, existing plugin handling and theme changes during an active edit.
 
 ## Appearance
 
@@ -32,7 +38,7 @@ The Windows x64 archive contains the portable editor and its optional in-game pl
 | Parser and renderer | 265 checks passed |
 | Session history and patch format | 158 checks passed |
 | Save discovery | 23 checks passed. The filesystem symlink test was skipped locally because the account could not create a test symlink. |
-| Interface localization | 4,345 checks passed |
+| Interface localization | 4,369 checks passed |
 | Curated labels | 452 translations across four western languages verified, plus 1,489 checks for eastern languages, Russian and Turkish |
 | Display values | 90,256 checks across 11 languages |
 | Advanced Chinese names | 24,617 checks across 4,097 fields |
@@ -47,3 +53,5 @@ The observed save versions were 3.1.0.1.175 and 3.1.0.1.137. Loading numeric cha
 Build with `build.ps1 -CompilerKind GCC`, then run `test.ps1 -Compiler <g++.exe>`. Pass `-SaveDirectory <folder>` for the optional read-only check. The default suites use synthetic fixtures. The application's dependency notices are available from Help and in the source tree.
 
 Run `dotnet run --project tests/live/LiveChecks.csproj -c Release` with a .NET 6 SDK to reproduce the simulated campaign suite. To build the actual plugin against your installation, follow the [live panel guide](live/README.zh-CN.md).
+
+The panel test suite can be reproduced on Windows with `dotnet run --project tests/panel/PanelChecks.csproj -c Release`.

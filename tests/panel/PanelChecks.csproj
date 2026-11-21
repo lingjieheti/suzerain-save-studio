@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../live/LivePanel.cs" Link="LivePanel.cs" />
+    <Compile Include="../../live/PanelAppearance.cs" Link="PanelAppearance.cs" />
+    <Compile Include="../../live/LiveAdjustment.cs" Link="LiveAdjustment.cs" />
+    <Compile Include="../../live/LiveGame.cs" Link="LiveGame.cs" />
+    <Compile Include="../live/GameTestDoubles.cs" Link="GameTestDoubles.cs" />
+  </ItemGroup>
+</Project>

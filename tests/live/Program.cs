@@ -123,6 +123,30 @@ internal static class Program
         }
     }
 
+    private static void DraftSteps()
+    {
+        Game(Sordland);
+        var field = LiveGame.Read().Find(Budget);
+        int draft = field.Value;
+        foreach (int delta in new[] { -5, -1, 1, 5 })
+        {
+            int expected = draft + delta;
+            Check(LiveAdjustment.TryStep(field, draft, delta, out draft) && draft == expected, "Steps accumulate in the draft");
+        }
+        Check(DialogueLua.Writes.Count == 0 && LiveGame.Read().Find(Budget).Value == -3, "Adjusting a draft never writes to the campaign");
+        Check(!LiveAdjustment.TryStep(field, int.MaxValue, 1, out draft) && draft == int.MaxValue, "Increment cannot overflow");
+        Check(!LiveAdjustment.TryStep(field, int.MinValue, -1, out draft) && draft == int.MinValue, "Decrement cannot underflow");
+        Check(!LiveAdjustment.TryStep(LiveGame.Read().Find(Wealth), 0, -1, out draft) && draft == 0, "Wealth cannot step below zero");
+        Game(Rizia);
+        var before = LiveGame.Read();
+        field = before.Find(Stock);
+        Check(LiveAdjustment.TryStep(field, 45, 5, out draft) && draft == field.Cap, "Can step to the cap");
+        Check(!LiveAdjustment.TryStep(field, 48, 5, out draft) && draft == 48, "A step above the cap preserves the draft");
+        Check(LiveAdjustment.TryStep(field, field.Value, 1, out draft), "Previewable Rizia draft");
+        DialogueLua.Put(Stock, field.Value + 2);
+        Reject(before, Stock, draft, "A confirmed adjustment cannot overwrite an intervening resource change");
+    }
+
     private static void Readback()
     {
         Game(Sordland);
@@ -182,6 +206,7 @@ internal static class Program
     {
         ActivityAndIdentity();
         Values();
+        DraftSteps();
         Readback();
         Hud();
         Console.WriteLine($"{checks} live state checks passed (in-memory game API doubles).");

@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force -Path $testBuild | Out-Null
 if (!(Test-Path -LiteralPath $Compiler)) { throw "Pass -Compiler with a MinGW x64 g++.exe path." }
 $compat = Join-Path $sourceRoot "build\mingw-dwm-compat.hpp"
 if (!(Test-Path -LiteralPath $compat)) { throw "Run build.ps1 first (GCC mode)." }
-$suites = @("test_core", "test_session", "test_discovery", "test_i18n", "test_field_labels_west", "test_field_labels_east", "test_display_values", "test_advanced_zh", "test_app_io", "test_editor")
+$suites = @("test_core", "test_session", "test_discovery", "test_i18n", "test_field_labels_west", "test_field_labels_east", "test_display_values", "test_advanced_zh", "test_field_favorites", "test_app_io", "test_editor")
 if ($SaveDirectory) { $suites += "test_campaign_files" }
 foreach ($suite in $suites) {
     $sourceFile = Join-Path $sourceRoot "tests\$suite.cpp"

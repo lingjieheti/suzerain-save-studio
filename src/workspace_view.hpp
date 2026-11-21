@@ -6,8 +6,10 @@ int navGap(const WorkspaceGeometry& a) { return a.shortScreen || a.compactRail ?
 int navY(const WorkspaceGeometry& a, int index) {
     return navStart(a) + index * navStep(a) + (index >= 5 ? navGap(a) : 0);
 }
+bool compactFieldTools(const WorkspaceGeometry& a) { return a.list < (g.tab==4 ? 560 : 450); }
 int searchWidth(const WorkspaceGeometry& a) {
-    return a.list - (a.list < 450 ? 92 : 132) - 6 - (g.tab==4 ? (a.list < 450 ? 78 : 108) : 0);
+    bool compact=compactFieldTools(a);
+    return a.list - (compact ? 92 : 132) - 6 - (g.tab==4 ? (compact ? 153 : 213) : 0);
 }
 int inspectorPad(const WorkspaceGeometry& a) { return a.inspector < 218 ? 9 : 18; }
 
@@ -42,8 +44,11 @@ void layout() {
     place(ctl(AUTOCAP), a.left, a.presetsY, std::min(270,a.content-2*presetW-14), 31);
     int sw = searchWidth(a);
     place(g.search, a.left+29, a.toolsY+6, sw-37, 22);
-    place(ctl(FILTER_CHANGED), a.left+sw+5, a.toolsY, a.list<450 ? 92 : 132, 32);
-    place(ctl(PATCH_IMPORT), a.right-a.gap-(a.list<450?74:104), a.toolsY, a.list<450?74:104, 32);
+    bool compactTools=compactFieldTools(a);
+    place(ctl(FILTER_CHANGED), a.left+sw+5, a.toolsY, compactTools ? 92 : 132, 32);
+    int favoritesX=a.left+sw+10+(compactTools?92:132);
+    place(ctl(FILTER_FAVORITES),favoritesX,a.toolsY,compactTools?70:100,32);
+    place(ctl(PATCH_IMPORT), a.right-a.gap-(compactTools?74:104), a.toolsY, compactTools?74:104, 32);
     place(ctl(BACKUP_REFRESH), a.left, a.toolsY, 96, 32);
     place(ctl(BACKUP_FOLDER), a.left+102, a.toolsY, std::min(165,a.list-102), 32);
     place(ctl(HELP_USAGE), a.left, a.toolsY, 120, 32);
@@ -58,7 +63,9 @@ void layout() {
     int nameH = edit ? (a.shortScreen ? 25 : 34) : (a.shortScreen ? 32 : 43);
     place(g.name,rx,y,rw,nameH);
     y += nameH + 3;
-    place(g.oldValue,rx,y,rw,20);
+    int favoriteW=std::clamp(rw/2,70,100);
+    place(g.oldValue,rx,y,edit?rw-favoriteW-5:rw,20);
+    if(edit)place(ctl(FIELD_FAVORITE),rx+rw-favoriteW,y-3,favoriteW,25);
     if (edit) {
         y += a.shortScreen ? 27 : 34;
         place(g.valueLabel,rx,y,rw,18);
@@ -104,6 +111,8 @@ void layout() {
     place(g.notice,a.left+15,a.footer+13,(help?toolbarEnd:footerRight)-a.left-20,24);
 
     visible(g.grid,!help); visible(g.search,edit); visible(FILTER_CHANGED,edit);
+    visible(FILTER_FAVORITES,g.tab==4);EnableWindow(ctl(FILTER_FAVORITES),g.doc!=nullptr);
+    visible(FIELD_FAVORITE,edit);
     visible(g.name,!help); visible(g.oldValue,!help); visible(g.desc,!help);
     visible(g.valueLabel,edit); visible(APPLY,edit); visible(UNDOONE,edit);
     visible(COPY_KEY,g.tab==4); visible(EXPORT_CSV,g.tab==4); EnableWindow(ctl(EXPORT_CSV),g.doc!=nullptr);
@@ -117,7 +126,11 @@ void layout() {
     visible(g.helpText,help); visible(HELP_USAGE,help); visible(HELP_LICENSES,help);
     visible(SAVE,!review&&!help); visible(HISTORY_UNDO,!help); visible(HISTORY_REDO,!help);
     bool empty=!help && (backup?g.backups.empty():g.rows.empty()); visible(g.empty,empty);
-    if (empty) setText(g.empty,!g.doc?L"选择存档，或拖入 JSON 文件":backup?L"暂无备份":review?L"暂无修改":L"无匹配项目");
+    if (empty) {
+        bool emptyFavorites=g.tab==4&&g.favoritesOnly&&!g.changedOnly&&g.pages[4].query.empty();
+        setText(g.empty,!g.doc?L"选择存档，或拖入 JSON 文件":backup?L"暂无备份":review?L"暂无修改":
+                emptyFavorites?L"当前存档没有已收藏的字段。关闭筛选后可选择字段收藏。":L"无匹配项目");
+    }
     if (!help) {
         RECT client{}; GetClientRect(g.grid,&client);
         int avail=MulDiv(client.right,96,g.dpi)-3;
@@ -143,16 +156,61 @@ void layout() {
     InvalidateRect(g.win,nullptr,FALSE);
 }
 
+void paintRiziaMetric(HDC dc, const RiziaResource& resource, const rizia::ChangeMap& linkedCaps,
+                     int x, int y, int width, int height) {
+    bool tall = height >= 70;
+    int pad = tall ? 15 : 10;
+    int right = x + width - pad;
+    int inner = width - 2 * pad;
+    auto balance = val(resource.stock);
+    auto numberFont = tall ? g.large : g.bold;
+    auto old = SelectObject(dc, numberFont);
+    SIZE valueSize{};
+    GetTextExtentPoint32W(dc, balance.c_str(), static_cast<int>(balance.size()), &valueSize);
+    SelectObject(dc, old);
+    int valueW = std::min(inner / 2, std::max(28, MulDiv(valueSize.cx, 96, g.dpi) + 3));
+    int rowY = y + (tall ? 7 : 2);
+    int rowH = tall ? 38 : 28;
+    drawText(dc, resource.balanceLabel, rect(x+pad,rowY,inner-valueW-4,rowH),
+             tall ? g.font : g.small, Theme::muted);
+    drawText(dc, balance, rect(right-valueW,rowY,valueW,rowH), numberFont,
+             pending().count(resource.stock) ? Theme::accentInk : Theme::text, DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
+
+    const auto linked = linkedCaps.find(resource.cap);
+    const auto cap = linked == linkedCaps.end() ? val(resource.cap) : wide(linked->second);
+    const auto capText = tr(L"上限 ") + cap;
+    const auto turnText = tr(L"每回合") + L" " + turnDelta(val(resource.turnTotal));
+    auto oldSmall = SelectObject(dc, g.small);
+    SIZE capSize{};
+    GetTextExtentPoint32W(dc, capText.c_str(), static_cast<int>(capText.size()), &capSize);
+    SelectObject(dc, oldSmall);
+    int capW = std::min(inner / 2, MulDiv(capSize.cx, 96, g.dpi) + 3);
+    int bottomRow = y + height - (tall ? 27 : 22);
+    drawText(dc, turnText, rect(x+pad,bottomRow,inner-capW-5,19), g.small,
+             pending().count(resource.turnTotal) ? Theme::accentInk : Theme::muted);
+    drawText(dc, capText, rect(right-capW,bottomRow,capW,19), g.small,
+             linked != linkedCaps.end() || pending().count(resource.cap) ? Theme::accentInk : Theme::muted,
+             DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
+}
+
 void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
-    const char* resource[]={"Budget","Authority","Energy"};
     const char* mainKeys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
-    const wchar_t* labels[]={L"预算",isBase()?L"个人财富":L"权威",isBase()?L"经济水平":L"能源"};
+    const wchar_t* labels[]={L"预算",L"个人财富",L"经济水平"};
     rounded(dc,rect(a.left,a.headerBottom,a.content,a.metricHeight),Theme::head,Theme::line,14);
     int cw=a.content/3;
+    rizia::ChangeMap linkedCaps;
+    if (!isBase()) {
+        try { linkedCaps = linkedCapChanges(); }
+        catch (const std::exception&) { /* Conflicting edits are shown as entered until corrected in Review. */ }
+    }
     for(int i=0;i<3;++i) {
         int x=a.left+i*cw, y=a.headerBottom, width=i==2 ? a.left+a.content-x : cw;
         if(i>0)fill(dc,rect(x,y+12,1,a.metricHeight-24),Theme::line);
-        auto key=isBase()?std::string(mainKeys[i]):std::string("RiziaDLC.Resources_")+resource[i];
+        if (!isBase()) {
+            paintRiziaMetric(dc, riziaResources[i], linkedCaps, x, y, width, a.metricHeight);
+            continue;
+        }
+        const auto key = mainKeys[i];
         auto value=effective(key); bool tall=a.metricHeight>=70;
         int valueWidth=std::max(48,width/2-9);
         if (tall) {
@@ -161,13 +219,6 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
         } else {
             drawText(dc,labels[i],rect(x+12,y+5,width-valueWidth-20,a.metricHeight-10),g.font,Theme::muted);
             drawText(dc,value.empty()?L"—":wide(value),rect(x+width-valueWidth-9,y+4,valueWidth,a.metricHeight-8),g.large,pending().count(key)?Theme::goldDark:Theme::text,DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
-        }
-        if (!isBase() && tall && width>=200) {
-            auto cap=std::string("RiziaDLC.Rizia_HUDStat_")+resource[i]+"_Max";
-            auto income=std::string("RiziaDLC.Resources_")+resource[i]+"ModifiersTotal";
-            int half=width/2;
-            drawText(dc,L"上限 "+val(cap.c_str()),rect(x+half,y+24,width-half-12,19),g.small,Theme::muted,DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
-            drawText(dc,L"净变化 "+val(income.c_str()),rect(x+half,y+45,width-half-12,19),g.small,Theme::muted,DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
         }
     }
 }

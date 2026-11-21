@@ -1,11 +1,14 @@
 #pragma once
 #include "demo_resources.hpp"
 #include "field_search.hpp"
+#include "resource_summary.hpp"
+#include "field_favorites.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.13.2";
+constexpr wchar_t APP_VERSION[] = L"0.14.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
-       BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE };
+       BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
+       FIELD_FAVORITE, FILTER_FAVORITES };
 #include "appearance.hpp"
 struct BackupItem { fs::path path; fs::file_time_type time; uintmax_t size=0; };
 struct FieldPageState {
@@ -26,6 +29,8 @@ struct App {
     std::array<FieldPageState,6> pages;
     std::map<std::string,FieldCaption> captions;
     std::vector<const rizia::Field*> allFields;
+    field_favorites::Keys favorites;
+    bool favoritesOnly=false;
     std::wstring reviewError;
     size_t previewCount=0;
     std::map<std::string,std::string> review;
@@ -178,13 +183,25 @@ void showSelected(){
         auto*d=definition(f->key);std::wstring detail=d?d->help:L"仅修改此字段，剧情条件不联动。";
         if(f->key.find("Army_Unit_")!=std::string::npos)detail=L"部队状态与部署、阵亡、训练和战棋数据相互关联。军备库存页更适合常规修改。";
         if(f->key.find("ModifiersTotal")!=std::string::npos)detail=L"这是游戏计算的合计值，事件发生时可能重算。修改它不能锁定每回合收入。";
+        for (const auto& resource : riziaResources) {
+            if (f->key == resource.turnTotal) {
+                const bool hasModifiers = std::any_of(g.doc->fields.begin(), g.doc->fields.end(),
+                    [&](const auto& item) { return item.key.rfind(resource.modifierPrefix, 0) == 0; });
+                detail += hasModifiers
+                    ? L"\r\n\r\n在高级字段中搜索以下前缀，可查看收支明细。\r\n" + wide(resource.modifierPrefix)
+                    : L"\r\n\r\n这份存档未列出该资源的收支明细。";
+                break;
+            }
+        }
         if(g.tab==4)detail+=L"\r\n\r\n"+wide(f->key);
         setText(g.desc,detail);
         if(f->is_bool)g.boolValue=effective(f->key)=="true";else setText(g.edit,wide(effective(f->key)));
     }
     bool editPage=g.tab<5,has=editPage&&f;
     visible(g.edit,editPage&&(!f||!f->is_bool));visible(BOOL_FALSE,has&&f->is_bool);visible(BOOL_TRUE,has&&f->is_bool);
-    for(int id:std::initializer_list<int>{APPLY,UNDOONE,COPY_KEY})EnableWindow(ctl(id),has);EnableWindow(g.edit,has);
+    for(int id:std::initializer_list<int>{APPLY,UNDOONE,COPY_KEY,FIELD_FAVORITE})EnableWindow(ctl(id),has);EnableWindow(g.edit,has);
+    setText(ctl(FIELD_FAVORITE),has&&g.favorites.count(f->key)?L"取消收藏":L"收藏字段");
+    InvalidateRect(ctl(FIELD_FAVORITE),nullptr,FALSE);
     rawText(ctl(BOOL_FALSE),displayValue("false",true,i18n::language));rawText(ctl(BOOL_TRUE),displayValue("true",true,i18n::language));
     InvalidateRect(ctl(BOOL_FALSE),nullptr,FALSE);InvalidateRect(ctl(BOOL_TRUE),nullptr,FALSE);
     g.populating=false;updateStatus();
@@ -284,6 +301,7 @@ void appendFieldRows(){
     const auto terms=field_search::terms(g.pages[g.tab].query);
     const auto number=tr(L"数值"), toggle=tr(L"开关");
     auto append=[&](const rizia::Field& field){
+        if(g.tab==4&&g.favoritesOnly&&!g.favorites.count(field.key))return;
         const auto change=pending().find(field.key);
         if(g.changedOnly&&change==pending().end())return;
         auto& caption=g.captions[field.key];
@@ -291,6 +309,11 @@ void appendFieldRows(){
         if(!terms.empty()){
             if(caption.searchText.empty()){
                 auto search=caption.label+L"|"+wide(field.key);
+                const auto aliases = resourceSearchAliases(field.key);
+                if (!aliases.empty()) {
+                    search += L"|" + aliases;
+                    if (i18n::language == 1) search += L"|" + i18n::traditional(aliases);
+                }
                 if(i18n::language!=0){
                     const auto* def=definition(field.key);
                     search+=L"|"+(def?std::wstring(fieldZh(def->label)):advancedZhLabel(field.key));
@@ -301,7 +324,7 @@ void appendFieldRows(){
         }
         const auto staged=change==pending().end()?L"—":displayValue(change->second,field.is_bool,i18n::language);
         g.rows.push_back(field.key);
-        addRow((int)g.rows.size()-1,{caption.label,displayValue(field.value,field.is_bool,i18n::language),
+        addRow((int)g.rows.size()-1,{(g.favorites.count(field.key)?L"★  ":L"")+caption.label,displayValue(field.value,field.is_bool,i18n::language),
                                     staged,field.is_bool?toggle:number});
     };
     if(g.tab==4){
@@ -390,7 +413,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.13.2 Preview · Windows 10 / 11 x64\r\n"
+        L"0.14.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -416,6 +439,8 @@ void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resourc
     g.session=std::move(session);g.doc=std::move(doc);g.file=path;g.demoResource=resource;
     InvalidateRect(ctl(LATEST),nullptr,FALSE);
     resetFieldBrowser();
+    g.favorites.clear();g.favoritesOnly=false;
+    field_favorites::read(activeStory,g.favorites);
     g.selected.clear();g.editingDirty=false;g.backupDoc.reset();g.backups.clear();g.backupIndex=-1;
     g.populating=true;setText(g.search,L"");g.changedOnly=false;g.populating=false;
     rawText(g.path,documentTitle());rawText(g.meta,campaignLabel(g.doc->story)+L"    /    "+wide(g.doc->version)+L"    /    "+tr(L"回合")+L" "+wide(g.doc->turn)+(g.doc->campaignName.empty()?L"":L"    /    "+wide(g.doc->campaignName)));
@@ -482,7 +507,7 @@ void saveDocument(bool as){
         bool original=samePath(dest,g.file);
         if(!original&&fs::exists(dest)){auto d=rizia::Document::parse(readFile(dest));if(d.story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");}
         auto bytes=g.doc->render(changes);auto bak=atomicSave(dest,bytes,original?&g.doc->original:nullptr);
-        loadDocument(dest,false);toast(as?L"已另存。游戏未显示自定义文件名时，请使用原存档名称和位置。":L"保存成功，原档备份已校验。请在游戏中手动读取此存档。");
+        loadDocument(dest,false);toast(as?L"已另存。游戏未显示自定义文件名时，请使用原存档名称和位置。":L"已保存并校验备份。请回到游戏主菜单，手动读取这份存档。");
     }catch(const std::exception&e){message(L"保存没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }
 void restoreSelected(){
@@ -569,7 +594,7 @@ void createControls(){
     for(int i=0;i<8;++i)button(nav[i],NAV_BASE+i);
     g.path=control(L"STATIC",L"未打开存档",SS_PATHELLIPSIS|SS_NOTIFY|SS_NOPREFIX);g.meta=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);
     g.search=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,SEARCH);SendMessageW(g.search,EM_SETLIMITTEXT,160,0);SetWindowSubclass(g.search,searchProc,1,0);
-    button(L"只看待保存",FILTER_CHANGED);button(L"导入方案",PATCH_IMPORT);
+    button(L"只看待保存",FILTER_CHANGED);button(L"只看收藏",FILTER_FAVORITES);button(L"导入方案",PATCH_IMPORT);
     g.grid=control(WC_LISTVIEWW,L"",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,GRID);
     SetWindowTheme(g.grid,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetExtendedListViewStyle(g.grid,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
@@ -577,6 +602,7 @@ void createControls(){
     
     g.empty=control(L"STATIC",L"",SS_CENTER);
     g.name=control(L"STATIC",L"选择一个项目",SS_NOPREFIX|SS_ENDELLIPSIS);g.oldValue=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);g.valueLabel=control(L"STATIC",L"新值",0);g.desc=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL);
+    button(L"收藏字段",FIELD_FAVORITE);
     SetWindowSubclass(g.desc,detailProc,1,0);
     g.edit=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,EDITVALUE);SendMessageW(g.edit,EM_SETLIMITTEXT,80,0);SetWindowSubclass(g.edit,editProc,1,0);
     button(L"false / 否",BOOL_FALSE);button(L"true / 是",BOOL_TRUE);button(L"应用修改",APPLY);button(L"还原该项",UNDOONE);button(L"复制字段名",COPY_KEY);button(L"Export CSV",EXPORT_CSV);
@@ -622,6 +648,27 @@ void command(int id,int code){
     case EXPORT_CSV:exportCSV();break;case COPY_KEY:copyKey();break;case PRESET99:preset(99);break;case PRESET999:preset(999);break;
     case AUTOCAP:g.autoCap=!g.autoCap;updatePreviewCount();updateStatus();InvalidateRect(ctl(id),nullptr,FALSE);break;
     case FILTER_CHANGED:if(g.tab<5&&applyInput(false)){g.changedOnly=!g.changedOnly;g.pages[g.tab].changedOnly=g.changedOnly;refresh();}break;
+    case FILTER_FAVORITES:
+        if(g.tab==4&&applyInput(false)){g.favoritesOnly=!g.favoritesOnly;refresh();}
+        break;
+    case FIELD_FAVORITE:{
+        if(g.tab>=5||!g.doc||!g.doc->find(g.selected))break;
+        const bool remove=g.favorites.count(g.selected)!=0;
+        const bool removingVisibleRow=remove&&g.tab==4&&g.favoritesOnly;
+        if(removingVisibleRow&&!applyInput(false))break;
+        if(!field_favorites::set(activeStory,g.selected,!remove,g.favorites)){
+            message(L"无法保存字段收藏。",MB_OK|MB_ICONWARNING);
+            break;
+        }
+        if(removingVisibleRow){refresh();break;}
+        // Updating just the selected label leaves an uncommitted value in its
+        // input control until the player actually applies or navigates away.
+        int row=ListView_GetNextItem(g.grid,-1,LVNI_SELECTED);
+        if(row>=0)rowText(row,0,(remove?L"":L"★  ")+label(g.selected));
+        setText(ctl(FIELD_FAVORITE),remove?L"收藏字段":L"取消收藏");
+        InvalidateRect(ctl(FIELD_FAVORITE),nullptr,FALSE);
+        break;
+    }
     case HISTORY_UNDO:if(g.session){if(g.editingDirty){g.editingDirty=false;showSelected();}else g.session->undo();refresh();toast(L"已撤销上一步修改");}break;
     case HISTORY_REDO:if(g.session&&!g.editingDirty){g.session->redo();refresh();toast(L"已重做上一步修改");}break;
     case UNDOALL:if(g.session){g.session->clearChanges();g.editingDirty=false;refresh();toast(L"待保存项已清空，点击“撤销”可恢复");}break;

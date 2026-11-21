@@ -119,6 +119,42 @@ void testAppearance(const fs::path& path){
     check(Theme::index()==0,"An invalid preference type falls back to Paper");
 }
 
+void testFavorites(const fs::path& mainPath,const fs::path& riziaPath){
+    AppearanceTestRegistry registry;
+    const std::string budget="BaseGame.GovernmentBudget", event="BaseGame.BranchChoice";
+    const std::string newer=R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={[\"BaseGame.GovernmentBudget\"]=7,[\"BaseGame.BranchChoice\"]=true}"})";
+    loadDocumentBytes(newer,{},0);
+    navigate(0);
+    selectRow(budget);
+    SetWindowTextW(g.edit,L"12");
+    command(FIELD_FAVORITE,0);
+    check(textOf(g.edit)==L"12"&&g.editingDirty&&pending().empty(),"Favoriting preserves a live unsaved draft");
+    command(UNDOONE,0);
+    navigate(4);
+    command(FILTER_FAVORITES,0);
+    check(g.rows==std::vector<std::string>{budget}&&textOf(ctl(FIELD_FAVORITE))==tr(L"取消收藏"),
+          "A curated favorite appears in advanced fields with its current state");
+    command(FILTER_FAVORITES,0);
+    selectRow(event);command(FIELD_FAVORITE,0);
+    check(pending().empty()&&!g.session->canUndo(),"An advanced boolean favorite is separate from edit history");
+    loadDocumentBytes(readFile(mainPath),mainPath,0);
+    command(FILTER_FAVORITES,0);
+    check(g.rows==std::vector<std::string>{budget}&&g.favorites.count(event),"Older save hides missing fields without forgetting them");
+    SetWindowTextW(g.search,L"no match");
+    check(g.rows.empty(),"Favorite filter intersects with field search");
+    SetWindowTextW(g.search,L"");
+    command(FIELD_FAVORITE,0);
+    check(g.rows.empty()&&!IsWindowEnabled(ctl(FIELD_FAVORITE)),"Removing the last visible favorite updates selection and edit controls");
+    loadDocumentBytes(readFile(riziaPath),riziaPath,0);
+    command(FILTER_FAVORITES,0);
+    check(g.rows.empty()&&g.favorites.empty(),"Another campaign starts with its own favorites");
+    loadDocumentBytes(newer,{},0);
+    command(FILTER_FAVORITES,0);
+    check(g.rows==std::vector<std::string>{event},"Reopened campaign recovers the advanced-only favorite");
+    command(FIELD_FAVORITE,0);
+    check(g.rows.empty()&&pending().empty()&&!g.session->canUndo(),"Advanced-only favorite can be removed without changing the save");
+}
+
 void testSearch(const fs::path& path){
     loadDocumentBytes(readFile(path),path,0);
     const std::string budget="BaseGame.GovernmentBudget";
@@ -162,6 +198,43 @@ void testSearch(const fs::path& path){
     i18n::setLanguage(2);g.captions.clear();refresh();
     check(g.rows.size()==1&&g.selected==economySelection,"Chinese search works in English UI");
     i18n::setLanguage(0);
+}
+
+void testResourceSearch(const fs::path& path){
+    i18n::setLanguage(0);
+    loadDocumentBytes(readFile(path),path,0);
+    navigate(0);
+    auto findOne = [&](const wchar_t* query, const char* key) {
+        SetWindowTextW(g.search,query);
+        const auto description = "Resource query " + utf8(query) + " should select " + key +
+            " (matches=" + std::to_string(g.rows.size()) + ", selection=" + g.selected + ")";
+        check(g.rows.size()==1 && g.selected==key, description.c_str());
+    };
+    findOne(L"现有权威",riziaResources[1].stock);
+    findOne(L"最大预算",riziaResources[0].cap);
+    findOne(L"每回合能源收入",riziaResources[2].turnTotal);
+    check(textOf(g.desc).find(L"可能重算")!=std::wstring::npos &&
+          textOf(g.desc).find(L"未列出")!=std::wstring::npos,
+          "A save without individual income modifiers explains their absence");
+    i18n::setLanguage(2);g.captions.clear();refresh();
+    findOne(L"per turn energy",riziaResources[2].turnTotal);
+    check(textOf(g.desc).find(L"no individual modifiers")!=std::wstring::npos,
+          "English inspector explains missing modifier data");
+    i18n::setLanguage(1);g.captions.clear();refresh();
+    findOne(L"預算餘額",riziaResources[0].stock);
+    i18n::setLanguage(0);
+
+    const std::string example = R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={[\"RiziaDLC.Energy_Modifier_AureusGasField\"]=3,[\"RiziaDLC.Resources_EnergyModifiersTotal\"]=2,[\"RiziaDLC.Resources_Energy\"]=4}"})";
+    loadDocumentBytes(example,{},0);
+    navigate(4);
+    findOne(L"能源来源","RiziaDLC.Energy_Modifier_AureusGasField");
+    findOne(L"能源净变化",riziaResources[2].turnTotal);
+    check(textOf(g.desc).find(L"RiziaDLC.Energy_Modifier_")!=std::wstring::npos,
+          "A save with income modifiers displays a searchable prefix");
+    check(turnDelta(L"3")==L"+3" && turnDelta(L"-2")==L"-2" && turnDelta(L"0")==L"0" &&
+          turnDelta(L"0.00e+9")==L"0.00e+9" && turnDelta(L"1.2e-2")==L"+1.2e-2" &&
+          turnDelta(L"")==L"—" && turnDelta(L"—")==L"—", "Signed turn summaries preserve zeros and missing data");
+    check(g.doc->render({})==example && pending().empty(), "Resource inspection preserves save bytes and edits");
 }
 
 void testReview(const fs::path& path){
@@ -217,8 +290,10 @@ int main(int argc,char** argv){
         const HWND window=CreateWindowW(wc.lpszClassName,L"",WS_OVERLAPPEDWINDOW,0,0,1120,740,nullptr,nullptr,wc.hInstance,nullptr);
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testSearch(fs::u8path(argv[1]));
+        testResourceSearch(fs::u8path(argv[2]));
         testReview(fs::u8path(argv[2]));
         testAppearance(fs::u8path(argv[1]));
+        testFavorites(fs::u8path(argv[1]),fs::u8path(argv[2]));
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";
         return 0;

@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../live/LiveGame.cs" Link="LiveGame.cs" />
+    <Compile Include="../../live/LiveAdjustment.cs" Link="LiveAdjustment.cs" />
     <Compile Include="GameTestDoubles.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>

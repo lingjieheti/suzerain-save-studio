@@ -85,14 +85,16 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool activeNav = nav && id - NAV_BASE == g.tab;
     bool check = id == AUTOCAP || id == FILTER_CHANGED;
     bool checked = id == AUTOCAP ? g.autoCap : g.changedOnly;
-    bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue);
+    bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue) ||
+                  (id == FILTER_FAVORITES && g.favoritesOnly) ||
+                  (id == FIELD_FAVORITE && g.favorites.count(g.selected));
     bool primary = (id == LATEST && !g.doc) || id == APPLY || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
                    (id == SAVE && (!pending().empty() || g.editingDirty));
     bool quiet = id==FOLDER || id==RELOAD || id==HISTORY_UNDO || id==HISTORY_REDO;
     bool inspector = id==APPLY || id==UNDOONE || id==BOOL_FALSE || id==BOOL_TRUE ||
                      id==SAVEAS || id==CONFIRM_SAVE || id==PATCH_EXPORT || id==REVIEW_REVERT ||
-                     id==UNDOALL || id==BACKUP_RESTORE || id==BACKUP_CANCEL || id==COPY_KEY || id==EXPORT_CSV;
+                     id==UNDOALL || id==BACKUP_RESTORE || id==BACKUP_CANCEL || id==COPY_KEY || id==EXPORT_CSV || id==FIELD_FAVORITE;
     COLORREF surface = nav ? Theme::sidebar : inspector ? Theme::panel : Theme::bg;
     COLORREF bg = quiet ? surface : Theme::input, border = quiet ? surface : Theme::line, fg = Theme::text;
     if (nav) {

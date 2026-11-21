@@ -33,3 +33,6 @@ jobs:
       - name: Verify live state changes with simulated campaigns
         shell: pwsh
         run: dotnet run --project tests/live/LiveChecks.csproj -c Release
+      - name: Verify live panel controls and compact layouts
+        shell: pwsh
+        run: dotnet run --project tests/panel/PanelChecks.csproj -c Release
