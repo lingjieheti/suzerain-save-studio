@@ -1,5 +1,9 @@
 # Suzerain Save Studio
 
+<a name="languages"></a>
+
+**简体中文** · [繁體中文](docs/intro/zh-TW.md) · [English](docs/intro/en.md) · [日本語](docs/intro/ja.md) · [한국어](docs/intro/ko.md) · [Deutsch](docs/intro/de.md) · [Français](docs/intro/fr.md) · [Español](docs/intro/es.md) · [Português (Brasil)](docs/intro/pt-BR.md) · [Русский](docs/intro/ru.md) · [Türkçe](docs/intro/tr.md)
+
 这是我自己玩《Suzerain》时做的小工具，平时用它查预算、改存档，也在游戏里微调资源。放在这里分享给同样喜欢索德兰和里奇亚的玩家。
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。

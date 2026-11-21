@@ -1,5 +1,7 @@
 # 赞助作者
 
+**简体中文** · [繁體中文](docs/intro/zh-TW.md#support) · [English](docs/intro/en.md#support) · [日本語](docs/intro/ja.md#support) · [한국어](docs/intro/ko.md#support) · [Deutsch](docs/intro/de.md#support) · [Français](docs/intro/fr.md#support) · [Español](docs/intro/es.md#support) · [Português (Brasil)](docs/intro/pt-BR.md#support) · [Русский](docs/intro/ru.md#support) · [Türkçe](docs/intro/tr.md#support)
+
 这是我自己玩《Suzerain》时做的工具。如果它帮你少翻了几次存档，也欢迎请我喝杯咖啡。金额随意，谢谢支持！
 
 **[PayPal 付款](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2)** · **[USDT（TRC20）](#usdttrc20)**
