@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可以用手机扫描 PayPal 或 USDT 收款码。收款码内置在程序中，离线也能显示。USDT 使用 **TRON（TRC20）** 网络，地址可直接复制。
 
-**[下载 v0.17.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.17.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.1/SuzerainSaveStudio-0.17.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.17.1) · [♡ 赞助作者](SPONSOR.md)
 
 ![Windows 桌面编辑器中的里奇亚示例，雾蓝主题和微软雅黑 UI](docs/images/rizia-workspace.png)
 
@@ -28,7 +28,7 @@
 
 - **收藏字段**。选中常用或高级字段，在右侧点“收藏字段”。换同一战役的存档后，到“高级字段”点“只看收藏”，可继续编辑这些数值。索德兰和里奇亚各用一份收藏。
 - **查里奇亚资源**。在高级字段搜索“能源”时，当前库存会排在收入修正项前面。要看每回合的变化，可以搜索“每回合能源”。净变化是存档记下的汇总值，游戏结算时可能重新计算。
-- **选择前查看结果**。在游戏内按 **Ctrl+F8**，开启“悬停显示选项结果”，然后关掉面板。将鼠标放到选项上，就能看到可确认的直接变化，例如“私人资产 +2”。没有足够信息时会提示无法确认。此功能默认关闭。[查看游戏内悬停实拍](docs/images/choice-preview.jpg)
+- **选择前查看结果**。按 **Ctrl+F8**，开启「按 Ctrl 查看选项结果」，再关掉面板。将鼠标指向选项，轻按一下左或右 **Ctrl**，就能看到「私人资产 +2」这样的变化。再按一次或移开鼠标，小窗就会收起。换一个选项后可再次按 Ctrl 查看。此功能默认关闭，剧情结果尚不明确时会显示「暂无可确认的直接效果」。[查看游戏内提示实拍](docs/images/choice-preview.jpg)
 - **在游戏里微调**。按 **Ctrl+F8**，选中资源后可点 **−5、−1、+1、+5**，看清目标值再预览和确认。如果操作期间游戏已更新该资源，请按面板提示重新核对。
 
 [查看收藏界面](docs/images/field-favorites.png) · [玩家反馈与五款同类工具对照](docs/PLAYER-RESEARCH.zh-CN.md)
@@ -67,6 +67,8 @@
 Use `Rizia auto turn 3` in the save picker to narrow the list to that campaign, slot type and turn. Paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` into **Advanced** to find that exact field. Enter your preferred amount in the inspector to make the edit.
 
 Bookmark any available field in its inspector and find it again under **Advanced** with the favorites filter. Sordland and Rizia keep separate lists. In the live panel, use **−5, −1, +1, +5** to prepare a change, then preview and confirm it.
+
+To see what a choice changes, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel, close it, then point to the choice and tap either Ctrl key. Tap again or move away to dismiss the preview.
 
 The desktop editor uses equal-width digits in numeric columns and inputs. The Ctrl+F8 panel uses the game's own font for English and Chinese, with bold headings and larger resource values. [View the panel in the game’s main menu](docs/images/live-panel-preview.png)
 

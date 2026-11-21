@@ -1,8 +1,15 @@
-# v0.17.0 Preview — Windows validation
+# v0.17.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.17.0 editor and optional 0.17.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.17.1 editor and optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
 
-## Choice previews
+## Ctrl-triggered choice previews in 0.17.1
+
+A standalone left or right Ctrl tap toggles a preview for the pointed choice. Moving to another choice dismisses it. The existing preference is shared between the desktop editor and the game.
+
+- Tested on Windows Steam build 175 with a copy of a Sordland campaign. At the family-origin choices, a left Ctrl tap showed the middle-income effects and a right Ctrl tap dismissed the tooltip on the same option. The dialogue stayed at the selection screen.
+- The Windows build passed 98 input/tooltip checks and 307 live panel checks. Regression coverage includes single-frame taps, a key already held when Ctrl is tapped, Ctrl+F8, repeated key events, focus loss, scene changes, and recycled choice controls. The effect parser, dialogue-path and live-state suites passed 47, 54 and 73 checks respectively.
+
+## Choice previews in 0.17.0
 
 - The desktop and in-game switches use the same per-user setting. A new profile starts with previews off. A preview reads the option bound to the hovered control. It does not invoke the option, evaluate Lua or save game state.
 - On the Steam Windows 3.1.0 build 175, the release DLL was run with a separate Sordland campaign copy. Hovering the rich, middle-income and poor family origins showed different wealth and public-opinion changes without advancing the dialogue. Wealth still read 0 after comparing all three. Selecting the poor family then took wealth to 1 as previewed. The desktop-enabled switch carried across a game restart and turning it off hid the tooltip. [In-game screenshot](docs/images/choice-preview.jpg)

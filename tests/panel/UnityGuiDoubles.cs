@@ -170,6 +170,7 @@ namespace SuzerainSaveStudio.Live
     internal sealed class ChoiceHover
     {
         internal static bool LastEnabled;
+        internal void Reset() => LastEnabled = false;
         internal void OnGUI(bool enabled, bool chinese, PanelAppearance palette) => LastEnabled = enabled;
     }
 }

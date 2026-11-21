@@ -4,9 +4,9 @@
 
 J’ai créé ce petit éditeur pour mes parties de *Suzerain*. Je m’en sers pour retrouver le budget de Sordland dans une sauvegarde ou pour voir combien d’énergie Rizia gagne ou perd à chaque tour.
 
-**[Télécharger la version préliminaire 0.17.0 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)**
+**[Télécharger la version préliminaire 0.17.1 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.1/SuzerainSaveStudio-0.17.1-Live-Preview-win-x64.zip)**
 
-Pour voir les effets immédiats avant de choisir, activez l’aperçu au survol dans le panneau **Ctrl+F8**, fermez-le, puis survolez une option. La fonction est désactivée par défaut. Certaines conséquences ultérieures restent inconnues.
+Activez l’aperçu des choix dans le panneau **Ctrl+F8**, puis fermez le panneau. Placez le pointeur sur un choix et appuyez brièvement sur la touche **Ctrl** de gauche ou de droite pour en voir les effets. Appuyez de nouveau ou éloignez le pointeur pour masquer l’infobulle. Pour comparer un autre choix, pointez-le et appuyez sur Ctrl. La fonction est désactivée par défaut. Certaines conséquences dépendent de la suite du récit.
 
 ## Modifier une sauvegarde
 

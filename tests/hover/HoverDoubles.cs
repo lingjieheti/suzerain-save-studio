@@ -5,6 +5,12 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+public abstract class NativeBinding
+{
+    private static long nextPointer = 100;
+    public IntPtr Pointer { get; set; } = new IntPtr(++nextPointer);
+}
+
 namespace Il2CppInterop.Runtime
 {
     public static class Il2CppType { public static Type Of<T>() => typeof(T); }
@@ -23,7 +29,7 @@ namespace BepInEx.Logging
 }
 namespace UnityEngine
 {
-    public class Component { public T Cast<T>() where T : Component => (T)this; }
+    public class Component : NativeBinding { public T Cast<T>() where T : Component => (T)this; }
     public class GameObject
     {
         public bool activeInHierarchy = true;
@@ -34,10 +40,24 @@ namespace UnityEngine
             Components.FirstOrDefault(type.IsInstanceOfType) ?? Parent?.GetComponentInParent(type);
     }
     public static class Application { public static bool isFocused = true; }
-    public enum EventType { Repaint, MouseDown, MouseUp }
-    public class Event { public static Event current = new(); public EventType type; public Vector2 mousePosition; }
+    public enum EventType { Repaint, MouseDown, MouseUp, KeyDown, KeyUp, Used, Layout, ScrollWheel }
+    public enum KeyCode { None, LeftControl, RightControl, LeftShift, RightShift, C, F8 }
+    [Flags]
+    public enum EventModifiers { None = 0, Shift = 1, Control = 2, Alt = 4, Command = 8 }
+    public class Event
+    {
+        public static Event current = new();
+        public EventType type, rawType;
+        public KeyCode keyCode;
+        public EventModifiers modifiers;
+        public Vector2 mousePosition;
+        public bool control => modifiers.HasFlag(EventModifiers.Control);
+        public bool shift => modifiers.HasFlag(EventModifiers.Shift);
+        public bool alt => modifiers.HasFlag(EventModifiers.Alt);
+        public bool command => modifiers.HasFlag(EventModifiers.Command);
+    }
     public static class Screen { public static int width = 1200, height = 900; }
-    public static class Time { public static float realtimeSinceStartup; }
+    public static class Time { public static int frameCount; public static float realtimeSinceStartup; }
     public record struct Color(float R, float G, float B, float A)
     {
         public static Color white => new(1, 1, 1, 1);
@@ -77,6 +97,15 @@ namespace UnityEngine
         public static readonly List<(Rect area, Color fill)> Fills = new();
         public static void DrawTexture(Rect area, object texture, ScaleMode scaleMode, bool blend, float aspect,
             Color fill, float border, float radius) => Fills.Add((area, fill));
+    }
+}
+namespace UnityEngine.SceneManagement
+{
+    public struct Scene { public int handle; }
+    public static class SceneManager
+    {
+        public static int Handle = 1;
+        public static Scene GetActiveScene() => new() { handle = Handle };
     }
 }
 namespace UnityEngine.UI
@@ -122,8 +151,33 @@ namespace UnityEngine.EventSystems
         }
     }
 }
+namespace UnityEngine.InputSystem.Controls
+{
+    public class ButtonControl
+    {
+        public bool isPressed, wasPressedThisFrame, wasReleasedThisFrame;
+    }
+    public class KeyControl : ButtonControl
+    {
+        public InputSystem.Key keyCode;
+    }
+}
 namespace UnityEngine.InputSystem
 {
+    using Controls;
+    public enum Key { LeftCtrl, RightCtrl, LeftShift, RightShift, LeftAlt, RightAlt, LeftMeta, RightMeta, F8, C }
+    public class Keyboard
+    {
+        public static Keyboard current;
+        public readonly IReadOnlyList<KeyControl> allKeys = Enum.GetValues<Key>().Select(key => new KeyControl { keyCode = key }).ToArray();
+        public KeyControl this[Key key] => allKeys[(int)key];
+        public KeyControl leftCtrlKey => this[Key.LeftCtrl];
+        public KeyControl rightCtrlKey => this[Key.RightCtrl];
+        public void ClearEdges()
+        {
+            foreach (var key in allKeys) key.wasPressedThisFrame = key.wasReleasedThisFrame = false;
+        }
+    }
     public class Mouse { public static Mouse current = new(); public int deviceId = 19; }
 }
 namespace UnityEngine.InputSystem.UI
@@ -143,9 +197,9 @@ namespace UnityEngine.InputSystem.UI
 }
 namespace PixelCrushers.DialogueSystem
 {
-    public class Response { public bool enabled = true; public DialogueEntry destinationEntry; }
-    public class DialogueEntry { public IntPtr Pointer; public string userScript; public int conversationID; }
-    public class Conversation { public string Title; }
+    public class Response : NativeBinding { public bool enabled = true; public DialogueEntry destinationEntry; }
+    public class DialogueEntry : NativeBinding { public string userScript; public int conversationID; }
+    public class Conversation : NativeBinding { public string Title; }
     public class DialogueDatabase
     {
         public Dictionary<int, Conversation> Conversations = new();
@@ -186,18 +240,18 @@ public class TemplateConversationResponse : Component
     public Button responseButton = new();
     public PixelCrushers.DialogueSystem.Response response;
 }
-public class InstructionData { public string Instruction; }
+public class InstructionData : NativeBinding { public string Instruction; }
 public class TemplateDecisionOptionButton : Component { public InstructionData currentDecisionOption; }
-public class FormOption { public InstructionData MultipleChoiceOptionProperties, CarouselChoiceOptionProperties; }
+public class FormOption : NativeBinding { public InstructionData MultipleChoiceOptionProperties, CarouselChoiceOptionProperties; }
 public class TemplateMultipleChoiceOption : Component { public FormOption currentChoiceData; }
 public class TemplateCarouselChoiceOption : Component { public FormOption selectedChoiceData; }
 public class TemplateSkipPrologueOption : Component { public FormOption selectedOption; }
 public class DecreeProperties { public string OnDecreeEnact; }
-public class DecreeData { public DecreeProperties DecreeProperties; }
+public class DecreeData : NativeBinding { public DecreeProperties DecreeProperties; }
 public class TemplateDecree : Component { public DecreeData currentDecreeData; }
 public class DecreeDetailsPage : Component { public Button signButton; public DecreeData currentDecreeData; }
 public class BillProperties { public string SignVariables, VetoVariables; }
-public class BillData { public BillProperties BillProperties; }
+public class BillData : NativeBinding { public BillProperties BillProperties; }
 public class BillPanel : Component
 {
     public Button vetoButton;

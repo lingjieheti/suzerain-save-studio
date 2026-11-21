@@ -14,7 +14,7 @@
 
 想支持作者，可点选档窗口底部或编辑器侧栏的 **赞助作者**。选择 PayPal 或 USDT 即可扫码。PayPal 也可打开收款页。USDT 使用 TRON（TRC20）网络，地址可直接复制。
 
-游戏内想在选择前看结果，按 **Ctrl+F8** 开启 **悬停显示选项结果**，关闭面板后把鼠标移到选项上。桌面端的 **实时模式** 也有同一开关，初始为关闭。
+按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
 
@@ -24,6 +24,6 @@ Open **Support the author** in the save picker or editor sidebar to scan a PayPa
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker and check the file name. In **Advanced**, search for a field name or paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate it.
 3. Select the field, enter a new value and choose **Apply**. Press **Ctrl+S** to review the changes. **Save as** creates a separate copy. Return to the game's main menu and load the file you just saved.
 
-For a read-only choice tooltip, enable **Preview choices on hover** in the Ctrl+F8 panel. Close the panel, then hover over the choice. The same switch is available in the editor’s **Live mode** dialog.
+To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel. Close the panel, point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. Point to another choice and tap Ctrl to see its effects. The setting is off by default and is also available in the editor’s **Live mode** dialog.
 
 For in-game adjustments on Windows Steam, the optional plugin requires BepInEx 6 IL2CPP. Keep the DLL beside the editor, choose **Live mode** at startup, and select the game's executable. In a running campaign, press **Ctrl+F8**, choose a resource, preview your edit and confirm.

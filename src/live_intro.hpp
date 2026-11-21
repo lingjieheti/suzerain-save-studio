@@ -36,11 +36,11 @@ inline void setChoiceHints(bool enabled){
 
 inline const wchar_t* choiceHintsLabel(){
     static const wchar_t* const labels[]={
-        L"在游戏中悬停时显示选项结果",L"在遊戲中將滑鼠移到選項上時顯示結果",L"Preview choices on hover in game",
-        L"ゲーム内の選択肢にカーソルを合わせて結果を表示",L"게임에서 선택지에 마우스를 올리면 결과 표시",
-        L"Im Spiel die Folgen einer Wahl beim Überfahren anzeigen",L"Afficher les effets au survol des choix en jeu",
-        L"Mostrar los efectos al pasar el cursor sobre una opción",L"Mostrar os efeitos ao passar o cursor sobre uma opção",
-        L"Показывать последствия при наведении на вариант",L"Oyunda imleç seçeneğin üzerindeyken etkileri göster"
+        L"在游戏中按 Ctrl 查看选项结果",L"在遊戲中按 Ctrl 查看選項結果",L"Preview choices with Ctrl in game",
+        L"ゲーム内で Ctrl キーを押して選択肢の効果を表示",L"게임에서 Ctrl 키로 선택지 효과 보기",
+        L"Auswirkungen einer Wahl mit Strg anzeigen",L"Afficher les effets d’un choix avec Ctrl",
+        L"Ver los efectos de una opción con Ctrl",L"Ver os efeitos de uma escolha com Ctrl",
+        L"Показывать последствия выбора по клавише Ctrl",L"Seçeneğin etkilerini Ctrl ile göster"
     };
     return labels[i18n::language];
 }

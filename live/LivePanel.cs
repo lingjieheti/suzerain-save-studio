@@ -45,7 +45,7 @@ namespace SuzerainSaveStudio.Live
 
         public void OnApplicationFocus(bool focused)
         {
-            if (!focused) hotkeyHeld = false;
+            if (!focused) { hotkeyHeld = false; choiceHover.Reset(); }
             else LoadPreferences();
         }
 
@@ -62,7 +62,7 @@ namespace SuzerainSaveStudio.Live
             if (pointerCanvas != null) UnityEngine.Object.Destroy(pointerCanvas);
         }
 
-        public void OnDisable() => ClosePanel();
+        public void OnDisable() { choiceHover.Reset(); ClosePanel(); }
 
         [HideFromIl2Cpp]
         private void ClosePanel()
@@ -674,7 +674,7 @@ namespace SuzerainSaveStudio.Live
                         Notice("外观已切换，本次选择未能保存。","Theme applied for this session only.","",Feedback.Warning);
                 }
             }
-            GUI.Label(new Rect(Inset,373,content-84,28),T("悬停显示选项结果","Preview choices on hover"),body);
+            GUI.Label(new Rect(Inset,373,content-84,28),T("按 Ctrl 查看选项结果","Preview choices with Ctrl"),body);
             if (Button(new Rect(width-Inset-72,373,72,28),"choice-hints",
                     hintsEnabled ? T("已开启","On") : T("已关闭","Off"),primary:hintsEnabled))
             {

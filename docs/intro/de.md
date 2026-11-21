@@ -4,9 +4,9 @@
 
 Ich habe dieses kleine Werkzeug für meine eigenen *Suzerain*-Partien entwickelt. Damit behalte ich in Sordland den Staatshaushalt im Blick und sehe in Rizia, wie viel Energie ich habe und wie sich der Vorrat pro Runde verändert.
 
-**[Vorschauversion 0.17.0 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)**
+**[Vorschauversion 0.17.1 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.1/SuzerainSaveStudio-0.17.1-Live-Preview-win-x64.zip)**
 
-Für eine Vorschau der unmittelbaren Auswirkungen aktiviere die Option im **Ctrl+F8**-Panel. Schließe das Panel und fahre mit der Maus über eine Auswahl. Die Funktion ist zunächst ausgeschaltet. Spätere Folgen können offenbleiben.
+Aktiviere die Auswahlvorschau im **Ctrl+F8**-Panel und schließe das Panel. Zeige mit der Maus auf eine Option und drücke kurz die linke oder rechte **Strg**-Taste. Drücke sie erneut oder bewege den Mauszeiger von der Option weg, um die Vorschau zu schließen. Für eine andere Option drückst du dort erneut Strg. Die Funktion ist standardmäßig ausgeschaltet. Manche Folgen hängen vom späteren Spielverlauf ab.
 
 ## Einen Spielstand bearbeiten
 

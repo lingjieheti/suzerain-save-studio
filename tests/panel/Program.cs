@@ -132,7 +132,19 @@ internal static class Program
             GUI.DisplayedDraft == draft && DialogueLua.Writes.Count == writes, "Toggling hints preserves game and draft");
         Click("Close");
         Frame(EventType.Repaint);
-        Check(ChoiceHover.LastEnabled, "Closing the panel enables hover previews");
+        Check(ChoiceHover.LastEnabled, "Closing the panel enables the Ctrl preview shortcut");
+        Panel.OnApplicationFocus(false);
+        Check(!ChoiceHover.LastEnabled, "Focus loss resets previews even before the next repaint");
+        Panel.OnApplicationFocus(true);
+        Frame(EventType.KeyDown, KeyCode.F8, control: true);
+        Frame(EventType.KeyUp, KeyCode.F8);
+        Frame(EventType.Repaint);
+        Check(!ChoiceHover.LastEnabled && GUI.Buttons.ContainsKey("On"),
+            "Ctrl+F8 opens the panel and suppresses the shortcut despite the enabled preference");
+        Frame(EventType.KeyDown, KeyCode.F8, control: true);
+        Frame(EventType.KeyUp, KeyCode.F8);
+        Frame(EventType.Repaint);
+        Check(ChoiceHover.LastEnabled, "Closing the panel restores the enabled shortcut");
         key.SetValue("ChoiceHints", "1", RegistryValueKind.String);
         Panel.OnApplicationFocus(true);
         Frame(EventType.Repaint);

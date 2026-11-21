@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace SuzerainSaveStudio.Live;
@@ -17,26 +18,33 @@ internal sealed class ChoiceHover
     private readonly struct Choice
     {
         public readonly Kind Kind;
+        public readonly Component Owner;
+        public readonly IntPtr Binding, Entry;
         public readonly Response Response;
         public readonly string Script;
 
-        public Choice(Kind kind, string script, Response response = null)
+        public Choice(Kind kind, Component owner, IntPtr binding, string script, Response response = null)
         {
             Kind = kind;
-            Script = script;
+            Owner = owner;
+            Binding = binding;
             Response = response;
+            Entry = response?.destinationEntry?.Pointer ?? IntPtr.Zero;
+            Script = script;
         }
+
+        public bool Matches(Choice? other) => other is Choice current && Owner == current.Owner &&
+            Kind == current.Kind && Binding == current.Binding && Entry == current.Entry && Script == current.Script;
     }
 
     private EventSystem legacySystem;
     private PointerEventData legacyPointer;
     private Il2CppSystem.Collections.Generic.List<RaycastResult> legacyHits;
-    private GameObject lastHit;
-    private float nextRead;
-    private Kind kind;
-    private bool chineseText;
-    private DialogueEntry lastEntry;
-    private string lastScript;
+    private KeyCode pressedKey;
+    private Choice? pressedChoice, shownChoice;
+    private int scene, lastPhysicalFrame = -1, lastReleaseFrame = -1, chordFrame = -1;
+    private Vector2 lastMouse;
+    private bool hasMouse, chineseText;
     private GUIContent heading, body;
     private GUIStyle headingStyle, bodyStyle;
     private bool warned;
@@ -46,43 +54,56 @@ internal sealed class ChoiceHover
     {
         if (!enabled || !Application.isFocused)
         {
-            Clear();
+            Reset();
             return;
         }
         var ev = Event.current;
-        if (ev == null || ev.type != EventType.Repaint || Time.realtimeSinceStartup < retryAt) return;
+        if (ev == null || Time.realtimeSinceStartup < retryAt) return;
 
         try
         {
-            var mouse = ev.mousePosition;
-            if (mouse.x < 0 || mouse.y < 0 || mouse.x >= Screen.width || mouse.y >= Screen.height)
+            if ((pressedChoice.HasValue || shownChoice.HasValue) && SceneManager.GetActiveScene().handle != scene)
+                Reset();
+            if (ev.rawType == EventType.KeyDown || ev.rawType == EventType.KeyUp)
             {
-                Clear();
+                // Unity doesn't guarantee a useful mousePosition on a keyboard event. The
+                // Input System raycast is current; the legacy backend uses the last GUI position.
+                var pointer = hasMouse ? lastMouse : ev.mousePosition;
+                bool ctrl = ev.keyCode == KeyCode.LeftControl || ev.keyCode == KeyCode.RightControl;
+                if (!ctrl || ev.shift || ev.alt || ev.command || HasOtherKey(Keyboard.current, ev.keyCode))
+                {
+                    CancelChord();
+                    return;
+                }
+                if (ev.rawType == EventType.KeyDown) Begin(ev.keyCode, pointer);
+                else End(ev.keyCode, pointer);
                 return;
             }
-            var hit = HitAt(mouse);
-            if (hit == null || !hit.activeInHierarchy)
+            if (ev.rawType == EventType.MouseDown || ev.rawType == EventType.MouseUp || ev.rawType == EventType.ScrollWheel)
             {
-                Clear();
+                if (pressedKey != KeyCode.None || ev.control) CancelChord();
                 return;
             }
+            if (ev.type != EventType.Repaint) return;
+            lastMouse = ev.mousePosition;
+            hasMouse = true;
+            PollKeyboard(lastMouse);
+            if (!pressedChoice.HasValue && !shownChoice.HasValue) return;
 
-            // Pooled buttons and carousel cards can change their bound choice under a stationary mouse.
-            float now = Time.realtimeSinceStartup;
-            if (body != null || hit != lastHit || chineseText != chinese || now >= nextRead)
+            var current = AtMouse(lastMouse);
+            if (pressedChoice is Choice pressed && !pressed.Matches(current)) CancelChord();
+            if (shownChoice is not Choice shown) return;
+            if (!shown.Matches(current))
             {
-                var choice = BoundChoice(hit);
-                if (choice.HasValue) Read(choice.Value, chinese);
-                else Clear();
-                lastHit = hit;
-                chineseText = chinese;
-                nextRead = now + 0.06f;
+                Hide();
+                return;
             }
-            if (body != null) Draw(mouse, appearance);
+            if (body == null || chinese != chineseText) Read(shown, chinese);
+            Draw(lastMouse, appearance);
         }
         catch (Exception error)
         {
-            Clear();
+            Reset();
             retryAt = Time.realtimeSinceStartup + 1f;
             if (!warned)
             {
@@ -91,6 +112,105 @@ internal sealed class ChoiceHover
                     .LogWarning("Could not read this choice preview. " + error.Message);
             }
         }
+    }
+
+    private void PollKeyboard(Vector2 pointer)
+    {
+        int frame = Time.frameCount;
+        var keyboard = Keyboard.current;
+        if (keyboard == null || lastPhysicalFrame == frame) return;
+        lastPhysicalFrame = frame;
+        // Some IMGUI backends omit standalone modifiers. Input System edge flags also
+        // preserve a short press and release delivered between consecutive repaints.
+        var left = keyboard.leftCtrlKey;
+        var right = keyboard.rightCtrlKey;
+        bool leftPress = left.wasPressedThisFrame, leftRelease = left.wasReleasedThisFrame;
+        bool rightPress = right.wasPressedThisFrame, rightRelease = right.wasReleasedThisFrame;
+        if (!leftPress && !rightPress && pressedKey == KeyCode.None) return;
+        if ((left.isPressed || leftPress) && (right.isPressed || rightPress))
+        {
+            CancelChord();
+            return;
+        }
+        var side = leftPress ? KeyCode.LeftControl : rightPress ? KeyCode.RightControl : pressedKey;
+        if (HasOtherKey(keyboard, side))
+        {
+            CancelChord();
+            return;
+        }
+        if (leftPress) Begin(KeyCode.LeftControl, pointer);
+        if (rightPress) Begin(KeyCode.RightControl, pointer);
+        if (leftRelease) End(KeyCode.LeftControl, pointer);
+        if (rightRelease) End(KeyCode.RightControl, pointer);
+    }
+
+    private static bool HasOtherKey(Keyboard keyboard, KeyCode side)
+    {
+        if (keyboard == null) return false;
+        var allowed = side == KeyCode.LeftControl ? Key.LeftCtrl : Key.RightCtrl;
+        var keys = keyboard.allKeys;
+        for (int i = 0; i < keys.Count; i++)
+        {
+            var key = keys[i];
+            if (key.keyCode != allowed && (key.isPressed || key.wasPressedThisFrame || key.wasReleasedThisFrame))
+                return true;
+        }
+        return false;
+    }
+
+    private void Begin(KeyCode side, Vector2 pointer)
+    {
+        if (chordFrame == Time.frameCount || lastReleaseFrame == Time.frameCount) return;
+        if (pressedKey != KeyCode.None)
+        {
+            if (pressedKey != side) CancelChord();
+            return;
+        }
+        var target = AtMouse(pointer);
+        if (!target.HasValue) return;
+        pressedChoice = target;
+        pressedKey = side;
+        scene = SceneManager.GetActiveScene().handle;
+    }
+
+    private void End(KeyCode side, Vector2 pointer)
+    {
+        if (pressedKey != side) return;
+        lastReleaseFrame = Time.frameCount;
+        var pressed = pressedChoice;
+        pressedKey = KeyCode.None;
+        pressedChoice = null;
+        if (pressed is not Choice choice || !choice.Matches(AtMouse(pointer))) return;
+        bool alreadyShown = choice.Matches(shownChoice);
+        Hide();
+        if (!alreadyShown) shownChoice = choice;
+    }
+
+    private void CancelChord()
+    {
+        pressedKey = KeyCode.None;
+        pressedChoice = null;
+        chordFrame = Time.frameCount;
+    }
+
+    private Choice? AtMouse(Vector2 pointer)
+    {
+        if (pointer.x < 0 || pointer.y < 0 || pointer.x >= Screen.width || pointer.y >= Screen.height) return null;
+        var hit = HitAt(pointer);
+        return hit == null || !hit.activeInHierarchy ? null : BoundChoice(hit);
+    }
+
+    private void Hide()
+    {
+        shownChoice = null;
+        heading = body = null;
+    }
+
+    internal void Reset()
+    {
+        CancelChord();
+        Hide();
+        hasMouse = false;
     }
 
     private GameObject HitAt(Vector2 guiMouse)
@@ -123,10 +243,10 @@ internal sealed class ChoiceHover
     {
         if (button == null || !button.IsInteractable() || response?.enabled == false) return null;
         var reader = Owner<PrologueEpiloguePanel>(hit);
-        if (reader == null) return new Choice(Kind.DetachedDialogue, null, response);
+        if (reader == null) return new Choice(Kind.DetachedDialogue, button, response?.Pointer ?? IntPtr.Zero, null, response);
         var kind = reader.State == PrologueEpiloguePanel.PrologueEpilogueState.Prologue
             ? Kind.ReadingPrologue : Kind.Dialogue;
-        return new Choice(kind, null, response);
+        return new Choice(kind, button, response?.Pointer ?? IntPtr.Zero, null, response);
     }
 
     private static Choice? BoundChoice(GameObject hit)
@@ -149,28 +269,28 @@ internal sealed class ChoiceHover
 
         var decision = Owner<TemplateDecisionOptionButton>(hit);
         if (decision != null)
-            return new Choice(Kind.Decision, decision.currentDecisionOption?.Instruction);
+            return new Choice(Kind.Decision, decision, decision.currentDecisionOption?.Pointer ?? IntPtr.Zero, decision.currentDecisionOption?.Instruction);
 
         var multiple = Owner<TemplateMultipleChoiceOption>(hit);
         if (multiple != null)
-            return new Choice(Kind.Form, multiple.currentChoiceData?.MultipleChoiceOptionProperties?.Instruction);
+            return new Choice(Kind.Form, multiple, multiple.currentChoiceData?.Pointer ?? IntPtr.Zero, multiple.currentChoiceData?.MultipleChoiceOptionProperties?.Instruction);
 
         var carousel = Owner<TemplateCarouselChoiceOption>(hit);
         if (carousel != null)
-            return new Choice(Kind.Carousel, carousel.selectedChoiceData?.CarouselChoiceOptionProperties?.Instruction);
+            return new Choice(Kind.Carousel, carousel, carousel.selectedChoiceData?.Pointer ?? IntPtr.Zero, carousel.selectedChoiceData?.CarouselChoiceOptionProperties?.Instruction);
 
         var prologue = Owner<TemplateSkipPrologueOption>(hit);
         if (prologue != null)
-            return new Choice(Kind.Carousel, prologue.selectedOption?.CarouselChoiceOptionProperties?.Instruction);
+            return new Choice(Kind.Carousel, prologue, prologue.selectedOption?.Pointer ?? IntPtr.Zero, prologue.selectedOption?.CarouselChoiceOptionProperties?.Instruction);
 
         var decree = Owner<TemplateDecree>(hit);
         if (decree != null)
-            return new Choice(Kind.Decree, decree.currentDecreeData?.DecreeProperties?.OnDecreeEnact);
+            return new Choice(Kind.Decree, decree, decree.currentDecreeData?.Pointer ?? IntPtr.Zero, decree.currentDecreeData?.DecreeProperties?.OnDecreeEnact);
 
         // The details page also contains unrelated controls. Only the bound sign button is a choice.
         var details = Owner<DecreeDetailsPage>(hit);
         if (details != null && details.signButton != null && Owner<Button>(hit) == details.signButton)
-            return new Choice(Kind.Decree, details.currentDecreeData?.DecreeProperties?.OnDecreeEnact);
+            return new Choice(Kind.Decree, details, details.currentDecreeData?.Pointer ?? IntPtr.Zero, details.currentDecreeData?.DecreeProperties?.OnDecreeEnact);
 
         var bill = Owner<BillPanel>(hit);
         return bill == null ? null : BillChoice(bill, Owner<Button>(hit));
@@ -194,16 +314,13 @@ internal sealed class ChoiceHover
             veto |= method == nameof(BillPanel.VetoBill);
         }
         if (sign == veto || veto != (button == panel.vetoButton)) return null;
-        return sign ? new Choice(Kind.SignBill, bill.SignVariables) : new Choice(Kind.VetoBill, bill.VetoVariables);
+        return sign ? new Choice(Kind.SignBill, button, panel.currentBillData.Pointer, bill.SignVariables) :
+            new Choice(Kind.VetoBill, button, panel.currentBillData.Pointer, bill.VetoVariables);
     }
 
     private void Read(Choice choice, bool chinese)
     {
         var entry = choice.Response?.destinationEntry;
-        if (body != null && kind == choice.Kind && chineseText == chinese &&
-            lastEntry?.Pointer == entry?.Pointer && lastScript == choice.Script)
-            return;
-
         bool readingPrologue = choice.Kind == Kind.ReadingPrologue;
         if (choice.Kind == Kind.DetachedDialogue && entry != null)
         {
@@ -226,17 +343,7 @@ internal sealed class ChoiceHover
         };
         heading = new GUIContent(title);
         body = new GUIContent(summary);
-        kind = choice.Kind;
-        lastEntry = entry;
-        lastScript = choice.Script;
-    }
-
-    private void Clear()
-    {
-        heading = body = null;
-        lastEntry = null;
-        lastScript = null;
-        lastHit = null;
+        chineseText = chinese;
     }
 
     private void Draw(Vector2 mouse, PanelAppearance theme)

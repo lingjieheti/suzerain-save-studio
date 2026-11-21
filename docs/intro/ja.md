@@ -4,9 +4,9 @@
 
 『Suzerain』を遊ぶときに使っている、自作のセーブエディターです。ソードランドでもリジアでも、予算を確認したり、資源の値を少し調整したりできます。
 
-[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.1/SuzerainSaveStudio-0.17.1-Live-Preview-win-x64.zip)
 
-選択肢の直接的な効果を事前に見るには、**Ctrl+F8** のパネルでホバー表示を有効にし、パネルを閉じて選択肢にカーソルを合わせます。初期設定はオフです。後の展開に依存する効果は判定できない場合があります。
+選択肢の効果を事前に見るには、**Ctrl+F8** でパネルを開き、選択肢のプレビューを有効にしてからパネルを閉じます。選択肢にカーソルを合わせ、左右どちらかの **Ctrl** キーを軽く押すと効果が表示されます。もう一度押すか、カーソルを外すと閉じます。別の選択肢を確認するときは、その上で再度 Ctrl を押してください。初期設定はオフです。その後の展開によって決まる結果は表示できない場合があります。
 
 ## セーブデータを編集する
 
