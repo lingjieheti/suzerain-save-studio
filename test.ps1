@@ -16,6 +16,10 @@ foreach ($suite in $suites) {
     if (!(Test-Path -LiteralPath $sourceFile)) { throw "Missing test source: $sourceFile" }
     $binary = Join-Path $testBuild "$suite.exe"
     $flags = @("-std=c++17", "-O2", "-static", "-static-libgcc", "-static-libstdc++", "-include", $compat)
+    if ($suite -in @("test_app_io", "test_editor")) {
+        # These suites include the application entry point and need its common-controls v6 manifest.
+        $flags += Join-Path $sourceRoot "build\app.res"
+    }
     $libraries = @("-luser32", "-lkernel32", "-lcomdlg32", "-lcomctl32", "-lshell32", "-lole32", "-luuid", "-lgdi32", "-luxtheme", "-ldwmapi")
     & $Compiler $sourceFile @flags "-o" $binary @libraries
     if ($LASTEXITCODE -ne 0) { throw "$suite compilation failed" }

@@ -31,6 +31,7 @@ inline const std::map<std::wstring,Entry>& dictionary(){
     static const auto rows=[](){std::map<std::wstring,Entry> out;
         const wchar_t* data[]={
 // Chinese, English, Japanese, Korean, German, French, Spanish, Brazilian Portuguese, Russian, Turkish.
+L"实时模式|Live mode|リアルタイム|실시간 모드|Live-Modus|Mode en direct|Modo en vivo|Modo ao vivo|В игре|Canlı mod",
 L"选择存档|Select save|セーブ選択|저장 선택|Spielstand wählen|Choisir une sauvegarde|Elegir partida|Escolher jogo salvo|Выбрать сохранение|Kayıt seç",
 L"内置练习示例|Practice saves|練習用サンプル|연습용 예제|Übungsbeispiele|Exemples intégrés|Ejemplos de práctica|Exemplos de prática|Учебные примеры|Alıştırma örnekleri",
 L"可体验编辑功能，无法在游戏中载入。|Try editing a sample. Samples cannot be loaded in the game.|編集を試せます。ゲームでは読み込めません。|편집을 연습할 수 있습니다. 게임에서는 불러올 수 없습니다.|Zum Ausprobieren. Im Spiel nicht ladbar.|Pour tester l’éditeur. Inutilisables dans le jeu.|Para probar el editor. No se cargan en el juego.|Teste o editor. Os exemplos não abrem no jogo.|Для знакомства с редактором. В игре не загружаются.|Düzenleyiciyi deneyin. Örnekler oyunda açılamaz.",
@@ -189,6 +190,7 @@ L"净变化 |Net |純増減 |순변화 |Netto |Net |Neto |Líquido |Измене
 L"预览版  |Preview  |プレビュー  |미리 보기  |Vorschau  |Aperçu  |Vista previa  |Prévia  |Предварительная  |Önizleme  ",
 L"目标：|Target:|保存先：|대상:|Ziel:|Cible :|Destino:|Destino:|Назначение:|Hedef:",
 L" 个存档 · 最新在前| saves · newest first| 件 · 新しい順|개 저장 · 최신순| Spielstände · neueste zuerst| sauvegardes · récentes d'abord| partidas · recientes primero| jogos · recentes primeiro| сохр. · новые первыми| kayıt · yeniden eskiye",
+L"1 项即将保存|1 change to save|1 件の変更|저장할 변경 1개|1 Änderung zu speichern|1 modification à enregistrer|1 cambio para guardar|1 alteração para salvar|1 изменение для сохранения|Kaydedilecek 1 değişiklik",
 L" 项即将保存| changes to save| 件の変更|개 변경 저장 예정| Änderungen zu speichern| modifications à enregistrer| cambios por guardar| alterações para salvar| изменений к записи| değişiklik kaydedilecek",
 L" · 已到搜索上限| · search limit reached| · 検索上限に到達| · 검색 한도 도달| · Suchlimit erreicht| · limite atteinte| · límite alcanzado| · limite atingido| · достигнут лимит| · arama sınırına ulaşıldı",
 L" · 部分文件无法读取| · some files unreadable| · 一部読込不可| · 일부 파일 읽기 실패| · einige Dateien nicht lesbar| · certains fichiers illisibles| · algunos archivos ilegibles| · alguns arquivos ilegíveis| · часть файлов недоступна| · bazı dosyalar okunamadı",

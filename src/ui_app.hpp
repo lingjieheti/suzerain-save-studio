@@ -2,18 +2,19 @@
 #include "demo_resources.hpp"
 #include "field_search.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.11.0";
+constexpr wchar_t APP_VERSION[] = L"0.12.1";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT };
 namespace Theme {
-constexpr COLORREF bg=RGB(245,244,237), sidebar=RGB(24,49,44), panel=RGB(255,254,249),
-    input=RGB(255,255,252), line=RGB(208,213,201), text=RGB(28,45,38),
-    muted=RGB(73,91,80), dim=RGB(92,108,96), gold=RGB(234,194,122),
-    goldDark=RGB(125,76,15), blue=RGB(49,92,116), green=RGB(45,104,72),
-    red=RGB(139,61,49), select=RGB(217,235,222), accent=RGB(35,84,65),
-    sideText=RGB(244,245,232), sideMuted=RGB(186,204,188), sideLine=RGB(58,83,72),
-    stripe=RGB(246,248,240), head=RGB(234,238,226);
+constexpr COLORREF bg=RGB(249,247,241), sidebar=RGB(240,236,226), panel=RGB(253,251,246),
+    input=RGB(255,253,249), line=RGB(217,211,199), text=RGB(48,43,38),
+    muted=RGB(97,88,78), dim=RGB(112,102,91), select=RGB(245,224,209),
+    accent=RGB(165,77,48), accentHover=RGB(139,62,38), accentInk=RGB(132,59,38),
+    onAccent=RGB(255,250,243), focus=RGB(171,88,57), sideText=RGB(55,48,41),
+    sideMuted=RGB(101,90,77), sideLine=RGB(216,208,192), stripe=RGB(249,246,239),
+    head=RGB(242,238,228), hover=RGB(236,231,220), status=RGB(91,111,87),
+    gold=accent, goldDark=accentInk, blue=RGB(89,104,117), green=status, red=RGB(150,63,49);
 }
 struct BackupItem { fs::path path; fs::file_time_type time; uintmax_t size=0; };
 struct FieldPageState {
@@ -25,7 +26,7 @@ struct FieldCaption { std::wstring label, searchText; };
 struct App {
     HWND win{},path{},meta{},grid{},search{},name{},desc{},edit{},oldValue{},valueLabel{},notice{},helpText{},empty{};
     std::map<int,HWND> controls;
-    HFONT font{},small{},title{},large{},bold{},mono{};
+    HFONT font{},small{},title{},large{},bold{},mono{},brand{};
     HBRUSH bg{},panel{},input{}; HIMAGELIST rowHeight{};
     UINT dpi=96; int tab=0; bool populating=false,editingDirty=false,autoCap=true,changedOnly=false,restoreArmed=false;
     bool boolValue=false,licenseMode=false; int gridTop=350,tableW=0,rightX=0; std::wstring noticeText=L"未打开存档";
@@ -80,25 +81,28 @@ HWND button(const wchar_t*txt,int id){auto h=control(L"BUTTON",txt,WS_TABSTOP|BS
 #include "workspace_chrome.hpp"
 LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
     if(m==WM_ERASEBKGND)return 1;
-    if(m==WM_PAINT){PAINTSTRUCT ps;auto dc=BeginPaint(h,&ps);RECT all;GetClientRect(h,&all);fill(dc,all,Theme::head);
-        int count=Header_GetItemCount(h);for(int i=0;i<count;++i){RECT r{};Header_GetItemRect(h,i,&r);wchar_t title[128]{};HDITEMW item{};item.mask=HDI_TEXT;item.pszText=title;item.cchTextMax=128;Header_GetItem(h,i,&item);r.left+=px(7);
-            if(i==0&&g.doc&&g.tab<7&&r.right-r.left>px(112)){
-                auto count=g.tab==6?g.backups.size():g.rows.size();auto countText=std::to_wstring(count);
-                int badgeW=px(16+7*(int)countText.size());RECT badge=r;badge.right-=px(5);badge.left=badge.right-badgeW;
-                int mid=(badge.top+badge.bottom)/2;badge.top=mid-px(8);badge.bottom=mid+px(8);
-                rounded(dc,badge,Theme::panel,Theme::line,10);drawText(dc,countText,badge,g.small,Theme::muted,DT_CENTER|DT_VCENTER|DT_SINGLELINE);r.right=badge.left-px(3);
-            }
-            drawText(dc,title,r,g.small,Theme::muted);}
-        auto pen=CreatePen(PS_SOLID,1,Theme::line);auto old=SelectObject(dc,pen);MoveToEx(dc,0,all.bottom-1,nullptr);LineTo(dc,all.right,all.bottom-1);SelectObject(dc,old);DeleteObject(pen);EndPaint(h,&ps);return 0;}
+    if(m==HDM_LAYOUT){
+        auto result=DefSubclassProc(h,m,wp,lp);
+        auto* hd=reinterpret_cast<HDLAYOUT*>(lp);
+        if(result&&hd&&hd->pwpos&&hd->prc){
+            int extra=px(30)-hd->pwpos->cy;hd->pwpos->cy+=extra;hd->prc->top+=extra;
+        }
+        return result;
+    }
+    if(m==WM_PAINT){PAINTSTRUCT ps{};auto dc=BeginPaint(h,&ps);paintWorkspaceHeader(h,dc);EndPaint(h,&ps);return 0;}
+    if(m==WM_PRINTCLIENT){paintWorkspaceHeader(h,(HDC)wp);return 0;}
     return DefSubclassProc(h,m,wp,lp);
 }
 void fonts(){
-    HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono};
+    HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand};
     auto f=[](int size,int weight,const wchar_t*face=L"Microsoft YaHei UI"){return CreateFontW(-px(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
-    g.font=f(14,FW_NORMAL);g.small=f(13,FW_NORMAL);g.title=f(25,FW_BOLD);
-    g.large=f(31,FW_NORMAL,L"Georgia");g.bold=f(17,FW_BOLD);g.mono=f(21,FW_SEMIBOLD,L"Segoe UI");
+    const wchar_t* body=i18n::language<=1?L"Microsoft YaHei UI":i18n::language==3?L"Yu Gothic UI":i18n::language==4?L"Malgun Gothic":L"Segoe UI";
+    const wchar_t* titleFace=i18n::language<=1?L"SimSun":i18n::language==3?L"Yu Mincho":i18n::language==4?L"Batang":L"Georgia";
+    g.font=f(14,FW_NORMAL,body);g.small=f(13,FW_NORMAL,body);g.title=f(29,FW_NORMAL,titleFace);
+    g.large=f(32,FW_NORMAL,L"Georgia");g.bold=f(18,FW_SEMIBOLD,body);g.mono=f(22,FW_NORMAL,L"Segoe UI");
+    g.brand=f(22,FW_NORMAL,L"Georgia");
     if(g.win)EnumChildWindows(g.win,[](HWND h,LPARAM){SendMessageW(h,WM_SETFONT,(WPARAM)g.font,TRUE);return TRUE;},0);
-    for(HWND h:{g.meta,g.desc,g.notice,g.oldValue})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)g.small,TRUE);
+    for(HWND h:{g.path,g.meta,g.desc,g.notice,g.oldValue,g.valueLabel})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)g.small,TRUE);
     if(g.name)SendMessageW(g.name,WM_SETFONT,(WPARAM)g.bold,TRUE);
     if(g.edit)SendMessageW(g.edit,WM_SETFONT,(WPARAM)g.mono,TRUE);
     if(g.grid){
@@ -358,7 +362,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.11.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.12.1 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -498,7 +502,7 @@ void updateCampaign(){
 }
 void changeLanguage(){
     if(!applyInput(false)){SendMessageW(ctl(LANGUAGE),CB_SETCURSEL,i18n::language,0);return;}
-    auto language=(int)SendMessageW(ctl(LANGUAGE),CB_GETCURSEL,0,0);i18n::setLanguage(language);i18n::savePreferences();
+    auto language=(int)SendMessageW(ctl(LANGUAGE),CB_GETCURSEL,0,0);i18n::setLanguage(language);i18n::savePreferences();fonts();
     g.captions.clear();
     g.populating=true;
     for(const auto& item:uiText)if(IsWindow(item.first)&&IsChild(g.win,item.first)&&item.first!=g.edit&&item.first!=g.search&&item.first!=g.path&&item.first!=g.meta&&item.first!=ctl(LANGUAGE))SetWindowTextW(item.first,tr(item.second).c_str());
@@ -528,6 +532,7 @@ LRESULT CALLBACK searchProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
 }
 void createControls(){
     auto languages=control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,LANGUAGE);for(const auto*name:i18n::names)SendMessageW(languages,CB_ADDSTRING,0,(LPARAM)name);SendMessageW(languages,CB_SETCURSEL,i18n::language,0);
+    SetWindowSubclass(languages,languageFaceProc,1,0);
     button(L"手动打开",OPEN);button(L"选择存档",LATEST);button(L"文件夹",FOLDER);button(L"重新载入",RELOAD);
     const wchar_t*nav[]={L"资源与经济",L"军备库存",L"家族与人物",L"外交谈判",L"高级字段",L"修改预览",L"备份管理",L"使用指南"};
     for(int i=0;i<8;++i)button(nav[i],NAV_BASE+i);
@@ -602,7 +607,7 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     case WM_DPICHANGED:g.dpi=HIWORD(wp);{auto*r=(RECT*)lp;SetWindowPos(w,nullptr,r->left,r->top,r->right-r->left,r->bottom-r->top,SWP_NOZORDER|SWP_NOACTIVATE);}fonts();layout();return 0;
     case WM_PAINT:paint();return 0;case WM_ERASEBKGND:return 1;
     case WM_DRAWITEM:if(((DRAWITEMSTRUCT*)lp)->CtlType==ODT_BUTTON){drawButton((DRAWITEMSTRUCT*)lp);return TRUE;}break;
-    case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.meta||h==g.notice||h==g.desc?Theme::muted:Theme::text);
+    case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.path||h==g.meta||h==g.notice||h==g.desc||h==g.valueLabel?Theme::muted:Theme::text);
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
         // Complete the native button's input callback before rebuilding child controls.
@@ -634,10 +639,9 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             return 0;
         }
         if(n->code==NM_DBLCLK&&g.tab<5){auto*f=g.doc?g.doc->find(g.selected):nullptr;if(f){SetFocus(f->is_bool?ctl(BOOL_TRUE):g.edit);if(!f->is_bool)SendMessageW(g.edit,EM_SETSEL,0,-1);}return 0;}
-        if(n->code==NM_CUSTOMDRAW){auto*c=(NMLVCUSTOMDRAW*)lp;if(c->nmcd.dwDrawStage==CDDS_PREPAINT)return CDRF_NOTIFYITEMDRAW;
-            if(c->nmcd.dwDrawStage==CDDS_ITEMPREPAINT){int i=(int)c->nmcd.dwItemSpec;bool selected=ListView_GetItemState(g.grid,i,LVIS_SELECTED)!=0;c->clrTextBk=selected?Theme::select:(i%2?Theme::stripe:Theme::panel);c->clrText=Theme::text;
-                if(g.tab<6&&i>=0&&i<(int)g.rows.size()&&(g.tab==5||pending().count(g.rows[i])))c->clrText=Theme::goldDark;
-                c->nmcd.uItemState&=~CDIS_SELECTED;return CDRF_NEWFONT;}}
+        if(n->code==NM_CUSTOMDRAW){auto*c=(NMLVCUSTOMDRAW*)lp;if(c->nmcd.dwDrawStage==CDDS_PREPAINT)return CDRF_NOTIFYITEMDRAW|CDRF_NOTIFYPOSTPAINT;
+            if(c->nmcd.dwDrawStage==CDDS_POSTPAINT){fillGridRemainder(c->nmcd.hdc);return CDRF_DODEFAULT;}
+            if(c->nmcd.dwDrawStage==CDDS_ITEMPREPAINT){drawWorkspaceRow(*c);return CDRF_SKIPDEFAULT;}}
         }break;}
     case WM_CLOSE:if(discardIfNeeded())DestroyWindow(w);return 0;
     case WM_DESTROY:PostQuitMessage(0);return 0;
@@ -651,8 +655,8 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);UINT dpi=GetDpiForSystem();int width=std::min<int>(MulDiv(1280,dpi,96),area.right-area.left),height=std::min<int>(MulDiv(900,dpi,96),area.bottom-area.top);
     HWND w=CreateWindowExW(WS_EX_ACCEPTFILES,APP_CLASS,APP_TITLE,WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,area.left+(area.right-area.left-width)/2,area.top+(area.bottom-area.top-height)/2,width,height,nullptr,nullptr,inst,nullptr);
     if(!w)return 1;
-    BOOL dark=TRUE;DwmSetWindowAttribute(w,DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof(dark));
-    COLORREF caption=Theme::sidebar,captionText=Theme::sideText;
+    BOOL dark=FALSE;DwmSetWindowAttribute(w,DWMWA_USE_IMMERSIVE_DARK_MODE,&dark,sizeof(dark));
+    COLORREF caption=Theme::bg,captionText=Theme::text;
     DwmSetWindowAttribute(w,DWMWA_CAPTION_COLOR,&caption,sizeof(caption));DwmSetWindowAttribute(w,DWMWA_TEXT_COLOR,&captionText,sizeof(captionText));
     ShowWindow(w,show);UpdateWindow(w);
     int argc=0;auto argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(argv&&argc>1){if(std::wstring(argv[1])==L"--licenses"){g.licenseMode=true;navigate(7);}else loadDocument(fs::path(argv[1]),false);}else PostMessageW(w,WM_APP+2,0,0);if(argv)LocalFree(argv);
@@ -672,5 +676,5 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
         }
         if(!IsDialogMessageW(w,&msg)){TranslateMessage(&msg);DispatchMessageW(&msg);}
     }
-    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;
+    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;
 }

@@ -1,6 +1,6 @@
 Suzerain Save Studio - Third-party notices
 
-The 0.11.0 Windows x64 release build uses GCC 13.2.0, MinGW-w64 11.0.1,
+The Windows x64 release build uses GCC 13.2.0, MinGW-w64 11.0.1,
 UCRT and the POSIX/SEH thread/exception model (winlibs r8, as bundled
 with Strawberry Perl). libgcc, libstdc++ and winpthreads are linked
 statically. Only Windows system/UCRT DLLs are imported by the executable.

@@ -9,7 +9,7 @@ int navY(const WorkspaceGeometry& a, int index) {
 int searchWidth(const WorkspaceGeometry& a) {
     return a.list - (a.list < 450 ? 92 : 132) - 6 - (g.tab==4 ? (a.list < 450 ? 78 : 108) : 0);
 }
-int inspectorPad(const WorkspaceGeometry& a) { return a.inspector < 218 ? 9 : 15; }
+int inspectorPad(const WorkspaceGeometry& a) { return a.inspector < 218 ? 9 : 18; }
 
 void layout() {
     if (!g.grid) return;
@@ -51,13 +51,13 @@ void layout() {
     place(g.helpText, a.left+14,a.listY+13,a.content-28,a.bottom-a.listY-26);
 
     const int pad = inspectorPad(a), rx = a.right+pad, rw = a.inspector-2*pad;
-    int y = a.toolsY+12;
-    int nameH = edit ? (a.shortScreen ? 30 : 48) : (a.shortScreen ? 40 : 51);
+    int y = a.toolsY+(a.shortScreen?12:19);
+    int nameH = edit ? (a.shortScreen ? 25 : 34) : (a.shortScreen ? 32 : 43);
     place(g.name,rx,y,rw,nameH);
     y += nameH + 3;
     place(g.oldValue,rx,y,rw,20);
     if (edit) {
-        y += 22;
+        y += a.shortScreen ? 27 : 34;
         place(g.valueLabel,rx,y,rw,18);
         y += 20;
         place(g.edit,rx+8,y+4,rw-16,27);
@@ -66,7 +66,7 @@ void layout() {
         y += 42;
         int first = (rw-6)*54/100;
         place(ctl(APPLY),rx,y,first,33); place(ctl(UNDOONE),rx+first+6,y,rw-first-6,33);
-        y += 40;
+        y += a.shortScreen ? 40 : 47;
         if (g.tab==4) {
             place(ctl(COPY_KEY),rx,y,(rw-6)/2,30);
             place(ctl(EXPORT_CSV),rx+(rw-6)/2+6,y,rw-(rw-6)/2-6,30);
@@ -91,6 +91,7 @@ void layout() {
         place(ctl(BACKUP_CANCEL),rx,y,rw,30);
         y+=36;
     }
+    if (!a.shortScreen) y+=9;
     place(g.desc,rx,y,rw,std::max(12,a.bottom-y-10));
     int saveW = a.width < 820 ? 107 : 155, historyW = a.width < 820 ? 58 : 80;
     int footerRight = toolbarEnd;
@@ -123,7 +124,14 @@ void layout() {
         } else if (review) {
             widths[1]=widths[2]=std::clamp(avail/5,51,108); widths[0]=avail-widths[1]-widths[2];
         } else {
-            widths[3]=std::clamp(avail/8,45,72); widths[1]=widths[2]=std::clamp(avail/6,48,92);
+            auto dc=GetDC(g.grid);auto old=SelectObject(dc,g.small);
+            int typeW=0;
+            for(const wchar_t* caption : {L"类型",L"数值",L"开关"}) {
+                auto s=tr(caption);SIZE size{};GetTextExtentPoint32W(dc,s.c_str(),(int)s.size(),&size);
+                typeW=std::max(typeW,MulDiv(size.cx,96,g.dpi)+16);
+            }
+            SelectObject(dc,old);ReleaseDC(g.grid,dc);
+            widths[3]=std::clamp(std::max(avail/9,typeW),44,94); widths[1]=widths[2]=std::clamp(avail/6,48,92);
             widths[0]=avail-widths[1]-widths[2]-widths[3];
         }
         for (int i=0;i<4;++i) ListView_SetColumnWidth(g.grid,i,px(std::max(0,widths[i])));
@@ -136,18 +144,17 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
     const char* resource[]={"Budget","Authority","Energy"};
     const char* mainKeys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
     const wchar_t* labels[]={L"预算",isBase()?L"个人财富":L"权威",isBase()?L"经济水平":L"能源"};
-    COLORREF colors[]={Theme::goldDark,Theme::blue,Theme::green};
-    int cw=(a.content-2*a.gap)/3;
+    rounded(dc,rect(a.left,a.headerBottom,a.content,a.metricHeight),Theme::head,Theme::line,14);
+    int cw=a.content/3;
     for(int i=0;i<3;++i) {
-        int x=a.left+i*(cw+a.gap), y=a.headerBottom, width=i==2 ? a.left+a.content-x : cw;
-        rounded(dc,rect(x,y,width,a.metricHeight),Theme::panel,Theme::line,9);
-        fill(dc,rect(x+1,y+9,3,a.metricHeight-18),colors[i]);
+        int x=a.left+i*cw, y=a.headerBottom, width=i==2 ? a.left+a.content-x : cw;
+        if(i>0)fill(dc,rect(x,y+12,1,a.metricHeight-24),Theme::line);
         auto key=isBase()?std::string(mainKeys[i]):std::string("RiziaDLC.Resources_")+resource[i];
         auto value=effective(key); bool tall=a.metricHeight>=70;
         int valueWidth=std::max(48,width/2-9);
         if (tall) {
-            drawText(dc,labels[i],rect(x+13,y+8,width-26,20),g.font,Theme::muted);
-            drawText(dc,value.empty()?L"—":wide(value),rect(x+13,y+29,width-26,37),g.large,pending().count(key)?Theme::goldDark:Theme::text);
+            drawText(dc,labels[i],rect(x+17,y+7,width-32,19),g.small,Theme::muted);
+            drawText(dc,value.empty()?L"—":wide(value),rect(x+16,y+28,width-32,39),g.large,pending().count(key)?Theme::accentInk:Theme::text);
         } else {
             drawText(dc,labels[i],rect(x+12,y+5,width-valueWidth-20,a.metricHeight-10),g.font,Theme::muted);
             drawText(dc,value.empty()?L"—":wide(value),rect(x+width-valueWidth-9,y+4,valueWidth,a.metricHeight-8),g.large,pending().count(key)?Theme::goldDark:Theme::text,DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
@@ -167,11 +174,12 @@ void paint() {
     RECT client{};GetClientRect(g.win,&client);FillRect(dc,&client,g.bg);
     auto a=workspaceGeometry(); fill(dc,rect(0,0,a.rail,a.height),Theme::sidebar);
     int logoX=a.compactRail?13:16,logoY=a.shortScreen?13:20;
-    rounded(dc,rect(logoX,logoY,31,32),Theme::sidebar,Theme::gold,5);
-    navSymbol(dc,1,px(logoX+6),px(logoY+7),Theme::gold);
+    fill(dc,rect(a.rail-1,0,1,a.height),Theme::sideLine);
+    rounded(dc,rect(logoX,logoY,33,33),Theme::accent,Theme::accent,12);
+    navSymbol(dc,7,px(logoX+7),px(logoY+7),Theme::onAccent);
     if (!a.compactRail) {
-        drawText(dc,L"SUZERAIN",rect(54,logoY-4,a.rail-59,26),g.bold,Theme::sideText);
-        drawText(dc,L"SAVE STUDIO",rect(55,logoY+19,a.rail-60,17),g.small,Theme::gold);
+        drawText(dc,L"Suzerain",rect(59,logoY-7,a.rail-64,28),g.brand,Theme::sideText);
+        drawText(dc,L"Save Studio",rect(60,logoY+17,a.rail-64,19),g.small,Theme::sideMuted);
         if (!a.shortScreen) {
             fill(dc,rect(16,84,a.rail-32,1),Theme::sideLine);
             drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(19,101,a.rail-32,26),g.font,Theme::sideMuted);
@@ -188,8 +196,13 @@ void paint() {
     if(a.metricHeight) paintMetrics(dc,a);
     if(g.tab<7) {
         int listY=g.tab==5?a.toolsY:a.listY;
-        rounded(dc,rect(a.left,listY,a.list,a.bottom-listY),Theme::panel,Theme::line,7);
-        rounded(dc,rect(a.right,a.toolsY,a.inspector,a.bottom-a.toolsY),Theme::panel,Theme::line,9);
+        rounded(dc,rect(a.left,listY,a.list,a.bottom-listY),Theme::panel,Theme::line,9);
+        rounded(dc,rect(a.right,a.toolsY,a.inspector,a.bottom-a.toolsY),Theme::panel,Theme::line,14);
+        if(!a.shortScreen){
+            RECT notes{};GetWindowRect(g.desc,&notes);MapWindowPoints(nullptr,g.win,(POINT*)&notes,2);
+            RECT divider{notes.left,notes.top-px(7),notes.right,notes.top-px(7)+1};
+            fill(dc,divider,Theme::line);
+        }
         if(g.tab<5) {
             rounded(dc,rect(a.left,a.toolsY,searchWidth(a),32),Theme::input,GetFocus()==g.search?Theme::accent:Theme::line,8);
             auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),Theme::dim);auto old=SelectObject(dc,pen);auto ob=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
@@ -198,7 +211,7 @@ void paint() {
             SelectObject(dc,ob);SelectObject(dc,old);DeleteObject(pen);
             if(IsWindowVisible(g.edit)) {
                 RECT box{};GetWindowRect(g.edit,&box);MapWindowPoints(nullptr,g.win,(POINT*)&box,2);InflateRect(&box,px(8),px(4));
-                rounded(dc,box,Theme::input,GetFocus()==g.edit?Theme::accent:Theme::line,6);
+                rounded(dc,box,Theme::input,GetFocus()==g.edit?Theme::focus:Theme::line,9);
             }
         }
     } else rounded(dc,rect(a.left,a.listY,a.content,a.bottom-a.listY),Theme::panel,Theme::line,8);

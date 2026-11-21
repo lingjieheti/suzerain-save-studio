@@ -10,7 +10,7 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
@@ -27,3 +27,9 @@ jobs:
       - name: Run synthetic tests
         shell: pwsh
         run: ./test.ps1 -Compiler (Join-Path $env:SUZERAIN_MINGW 'g++.exe')
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '6.0.x'
+      - name: Verify live state changes with simulated campaigns
+        shell: pwsh
+        run: dotnet run --project tests/live/LiveChecks.csproj -c Release

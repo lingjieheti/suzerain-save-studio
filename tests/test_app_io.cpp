@@ -73,6 +73,23 @@ int main(int argc,char** argv){
         const std::string csv="\xEF\xBB\xBF" "Campaign,Field,Original,Current\r\nStoryPack_Main,BaseGame.Budget,7,8\r\n";
         writePatch(root/"fields.csv",csv);
         check(readFile(root/"fields.csv")==csv,"CSV bytes changed by writer");
+        const auto gameFolder=root/"sample-game";
+        const auto gameExe=gameFolder/"Suzerain.exe";
+        const auto host=gameFolder/"BepInEx";
+        const auto payload=root/live_setup::pluginName;
+        const auto installed=host/"plugins"/"SuzerainSaveStudio"/live_setup::pluginName;
+        fs::create_directories(gameFolder);
+        write(payload,"synthetic plugin bytes");write(gameExe,"synthetic exe");
+        rejects([&]{live_setup::install(payload,gameExe);},"Setup accepted missing mod host");
+        check(!fs::exists(host/"plugins"),"Setup changed an unsupported installation");
+        fs::create_directories(host/"core");fs::create_directories(host/"interop");
+        write(gameFolder/"GameAssembly.dll","fixture");write(host/"core"/"BepInEx.Unity.IL2CPP.dll","fixture");
+        write(host/"interop"/"Assembly-CSharp.dll","fixture");
+        check(live_setup::install(payload,gameExe)&&readFile(installed)==readFile(payload),"Plugin installation");
+        check(!live_setup::install(payload,gameExe),"Setup should recognize an identical installation");
+        write(installed,"older user-controlled plugin");
+        rejects([&]{live_setup::install(payload,gameExe);},"Setup overwrote a different plugin");
+        check(readFile(installed)=="older user-controlled plugin","Setup changed the previous plugin");
         std::cout<<"PASS: "<<checks<<" synthetic app IO checks; fixtures retained at "<<root.u8string()<<'\n';
         return 0;
     }catch(const std::exception& error){std::cerr<<"FAIL after "<<checks<<" checks: "<<error.what()<<'\n';return 1;}

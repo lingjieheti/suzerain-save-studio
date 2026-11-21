@@ -2,11 +2,15 @@
 
 Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体与《Kingdom of Rizia》DLC。双击单文件程序，启动后可打开自己的存档，也可先用内置战役示例练习。
 
-**[下载 v0.11.0 Windows 版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.11.0/SuzerainSaveStudio-0.11.0-win-x64.exe)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.11.0)
+**[下载 v0.12.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.12.1/SuzerainSaveStudio-0.12.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.12.1)
 
 ![里奇亚存档编辑器，展示资源概览、字段搜索和当前选中字段的编辑面板](docs/images/rizia-workspace.png)
 
+[存档选择器](docs/images/save-picker.png) · [修改前后对照](docs/images/change-review.png) · [实时面板离线预览](docs/images/live-panel-preview.png)
+
 ## 快速上手
+
+完整包内含桌面编辑器和可选的 **Ctrl+F8 游戏内实时面板**。解压后运行 EXE 即可编辑存档。若要使用实时面板，在启动窗口选择“实时模式”。安装要求、可编辑的五项资源与验证范围见[实时面板使用说明](live/README.zh-CN.md)。
 
 1. 在游戏中保存并退出。启动修改器，选择自动发现的存档，或点“手动打开”。首次使用可以先选“索德兰示例”或“里奇亚示例”。
 2. 选择左侧分类，按中文名称或原始字段名查找项目。比如在索德兰经济页搜索“政府 预算”，选中后输入新值并点“应用修改”。
@@ -31,7 +35,7 @@ Windows 10 / 11 x64 便携存档修改器，支持《Suzerain》索德兰本体�
 
 ## English quick start
 
-Download the Windows x64 executable from the release link above. Open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. Saving over an existing game file creates a verified backup that you can restore from the editor. Switch interface language using the language menu. This unsigned preview has been tested with local saves and synthetic round trips. In-game loading of edited saves is still unverified.
+Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. Testing covers the Windows editor, simulated game states and compilation against local game assemblies. Live writes inside an actual campaign remain unverified.
 
 ## 从源码构建
 

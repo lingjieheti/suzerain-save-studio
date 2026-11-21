@@ -16,8 +16,8 @@ WorkspaceGeometry workspaceGeometry() {
     a.shortScreen = a.height < 610;
     a.compactRail = a.width < 1000 || a.height < 435;
     a.rail = a.compactRail ? 56 : (a.width < 1140 ? 174 : 194);
-    a.gap = a.width < 800 ? 9 : 14;
-    int margin = a.width < 900 ? 12 : 22;
+    a.gap = a.width < 800 ? 9 : 18;
+    int margin = a.width < 900 ? 12 : 26;
     a.left = a.rail + margin;
     a.content = a.width - a.left - margin;
     a.inspector = std::clamp(a.content / 3, 180, 286);
@@ -88,31 +88,32 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool primary = id == LATEST || id == APPLY || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
                    (id == SAVE && (!pending().empty() || g.editingDirty));
-    COLORREF bg = Theme::panel, border = Theme::line, fg = Theme::text;
+    bool quiet = id==FOLDER || id==RELOAD || id==HISTORY_UNDO || id==HISTORY_REDO;
+    bool inspector = id==APPLY || id==UNDOONE || id==BOOL_FALSE || id==BOOL_TRUE ||
+                     id==SAVEAS || id==CONFIRM_SAVE || id==PATCH_EXPORT || id==REVIEW_REVERT ||
+                     id==UNDOALL || id==BACKUP_RESTORE || id==BACKUP_CANCEL || id==COPY_KEY || id==EXPORT_CSV;
+    COLORREF surface = nav ? Theme::sidebar : inspector ? Theme::panel : Theme::bg;
+    COLORREF bg = quiet ? surface : Theme::input, border = quiet ? surface : Theme::line, fg = Theme::text;
     if (nav) {
-        bg = activeNav ? Theme::sideLine : Theme::sidebar;
-        if (hover && !activeNav) bg = RGB(43, 68, 58);
-        border = bg; fg = activeNav ? Theme::sideText : Theme::sideMuted;
+        bg = activeNav ? Theme::select : hover ? Theme::hover : Theme::sidebar;
+        border = bg; fg = activeNav ? Theme::accentInk : Theme::sideText;
     } else if (primary) {
-        bg = border = hover ? RGB(26, 70, 51) : Theme::accent; fg = Theme::sideText;
+        bg = border = hover || down ? Theme::accentHover : Theme::accent; fg = Theme::onAccent;
     } else if (toggle || hover || down) {
-        bg = Theme::select; border = toggle ? Theme::accent : Theme::line;
+        bg = toggle ? Theme::select : Theme::hover; border = toggle ? Theme::accent : Theme::line;
     } else if (check) {
         bg = border = Theme::bg;
     }
-    if (disabled) { bg = Theme::stripe; fg = Theme::dim; border = Theme::line; }
+    if (disabled) { bg = quiet ? surface : Theme::stripe; fg = Theme::dim; border = quiet ? surface : Theme::line; }
     RECT r = d->rcItem;
-    fill(d->hDC, r, nav ? Theme::sidebar : Theme::bg);
-    rounded(d->hDC, r, bg, border, nav ? 6 : 8);
+    fill(d->hDC, r, surface);
+    rounded(d->hDC, r, bg, border, nav ? 14 : 11);
     RECT tx = r;
     if (nav) {
         bool compact = r.right - r.left < px(64);
         int glyphX = compact ? (r.right - px(18)) / 2 : px(13);
         navSymbol(d->hDC, id - NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
-                  activeNav ? Theme::gold : Theme::sideMuted);
-        if (activeNav) {
-            RECT strip{0, px(7), px(3), r.bottom - px(7)}; fill(d->hDC, strip, Theme::gold);
-        }
+                  activeNav ? Theme::accentInk : Theme::sideMuted);
         if (!compact) {
             tx.left += px(42); tx.right -= px(5);
             drawText(d->hDC, textOf(d->hwndItem), tx, g.font, fg);
@@ -123,7 +124,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             RECT box{px(5), y, px(20), y + px(15)};
             rounded(d->hDC, box, checked ? Theme::accent : Theme::input, checked ? Theme::accent : Theme::dim, 5);
             if (checked) {
-                auto pen = CreatePen(PS_SOLID, px(2), Theme::sideText);
+                auto pen = CreatePen(PS_SOLID, px(2), Theme::onAccent);
                 auto old = SelectObject(d->hDC, pen);
                 MoveToEx(d->hDC, px(8), y+px(8), nullptr); LineTo(d->hDC, px(11), y+px(11));
                 LineTo(d->hDC, px(17), y+px(4)); SelectObject(d->hDC, old); DeleteObject(pen);
@@ -133,9 +134,117 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         drawText(d->hDC, textOf(d->hwndItem), tx, g.font, fg,
                  (check ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE);
     }
-    if ((d->itemState & ODS_FOCUS) && !disabled) {
-        RECT focus = r; InflateRect(&focus, -px(4), -px(4)); DrawFocusRect(d->hDC, &focus);
+    if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
+        RECT focus = r; InflateRect(&focus, -px(4), -px(4));
+        auto pen=CreatePen(PS_DOT,1,primary?Theme::onAccent:Theme::focus);
+        auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
+        RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,px(5),px(5));
+        SelectObject(d->hDC,oldBrush);SelectObject(d->hDC,oldPen);DeleteObject(pen);
     }
+}
+
+void literalText(HDC dc,const wchar_t* value,RECT r,HFONT font,COLORREF color,UINT align=DT_LEFT) {
+    auto old=SelectObject(dc,font);
+    SetBkMode(dc,TRANSPARENT); SetTextColor(dc,color);
+    DrawTextW(dc,value,-1,&r,align|DT_VCENTER|DT_SINGLELINE|DT_END_ELLIPSIS|DT_NOPREFIX);
+    SelectObject(dc,old);
+}
+
+UINT gridAlignment(int col) {
+    if(col==0 || (g.tab==6 && col==2)) return DT_LEFT;
+    if(g.tab<5 && col==3) return DT_CENTER;
+    return DT_RIGHT;
+}
+
+// Paint the visible cells from the native ListView. Selection, keyboard search,
+// accessibility and scrolling still use the common control's own row model.
+void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
+    auto dc=item.nmcd.hdc;
+    int row=static_cast<int>(item.nmcd.dwItemSpec);
+    RECT r{}; if(!ListView_GetItemRect(g.grid,row,&r,LVIR_BOUNDS)) return;
+    RECT view{};GetClientRect(g.grid,&view);r.left=0;r.right=view.right;
+    auto state=ListView_GetItemState(g.grid,row,LVIS_SELECTED|LVIS_FOCUSED);
+    bool selected=(state&LVIS_SELECTED)!=0;
+    bool changed=g.tab==5 || (g.tab<5 && row>=0 && row<(int)g.rows.size() && pending().count(g.rows[row]));
+    fill(dc,r,selected?Theme::select:Theme::panel);
+    if(selected || changed) {
+        RECT mark{r.left,r.top+px(5),r.left+px(selected?3:2),r.bottom-px(5)};
+        fill(dc,mark,selected?Theme::accent:Theme::focus);
+    }
+    auto header=ListView_GetHeader(g.grid);
+    for(int col=0;col<Header_GetItemCount(header);++col) {
+        RECT cell{};Header_GetItemRect(header,col,&cell);
+        if(cell.right<=cell.left)continue;
+        MapWindowPoints(header,g.grid,reinterpret_cast<POINT*>(&cell),2);
+        cell.top=r.top;cell.bottom=r.bottom;
+        cell.left+=px(col==0?12:5);cell.right-=px(col==3?4:11);
+        wchar_t value[2048]{};ListView_GetItemText(g.grid,row,col,value,2048);
+        COLORREF ink=col==0?Theme::text:Theme::muted;
+        if((col==2 && changed) || (col==0 && selected))ink=Theme::accentInk;
+        literalText(dc,value,cell,col==3?g.small:g.font,ink,gridAlignment(col));
+    }
+    RECT rule{0,r.bottom-1,r.right,r.bottom};fill(dc,rule,Theme::head);
+    if((state&LVIS_FOCUSED) && GetFocus()==g.grid) {
+        auto pen=CreatePen(PS_DOT,1,Theme::focus);auto old=SelectObject(dc,pen);
+        auto brush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+        Rectangle(dc,r.left+1,r.top+1,r.right-1,r.bottom-1);
+        SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);
+    }
+}
+
+void fillGridRemainder(HDC dc) {
+    RECT area{};GetClientRect(g.grid,&area);
+    RECT last{};
+    int count=ListView_GetItemCount(g.grid);
+    if(count && ListView_GetItemRect(g.grid,count-1,&last,LVIR_BOUNDS)) area.top=std::max<LONG>(0,last.bottom);
+    else {
+        auto header=ListView_GetHeader(g.grid);GetWindowRect(header,&last);
+        MapWindowPoints(nullptr,g.grid,reinterpret_cast<POINT*>(&last),2);area.top=last.bottom;
+    }
+    if(area.bottom>area.top)fill(dc,area,Theme::panel);
+}
+
+void paintWorkspaceHeader(HWND h,HDC dc) {
+    RECT all{};GetClientRect(h,&all);fill(dc,all,Theme::head);
+    for(int col=0;col<Header_GetItemCount(h);++col) {
+        RECT cell{};Header_GetItemRect(h,col,&cell);
+        if(cell.right<=cell.left)continue;
+        wchar_t title[128]{};
+        HDITEMW item{};item.mask=HDI_TEXT;item.pszText=title;item.cchTextMax=128;
+        Header_GetItem(h,col,&item);
+        cell.left+=px(col==0?12:5);cell.right-=px(col==3?4:11);
+        literalText(dc,title,cell,g.small,Theme::muted,gridAlignment(col));
+        if(col==0 && g.doc && cell.right-cell.left>px(120)) {
+            auto old=SelectObject(dc,g.small);
+            SIZE extent{};GetTextExtentPoint32W(dc,title,lstrlenW(title),&extent);SelectObject(dc,old);
+            auto count=std::to_wstring(g.tab==6?g.backups.size():g.rows.size());
+            cell.left+=extent.cx+px(8);
+            if(cell.right-cell.left>=px((int)count.size()*8+12))
+                literalText(dc,count.c_str(),cell,g.small,Theme::accentInk);
+        }
+    }
+    all.top=all.bottom-1;fill(dc,all,Theme::line);
+}
+
+void paintLanguageFace(HWND h,HDC dc) {
+    RECT r{};GetClientRect(h,&r);
+    auto a=workspaceGeometry();
+    fill(dc,r,a.compactRail?Theme::bg:Theme::sidebar);
+    rounded(dc,r,Theme::input,GetFocus()==h?Theme::focus:Theme::line,9);
+    RECT tx=r;tx.left+=px(9);tx.right-=px(22);
+    literalText(dc,textOf(h).c_str(),tx,g.font,Theme::text);
+    int x=r.right-px(14),y=r.bottom/2;
+    auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),Theme::muted);auto old=SelectObject(dc,pen);
+    MoveToEx(dc,x-px(4),y-px(2),nullptr);LineTo(dc,x,y+px(2));LineTo(dc,x+px(4),y-px(2));
+    SelectObject(dc,old);DeleteObject(pen);
+}
+
+LRESULT CALLBACK languageFaceProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR) {
+    if(m==WM_PAINT){PAINTSTRUCT ps{};auto dc=BeginPaint(h,&ps);paintLanguageFace(h,dc);EndPaint(h,&ps);return 0;}
+    if(m==WM_PRINTCLIENT){paintLanguageFace(h,(HDC)wp);return 0;}
+    auto result=DefSubclassProc(h,m,wp,lp);
+    if(m==CB_SETCURSEL||m==WM_SETFOCUS||m==WM_KILLFOCUS)InvalidateRect(h,nullptr,FALSE);
+    return result;
 }
 
 inline HWND workspaceTips{};

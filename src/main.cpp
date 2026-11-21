@@ -182,4 +182,5 @@ std::wstring label(const std::string&k){auto*d=definition(k);if(d)return tr(d->l
 std::wstring campaignLabel(const std::string&story){return tr(story=="StoryPack_Main"?L"Sordland":L"Rizia");}
 int localizedMessageBox(HWND owner,const std::wstring& text,UINT flags){return MessageBoxW(owner,tr(text).c_str(),APP_TITLE,flags);}
 
+#include "live_setup.hpp"
 #include "ui_app.hpp"
