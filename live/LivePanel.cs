@@ -12,8 +12,8 @@ namespace SuzerainSaveStudio.Live
         private static readonly string[] ThemeControls = { "theme-paper", "theme-forest", "theme-fjord", "theme-midnight" };
         private static readonly int[] Steps = { -5, -1, 1, 5 };
         private static readonly string[] StepLabels = { "-5", "-1", "+1", "+5" };
-        private int appearance, styledAppearance = -1;
-        private PanelAppearance palette = PanelAppearance.Choices[0];
+        private int appearance = PanelAppearance.Fjord, styledAppearance = -1;
+        private PanelAppearance palette = PanelAppearance.Choices[PanelAppearance.Fjord];
         private enum Feedback { Info, Success, Warning }
 
         private bool visible, hotkeyHeld, chinese;
@@ -509,7 +509,8 @@ namespace SuzerainSaveStudio.Live
             int count = snapshot.Fields.Count;
             const float margin = 3;
             float cell = (content-2*margin)/count;
-            Fill(new Rect(Inset,88,content,74),palette.Hover,11);
+            bool fjord = appearance == PanelAppearance.Fjord;
+            if (!fjord) Fill(new Rect(Inset,88,content,74),palette.Hover,11);
             for (int i=0;i<count;i++)
             {
                 var field = snapshot.Fields[i];
@@ -517,10 +518,15 @@ namespace SuzerainSaveStudio.Live
                 bool selected = field.Key == key;
                 bool enabled = !confirming && ready;
                 bool focus = enabled && focused == field.Key;
-                if (selected || focus || (enabled && r.Contains(Event.current.mousePosition)))
+                if (fjord && i > 0)
+                    Fill(new Rect(r.x-1,r.y+12,1,r.height-24),palette.Border);
+                if (focus || (enabled && r.Contains(Event.current.mousePosition)) || (selected && !fjord))
                     PaperBox(r,palette.Surface,focus ? palette.Text : palette.Border,9,focus ? 2 : 1);
                 if (selected)
-                    Fill(new Rect(r.x+1,r.y+15,3,r.height-30),palette.Accent,1.5f);
+                {
+                    var marker = fjord ? new Rect(r.x+10,r.y+r.height-3,25,2) : new Rect(r.x+1,r.y+15,3,r.height-30);
+                    Fill(marker,palette.Accent,1);
+                }
                 if (enabled && Press(r,field.Key,"",action) && !selected)
                 {
                     Select(field);
@@ -595,7 +601,9 @@ namespace SuzerainSaveStudio.Live
             }
             float buttonW = Math.Min(145,inside*.43f);
             float stepWidth = Math.Min(50,(inside-buttonW-10)/Steps.Length);
-            Fill(new Rect(x,237,stepWidth*Steps.Length,32),palette.Hover,8);
+            var steps = new Rect(x,237,stepWidth*Steps.Length,32);
+            if (appearance == PanelAppearance.Fjord) PaperBox(steps,palette.Surface,palette.Border,8);
+            else Fill(steps,palette.Hover,8);
             for (int i=0;i<Steps.Length;i++)
             {
                 var step = new Rect(x+i*stepWidth,237,stepWidth,32);
@@ -628,14 +636,15 @@ namespace SuzerainSaveStudio.Live
             GUI.Label(new Rect(Inset,336,41,28),T("外观","Theme"),caption);
             float labelWidth = content >= 345 ? 57 : 43;
             float choiceWidth = (content-labelWidth-4)/ThemeControls.Length;
-            Fill(new Rect(Inset+labelWidth,334,content-labelWidth,32),palette.Hover,8);
+            bool fjord = appearance == PanelAppearance.Fjord;
+            if (!fjord) Fill(new Rect(Inset+labelWidth,334,content-labelWidth,32),palette.Hover,8);
             for (int i = 0; i < ThemeControls.Length; i++)
             {
                 var choice = PanelAppearance.Choices[i];
                 var rect = new Rect(Inset+labelWidth+2+i*choiceWidth,336,choiceWidth,28);
                 bool selected = i == appearance, focus = focused == ThemeControls[i];
                 bool hovered = rect.Contains(Event.current.mousePosition);
-                if (selected || focus || hovered)
+                if (focus || hovered || (selected && !fjord))
                     PaperBox(rect,palette.Surface,focus ? palette.Text : palette.Border,7,focus ? 2 : 1);
                 if (selected)
                     Fill(new Rect(rect.x+rect.width/2-6,rect.y+rect.height-3,12,2),palette.Accent,1);

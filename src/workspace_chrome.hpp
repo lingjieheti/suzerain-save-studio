@@ -91,7 +91,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue) ||
                   (id == FILTER_FAVORITES && g.favoritesOnly) ||
                   (id == FIELD_FAVORITE && g.favorites.count(g.selected));
-    bool primary = (id == LATEST && !g.doc) || (id == APPLY && (g.editingDirty || pending().empty())) || (id == CONFIRM_SAVE && !g.demoResource) ||
+    const bool emphasizeApply=g.editingDirty || (Theme::index()!=Theme::fjordIndex && pending().empty());
+    bool primary = (id == LATEST && !g.doc) || (id == APPLY && emphasizeApply) || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
                    (id == SAVE && !g.editingDirty && !pending().empty());
     bool quiet = id==FOLDER || id==RELOAD || id==OPEN || id==UNDOONE || id==FIELD_FAVORITE ||

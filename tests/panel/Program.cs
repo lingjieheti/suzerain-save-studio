@@ -65,6 +65,27 @@ internal static class Program
         SceneManager.Loaded = true;
     }
 
+    private static void ThemePreferences(RegistryKey root)
+    {
+        const string path = @"Software\SuzerainSaveStudio";
+        const string name = "Appearance";
+        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A new profile opens in Fjord");
+        using var key = root.CreateSubKey(path);
+        Check(key.GetValue(name) == null, "Choosing the initial palette does not create a user preference");
+        foreach (int index in new[] { 0, 1, 2, 3 })
+        {
+            Check(AppearancePreference.Write(index) && AppearancePreference.Read() == index,
+                $"An explicit selection of {PanelAppearance.Choices[index].English} persists");
+        }
+        key.SetValue(name, -1, RegistryValueKind.DWord);
+        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A negative palette index falls back to Fjord");
+        key.SetValue(name, PanelAppearance.Choices.Length, RegistryValueKind.DWord);
+        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "An unknown palette index falls back to Fjord");
+        key.SetValue(name, "0", RegistryValueKind.String);
+        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A preference of the wrong type falls back to Fjord");
+        key.DeleteValue(name);
+    }
+
     private static void DraftAndKeyboard()
     {
         LoadCampaign("StoryPack_Main");
@@ -73,6 +94,9 @@ internal static class Program
         Panel.Awake();
         Frame(EventType.KeyDown, KeyCode.F8, control: true);
         Frame(EventType.KeyUp, KeyCode.F8);
+        Frame(EventType.Repaint);
+        Check(GUI.Fills[1] == PanelAppearance.Choices[PanelAppearance.Fjord].Background,
+            "The panel opens using Fjord when there is no saved choice");
         foreach (var (button, expected) in new[] { ("+5", "27"), ("-1", "26"), ("-5", "21"), ("+1", "22") })
         {
             Click(button);
@@ -156,6 +180,11 @@ internal static class Program
             Contrast(theme.Text, theme.Surface, 4.5, "selected resource value");
             Contrast(theme.Accent, theme.Surface, 3, "selected item indicator");
             Contrast(theme.OnAccent, theme.Accent, 4.5, "primary action");
+            if (theme == PanelAppearance.Choices[PanelAppearance.Fjord])
+            {
+                Contrast(theme.Muted, theme.Background, 4.5, "resource labels directly on the panel");
+                Contrast(theme.Accent, theme.Background, 3, "selected resource underline");
+            }
         }
     }
 
@@ -203,6 +232,7 @@ internal static class Program
                 throw new InvalidOperationException("Unable to isolate the theme preference.");
             try
             {
+                ThemePreferences(temporary);
                 DraftAndKeyboard();
                 StaleAndInvalidDrafts();
                 GroupedControlContrast();

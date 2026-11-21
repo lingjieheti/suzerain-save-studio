@@ -123,7 +123,7 @@ double textContrast(COLORREF ink, COLORREF surface){
 void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
-    check(Theme::index()==0,"A new user starts with Paper");
+    check(Theme::index()==2,"A new user starts with Fjord");
     const int languageBefore=i18n::language;
     for(int lang=0;lang<static_cast<int>(std::size(i18n::names));++lang){
         i18n::setLanguage(lang);
@@ -165,12 +165,12 @@ void testAppearance(const fs::path& path){
     const DWORD invalid=99;
     RegSetKeyValueW(HKEY_CURRENT_USER,L"Software\\SuzerainSaveStudio",L"Appearance",REG_DWORD,&invalid,sizeof(invalid));
     Theme::load();
-    check(Theme::index()==0,"An unsupported saved theme falls back to Paper");
+    check(Theme::index()==2,"An unsupported saved theme falls back to Fjord");
     const wchar_t wrongType[]=L"3";
     RegSetKeyValueW(HKEY_CURRENT_USER,L"Software\\SuzerainSaveStudio",L"Appearance",
                     REG_SZ,wrongType,sizeof(wrongType));
     Theme::load();
-    check(Theme::index()==0,"An invalid preference type falls back to Paper");
+    check(Theme::index()==2,"An invalid preference type falls back to Fjord");
 }
 
 void testFavorites(const fs::path& mainPath,const fs::path& riziaPath){

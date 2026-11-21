@@ -8,7 +8,7 @@
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 
-**[下载 v0.15.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.0/SuzerainSaveStudio-0.15.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.15.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.15.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.1/SuzerainSaveStudio-0.15.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.15.1) · [♡ 赞助作者](SPONSOR.md)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
@@ -34,7 +34,7 @@
 
 存档列表把文件名和战役名排成两行，方便分辨多个手动存档。编辑器并排显示库存、每回合变化和上限；侧栏和表格用相同的标记指示当前位置。游戏内面板把相对加减放在一组，确认页放大显示原值和目标值。
 
-在存档选择器或编辑器点 **外观**，即可切换主题。默认的 **暖纸** 用暖白底和陶土色按钮。喜欢冷色可以选薄荷绿的 **林间** 或冰蓝的 **雾蓝**，夜间可选石墨灰的 **午夜**。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
+在存档选择器或编辑器点 **外观**，即可切换主题。首次打开默认使用 **雾蓝**：冷白底色、浅灰蓝侧栏、细分隔线和蓝色主按钮。三项资源放在同一行，数值与每回合变化并排可查。也可以选陶土色的 **暖纸**、薄荷绿的 **林间**，或深色的 **午夜**。升级时会沿用你已经选好的外观。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
 
 ## 功能
 
@@ -59,7 +59,7 @@
 
 Bookmark any available field in its inspector and find it again under **Advanced** with the favorites filter. Sordland and Rizia keep separate lists. In the live panel, use **−5, −1, +1, +5** to prepare a change, then preview and confirm it.
 
-Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
+New installations open in **Fjord**, with a cool white workspace and a single row for resources. Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
 
 Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. In a live Sordland campaign, v0.13.1 changed the government budget from 16 to 17 and personal wealth from 1 to 2, and restored both original values. The game's top bar and the panel agreed after all four writes. Rizia’s three resources have been tested in simulation only. [HUD verification and test coverage](VALIDATION.md)
 

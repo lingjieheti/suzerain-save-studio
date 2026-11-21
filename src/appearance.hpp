@@ -2,6 +2,7 @@
 
 namespace Theme {
 constexpr int count = 4;
+constexpr int fjordIndex = 2;
 constexpr int menuBase = 16320;
 constexpr wchar_t settingsKey[] = L"Software\\SuzerainSaveStudio";
 
@@ -22,9 +23,9 @@ inline constexpr Palette palettes[count] = {
      rgb(0xE3F1E8),rgb(0x327055),rgb(0x275B44),rgb(0x285D46),rgb(0xFFFFFF),rgb(0x347558),
      rgb(0x243C2E),rgb(0x52655A),rgb(0xDDE8DF),rgb(0xE3EEE6),rgb(0xF7FAF8),rgb(0xF0F6F2),rgb(0xEAF2EC),
      rgb(0x366A4B),rgb(0x466A76),rgb(0x944B40)},
-    {rgb(0xF7FAFC),rgb(0xEFF5F9),rgb(0xFFFFFF),rgb(0xFFFFFF),rgb(0xDCE6EC),rgb(0x263642),rgb(0x506371),rgb(0x606E79),
-     rgb(0xE5F1F8),rgb(0x356C8D),rgb(0x2B5974),rgb(0x295978),rgb(0xFFFFFF),rgb(0x376D8B),
-     rgb(0x2A3D4A),rgb(0x516673),rgb(0xDCE7EE),rgb(0xE3EDF3),rgb(0xF6F9FB),rgb(0xF0F5F8),rgb(0xEAF2F6),
+    {rgb(0xF9FBFC),rgb(0xF3F6F7),rgb(0xFFFFFF),rgb(0xFFFFFF),rgb(0xDFE6EA),rgb(0x25323B),rgb(0x536570),rgb(0x606E79),
+     rgb(0xE8F1F5),rgb(0x336C85),rgb(0x295A72),rgb(0x27576B),rgb(0xFFFFFF),rgb(0x336C85),
+     rgb(0x30414C),rgb(0x546773),rgb(0xDFE6EA),rgb(0xEAF0F2),rgb(0xFAFBFC),rgb(0xF2F5F6),rgb(0xF0F4F6),
      rgb(0x3A6B58),rgb(0x395F80),rgb(0x974C48)},
     {rgb(0x1D2228),rgb(0x191E24),rgb(0x242A32),rgb(0x2B323B),rgb(0x404A55),rgb(0xEBEFF2),rgb(0xB2BBC5),rgb(0xA1ACB8),
      rgb(0x343E4A),rgb(0xB8C8E9),rgb(0xCDDAF0),rgb(0xD3E1F6),rgb(0x202832),rgb(0xB5CBE3),
@@ -32,8 +33,8 @@ inline constexpr Palette palettes[count] = {
      rgb(0x99CCAD),rgb(0xA8C9E7),rgb(0xECAEA7)}
 };
 
-inline int selected = 0;
-inline Palette colors = palettes[0];
+inline int selected = fjordIndex;
+inline Palette colors = palettes[fjordIndex];
 inline const COLORREF &bg=colors.bg, &sidebar=colors.sidebar, &panel=colors.panel, &input=colors.input,
     &line=colors.line, &text=colors.text, &muted=colors.muted, &dim=colors.dim,
     &accent=colors.accent, &accentHover=colors.accentHover, &accentInk=colors.accentInk, &onAccent=colors.onAccent,
@@ -46,14 +47,14 @@ inline bool valid(int id) { return id >= 0 && id < count; }
 inline int index() { return selected; }
 inline bool dark() { return selected == 3; }
 inline void use(int id) {
-    selected = valid(id) ? id : 0;
+    selected = valid(id) ? id : fjordIndex;
     colors = palettes[selected];
 }
 inline int stored() {
     DWORD value = 0, bytes = sizeof(value);
     if (RegGetValueW(HKEY_CURRENT_USER, settingsKey, L"Appearance", RRF_RT_REG_DWORD,
                      nullptr, &value, &bytes) != ERROR_SUCCESS || value >= count)
-        return 0;
+        return fjordIndex;
     return static_cast<int>(value);
 }
 inline void load() { use(stored()); }
@@ -79,7 +80,7 @@ inline constexpr Names translations[] = {
     {L"Görünüm",{L"Kâğıt",L"Orman",L"Fiyort",L"Gece yarısı"}}
 };
 inline const wchar_t* label() { return translations[i18n::language].label; }
-inline const wchar_t* name(int id) { return translations[i18n::language].skins[valid(id) ? id : 0]; }
+inline const wchar_t* name(int id) { return translations[i18n::language].skins[valid(id) ? id : fjordIndex]; }
 inline const wchar_t* bodyFace() {
     return i18n::language<=1?L"Microsoft YaHei UI":i18n::language==3?L"Yu Gothic UI":i18n::language==4?L"Malgun Gothic":L"Segoe UI";
 }
@@ -89,7 +90,7 @@ inline const wchar_t* headingFace() {
 }
 inline int radius(int paperRadius) {
     if(paperRadius <= 7) return paperRadius;
-    if(selected == 2) return 6;
+    if(selected == fjordIndex) return std::clamp(paperRadius - 2, 7, 14);
     if(selected == 1) return paperRadius + 3;
     return paperRadius;
 }

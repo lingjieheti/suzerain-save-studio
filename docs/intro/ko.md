@@ -4,7 +4,7 @@
 
 제가 《Suzerain》을 플레이할 때 쓰려고 만든 저장 파일 편집기입니다. 소르들란트와 리지아 캠페인에서 예산을 확인하거나 자원 수치를 조금씩 조정할 때 씁니다.
 
-[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.0/SuzerainSaveStudio-0.15.0-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.1/SuzerainSaveStudio-0.15.1-Live-Preview-win-x64.zip)
 
 ## 저장 파일 편집
 

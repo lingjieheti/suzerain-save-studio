@@ -1,6 +1,12 @@
-# v0.15.0 Preview — Windows validation
+# v0.15.1 Preview — Windows validation
 
-The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.15.0 and it runs independently of the plugin.
+The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.15.1 and it runs independently of the plugin.
+
+## Fjord in 0.15.1
+
+The desktop resource strip was checked with both embedded campaigns, 11 languages and three window sizes (1160×770, 840×650 and 680×630). All 396 text-width checks passed. Native Windows screenshots also confirmed the longer French and Russian Sordland economy labels at compact width.
+
+The desktop and optional live panel now start in Fjord when the Windows appearance preference is missing or invalid. The four saved theme IDs retain their meanings. Existing explicit selections, including Paper, are covered by the preference tests. The live panel passed 73 simulated game-state checks and 218 panel checks. The live panel image uses synthetic values rendered from the production drawing code.
 
 ## Visual update in 0.15.0
 

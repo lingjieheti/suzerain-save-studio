@@ -203,12 +203,16 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
     const wchar_t* labels[]={L"预算",L"个人财富",L"经济水平"};
     const COLORREF inks[]={Theme::accentInk,Theme::green,Theme::blue};
     const bool base=isBase(), tall=a.metricHeight>=70;
-    const int gap=a.content>=780?10:6, unit=(a.content-2*gap)/3;
+    const bool sharedSurface=Theme::index()==Theme::fjordIndex;
+    const int gap=sharedSurface?0:(a.content>=780?10:6);
+    const int unit=(a.content-2*gap)/3;
     rizia::ChangeMap linkedCaps;
     if(!base) {
         try { linkedCaps=linkedCapChanges(); }
         catch(const std::exception&) { /* Keep conflicting explicit values visible until Review. */ }
     }
+    if(sharedSurface)
+        fill(dc,rect(a.left,a.headerBottom,a.content,a.metricHeight),Theme::panel);
     for(int i=0;i<3;++i) {
         int x=a.left+i*(unit+gap), y=a.headerBottom;
         int width=i==2?a.left+a.content-x:unit;
@@ -216,23 +220,32 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
         const auto& resource=riziaResources[i];
         const char* key=base?keys[i]:resource.stock;
         const auto balance=val(key);
-        rounded(dc,rect(x,y,width,a.metricHeight),Theme::panel,Theme::line,21);
+        if(sharedSurface) {
+            if(i>0) {
+                const int inset=tall?18:11;
+                fill(dc,rect(x,y+inset,1,a.metricHeight-2*inset),Theme::line);
+            }
+        } else {
+            rounded(dc,rect(x,y,width,a.metricHeight),Theme::panel,Theme::line,21);
+        }
 
-        bool showSymbol=tall || width>=220;
+        bool showSymbol=!sharedSurface && (tall || width>=220);
         int labelX=x+pad+(showSymbol?23:0);
         int labelY=y+(tall?11:base?18:3);
         if(showSymbol)resourceSymbol(dc,i,base,x+pad,labelY+2,inks[i]);
         int available=inner-(showSymbol?23:0);
         int labelW=tall?available:available*3/5;
+          HFONT numberFont=tall?g.large:g.bold;
+          auto old=SelectObject(dc,numberFont);SIZE extent{};
+          GetTextExtentPoint32W(dc,balance.c_str(),static_cast<int>(balance.size()),&extent);
+          SelectObject(dc,old);
+          if(sharedSurface && !tall)
+              labelW=std::max(labelW,available-MulDiv(extent.cx,96,g.dpi)-8);
         drawText(dc,base?labels[i]:resource.balanceLabel,rect(labelX,labelY,labelW,20),g.small,Theme::muted);
 
         // Reserve a second column for income and cap only on the tall DLC card.
         int numberX=tall?x+pad:labelX+labelW+3;
         int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
-        HFONT numberFont=tall?g.large:g.bold;
-        auto old=SelectObject(dc,numberFont);SIZE extent{};
-        GetTextExtentPoint32W(dc,balance.c_str(),static_cast<int>(balance.size()),&extent);
-        SelectObject(dc,old);
         if(extent.cx>px(numberW))numberFont=tall?g.bold:g.small;
         drawText(dc,balance,rect(numberX,tall?y+33:base?y+15:y+1,numberW,tall?45:26),numberFont,
                  pending().count(key)?Theme::accentInk:Theme::text,
@@ -267,8 +280,10 @@ void paint() {
     auto a=workspaceGeometry(); fill(dc,rect(0,0,a.rail,a.height),Theme::sidebar);
     int logoX=a.compactRail?13:16,logoY=a.shortScreen?13:20;
     fill(dc,rect(a.rail-1,0,1,a.height),Theme::sideLine);
-    rounded(dc,rect(logoX,logoY,33,33),Theme::accent,Theme::accent,12);
-    navSymbol(dc,7,px(logoX+7),px(logoY+7),Theme::onAccent);
+    const bool fjord=Theme::index()==Theme::fjordIndex;
+    const auto logoFill=fjord?Theme::select:Theme::accent;
+    rounded(dc,rect(logoX,logoY,33,33),logoFill,logoFill,12);
+    navSymbol(dc,7,px(logoX+7),px(logoY+7),fjord?Theme::accentInk:Theme::onAccent);
     if (!a.compactRail) {
         drawText(dc,L"Suzerain",rect(59,logoY-7,a.rail-64,28),g.brand,Theme::sideText);
         drawText(dc,L"Save Studio",rect(60,logoY+17,a.rail-64,19),g.small,Theme::sideMuted);
