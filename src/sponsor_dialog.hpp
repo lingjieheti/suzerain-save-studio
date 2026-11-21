@@ -82,7 +82,9 @@ inline void layout(const State& s) {
     const int hintHeight=textHeight(get(methods[s.method].hint),s.body,detailWidth)+1;
     const int addressLine=textHeight(L"A",s.addressFont,detailWidth);
     int addressHeight=2*addressLine+4;
-    int actionWidth=detailWidth;
+    const int closeWidth=104, footerY=h-(compact?37:43);
+    const int maxActionWidth=compact?w-2*pad-closeWidth-gap:detailWidth;
+    int actionWidth=maxActionWidth;
     if(dc){
         const int addressWidth=typography::width(dc,s.addressFont,tronAddress);
         const int innerWidth=std::max(1,s.scale(detailWidth-5));
@@ -90,15 +92,22 @@ inline void layout(const State& s) {
         auto label=get(methods[s.method].action);
         int labelWidth=typography::width(dc,s.body,label);
         if(methods[s.method].action==Key::CopyAddress)labelWidth=std::max(labelWidth,typography::width(dc,s.body,get(Key::Copied)));
-        actionWidth=std::min(detailWidth,std::max(116,MulDiv(labelWidth,96,s.dpi)+28));
+        actionWidth=std::min(maxActionWidth,std::max(116,MulDiv(labelWidth,96,s.dpi)+28));
         ReleaseDC(s.win,dc);
     }
     const int spacing=compact?4:8;
-    int groupHeight=titleHeight+spacing+hintHeight+spacing+4+32;
+    int groupHeight=hintHeight;
     if(methods[s.method].action==Key::CopyAddress)groupHeight+=spacing+addressHeight;
+    if(!compact)groupHeight+=spacing+4+32;
+    // The selected radio already names the method on short work areas.
+    const bool showName=!compact || titleHeight+spacing+groupHeight<=bodyEnd-bodyTop;
+    if(showName)groupHeight+=titleHeight+spacing;
+    ShowWindow(GetDlgItem(s.win,MethodName),showName?SW_SHOW:SW_HIDE);
     int y=bodyTop+std::max(0,(bodyEnd-bodyTop-groupHeight)/2);
-    move(MethodName,col,y,detailWidth,titleHeight);
-    y+=titleHeight+spacing;
+    if(showName){
+        move(MethodName,col,y,detailWidth,titleHeight);
+        y+=titleHeight+spacing;
+    }
     move(Hint,col,y,detailWidth,hintHeight);
     y+=hintHeight;
     if(methods[s.method].action==Key::CopyAddress){
@@ -106,8 +115,9 @@ inline void layout(const State& s) {
         move(Address,col,y,detailWidth,addressHeight);
         y+=addressHeight;
     }
-    move(Action,col,y+spacing+4,actionWidth,32);
-    move(IDCANCEL,w-pad-104,h-(compact?37:43),104,32);
+    if(compact)move(Action,pad,footerY,actionWidth,32);
+    else move(Action,col,y+spacing+4,actionWidth,32);
+    move(IDCANCEL,w-pad-closeWidth,footerY,closeWidth,32);
 }
 
 inline void fitWindow(const State& s, RECT anchor) {

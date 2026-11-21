@@ -1,6 +1,11 @@
-# v0.17.2 Preview — Windows validation
+# v0.17.3 Preview — Windows validation
 
-The Windows x64 archive includes the 0.17.2 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.17.3 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Compact support window and release packaging in 0.17.3
+
+- Native Windows tests exercise both payment methods across eleven interface languages at two compact window sizes. They check that the action and Close buttons fit without overlapping and that resizing back restores the normal layout.
+- Packaging checks compare the built editor's Win32 file and product versions with the version on the ZIP. A local test with the withdrawn 0.17.1 executable confirmed that packaging rejects a version mismatch. The quick-start guide links to the companion guide on GitHub and to its bundled copy in the ZIP.
 
 ## In-app support in 0.17.2
 

@@ -2,3 +2,4 @@
 /.rizia-backups/
 *.bak
 *.tmp
+__pycache__/

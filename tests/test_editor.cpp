@@ -79,6 +79,37 @@ void testSponsorDialog() {
             const auto label=method==1?Key::CopyAddress:Key::OpenPage;
             check(textOf(control(sponsor::Action))==sponsor_text::get(label) && fits(control(sponsor::Action),false),
                   "The correct action fits in the current language");
+
+            RECT frame{},client{};
+            GetWindowRect(dialog,&frame);GetClientRect(dialog,&client);
+            const int frameWidth=frame.right-frame.left-client.right;
+            const int frameHeight=frame.bottom-frame.top-client.bottom;
+            for(const SIZE workArea: {SIZE{430,315},SIZE{384,265}}){
+                SetWindowPos(dialog,nullptr,0,0,state.scale(workArea.cx)+frameWidth,
+                             state.scale(workArea.cy)+frameHeight,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+                RECT viewport{};GetClientRect(dialog,&viewport);
+                MapWindowPoints(dialog,nullptr,reinterpret_cast<POINT*>(&viewport),2);
+                std::vector<RECT> visible;
+                bool separate=true;
+                for(int id: {int(sponsor::Heading),int(sponsor::Introduction),int(sponsor::FirstMethod),
+                             int(sponsor::LastMethod),int(sponsor::Qr),int(sponsor::MethodName),int(sponsor::Hint),
+                             int(sponsor::Address),int(sponsor::Action),IDCANCEL}){
+                    if(!shown(control(id)))continue;
+                    RECT area{};GetWindowRect(control(id),&area);
+                    separate=separate && area.right>area.left && area.bottom>area.top &&
+                             area.left>=viewport.left && area.top>=viewport.top &&
+                             area.right<=viewport.right && area.bottom<=viewport.bottom;
+                    for(const auto& prior:visible){
+                        RECT overlap{};if(IntersectRect(&overlap,&area,&prior))separate=false;
+                    }
+                    visible.push_back(area);
+                }
+                check(separate && fits(control(sponsor::Hint),true) && fits(control(sponsor::Action),false),
+                      "Short work areas keep the instructions and every visible control distinct and in bounds");
+            }
+            SetWindowPos(dialog,nullptr,0,0,frame.right-frame.left,frame.bottom-frame.top,
+                         SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+            check(shown(control(sponsor::MethodName)),"The method heading returns when the dialog regains height");
         }
         const auto hint=textOf(control(sponsor::Hint));
         check(textOf(control(sponsor::Address))==L"TXE2VuxUSFsenJvmz3Z8oSm7dqPLAUWfRE" &&

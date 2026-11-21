@@ -24,6 +24,8 @@ jobs:
       - name: Build the portable editor
         shell: pwsh
         run: ./build.ps1 -CompilerKind GCC -Toolchain $env:SUZERAIN_MINGW
+      - name: Verify release packaging and offline guide links
+        run: python -m unittest discover -s tests -p test_packaging.py
       - name: Run synthetic tests
         shell: pwsh
         run: ./test.ps1 -Compiler (Join-Path $env:SUZERAIN_MINGW 'g++.exe')

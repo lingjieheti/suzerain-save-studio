@@ -4,7 +4,7 @@
 
 Hice esta herramienta para mis propias partidas de *Suzerain*. La uso para consultar el presupuesto de Sordland o ver cuánta energía tiene Rizia y cuánto cambia esa reserva en cada turno.
 
-**[Descargar la versión preliminar 0.17.2 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.2/SuzerainSaveStudio-0.17.2-Live-Preview-win-x64.zip)**
+**[Descargar la versión preliminar 0.17.3 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.3/SuzerainSaveStudio-0.17.3-Live-Preview-win-x64.zip)**
 
 Activa la vista previa de las opciones en el panel **Ctrl+F8** y cierra el panel. Coloca el cursor sobre una opción y pulsa brevemente la tecla **Ctrl** izquierda o derecha para ver sus efectos. Vuelve a pulsarla o retira el cursor para cerrar la vista previa. Para comparar otra opción, coloca el cursor sobre ella y pulsa Ctrl. La función está desactivada de forma predeterminada. Algunas consecuencias dependen de cómo avance la historia.
 
