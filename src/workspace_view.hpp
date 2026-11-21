@@ -1,7 +1,7 @@
 #pragma once
 
 int navStart(const WorkspaceGeometry& a) { return a.compactRail ? 65 : (a.shortScreen ? 87 : 138); }
-int navStep(const WorkspaceGeometry& a) { return a.shortScreen ? 33 : 43; }
+int navStep(const WorkspaceGeometry& a) { return a.shortScreen ? 33 : a.height<640 ? 39 : 43; }
 int navGap(const WorkspaceGeometry& a) { return a.shortScreen || a.compactRail ? 12 : 30; }
 int navY(const WorkspaceGeometry& a, int index) {
     return navStart(a) + index * navStep(a) + (index >= 5 ? navGap(a) : 0);
@@ -51,6 +51,8 @@ void layout() {
     else place(ctl(LANGUAGE), 15, a.height - (a.shortScreen ? 39 : 73), a.rail-30, 300);
     for (int i=0;i<8;++i) place(ctl(NAV_BASE+i), a.compactRail ? 6 : 10, navY(a,i),
                                   a.rail - (a.compactRail ? 12 : 20), navStep(a)-4);
+    const int supportY=a.height-(a.compactRail?42:(a.shortScreen?73:108));
+    place(ctl(SUPPORT_AUTHOR),a.compactRail?6:10,supportY,a.rail-(a.compactRail?12:20),30);
 
     int presetW = a.content < 610 ? 104 : 138;
     place(ctl(PRESET99), toolbarEnd-2*presetW-7, a.presetsY, presetW, 31);

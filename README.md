@@ -8,7 +8,9 @@
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 
-**[下载 v0.16.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/SuzerainSaveStudio-0.16.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.2) · [♡ 赞助作者](SPONSOR.md)
+在选档窗口底部或编辑器左侧点 **赞助作者**，可以用手机扫描 PayPal 或 USDT 收款码。收款码内置在程序中，离线也能显示。USDT 使用 **TRON（TRC20）** 网络，地址可直接复制。
+
+**[下载 v0.16.3 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.3/SuzerainSaveStudio-0.16.3-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.3) · [♡ 赞助作者](SPONSOR.md)
 
 ![Windows 桌面编辑器中的里奇亚示例，雾蓝主题和微软雅黑 UI](docs/images/rizia-workspace.png)
 

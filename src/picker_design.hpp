@@ -93,7 +93,8 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     ::fill(d.hDC,box,inCard?Theme::panel:Theme::bg);
     --box.right;--box.bottom;
     const bool railItem=(demo||live)&&!s.stacked;
-    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||railItem)&&!hover&&!focus&&!pressed;
+    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||railItem)&&!hover&&!focus&&!pressed;
+    if(id==SUPPORT&&plain)fg=Theme::muted;
     if(!plain)surface(s,d.hDC,box,bg,focus?Theme::focus:edge,11,focus?2:1);
     const int width=box.right-box.left;
     int hmid=(box.top+box.bottom)/2;
@@ -105,7 +106,7 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         font=s.small;
         labelWidth=textWidth(d.hDC,label,font);
     }
-    const bool hasIcon=id!=IDCANCEL&&width>=labelWidth+s.scale(35);
+    const bool hasIcon=id!=IDCANCEL&&id!=SUPPORT&&width>=labelWidth+s.scale(35);
     if(id==APPEARANCE){
         const int x=box.left+s.scale(12),r=s.scale(5);
         RECT swatch{x,hmid-r,x+2*r,hmid+r};

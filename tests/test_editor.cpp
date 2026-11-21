@@ -20,6 +20,110 @@ void selectRow(const std::string& key){
     check(g.selected==key,"Native row selection reaches the editor");
 }
 
+void testSponsorDialog() {
+    using sponsor_text::Key;
+    const int originalLanguage=i18n::language;
+    const auto module=GetModuleHandleW(nullptr);
+    check(!FindResourceW(module,MAKEINTRESOURCEW(204),RT_BITMAP) &&
+          !FindResourceW(module,MAKEINTRESOURCEW(205),RT_BITMAP),
+          "Retired payment images are absent from the executable resources");
+    struct alignas(DWORD) Template { DLGTEMPLATE dialog{}; WORD menu=0,cls=0,title=0; } form;
+    form.dialog.style=WS_POPUP|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME;
+    auto shown=[](HWND control){ return (GetWindowLongPtrW(control,GWL_STYLE)&WS_VISIBLE)!=0; };
+    for(int language=0;language<static_cast<int>(std::size(i18n::names));++language) {
+        i18n::setLanguage(language);
+        sponsor::State state{};
+        HWND dialog=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&form.dialog,g.win,
+                                               sponsor::proc,reinterpret_cast<LPARAM>(&state));
+        check(dialog!=nullptr,"Create the support dialog for each app language");
+        auto control=[&](int id){return GetDlgItem(dialog,id);};
+        auto fits=[](HWND control,bool wrap) {
+            RECT bounds{};GetClientRect(control,&bounds);
+            HDC dc=GetDC(control);
+            auto prev=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(control,WM_GETFONT,0,0)));
+            RECT text={0,0,bounds.right,bounds.bottom};
+            auto caption=textOf(control);
+            DrawTextW(dc,caption.c_str(),-1,&text,DT_CALCRECT|DT_NOPREFIX|(wrap?DT_WORDBREAK:DT_SINGLELINE));
+            SelectObject(dc,prev);ReleaseDC(control,dc);
+            if(text.right>bounds.right || text.bottom>bounds.bottom)
+                std::cerr<<"Support layout: language "<<i18n::language<<", control "<<GetDlgCtrlID(control)
+                         <<", text "<<text.right<<"x"<<text.bottom<<", area "
+                         <<bounds.right<<"x"<<bounds.bottom<<'\n';
+            return text.right<=bounds.right && text.bottom<=bounds.bottom;
+        };
+        check(textOf(dialog)==sponsor_text::get(Key::Title) && fits(control(sponsor::Heading),false),
+              "The support window has a localized title that fits");
+        check(fits(control(sponsor::Introduction),true),"The introduction fits the support dialog");
+        check(SendMessageW(control(sponsor::FirstMethod),BM_GETCHECK,0,0)==BST_CHECKED,
+              "PayPal is selected on first open");
+        constexpr Key names[]={Key::PayPal,Key::USDT};
+        constexpr Key hints[]={Key::ScanPayPal,Key::ScanUSDT};
+        const HWND first=control(sponsor::FirstMethod),second=control(sponsor::FirstMethod+1);
+        check(GetNextDlgGroupItem(dialog,first,FALSE)==second &&
+              GetNextDlgGroupItem(dialog,second,FALSE)==first &&
+              GetNextDlgGroupItem(dialog,first,TRUE)==second,
+              "The keyboard radio group cycles between the two available methods");
+        for(int method=0;method<static_cast<int>(std::size(names));++method) {
+            auto radio=control(sponsor::FirstMethod+method);
+            if(method)SendMessageW(radio,BM_CLICK,0,0);
+            check(SendMessageW(radio,BM_GETCHECK,0,0)==BST_CHECKED &&
+                  textOf(radio)==sponsor_text::get(names[method]) && fits(radio,false),
+                  "A support method selects its correctly localized tab");
+            check(textOf(control(sponsor::Hint))==sponsor_text::get(hints[method]) && fits(control(sponsor::Hint),true),
+                  "The selected method shows its matching scan instructions");
+            BITMAP qr{};
+            check(GetObjectW(state.bitmap,sizeof(qr),&qr)==sizeof(qr) && qr.bmWidth>0 && qr.bmWidth==qr.bmHeight,
+                  "Every payment method loads a square QR bitmap from the executable");
+            check(shown(control(sponsor::Action)) && shown(control(sponsor::Address))==(method==1),
+                  "Payment link and address actions are available only for the matching method");
+            const auto label=method==1?Key::CopyAddress:Key::OpenPage;
+            check(textOf(control(sponsor::Action))==sponsor_text::get(label) && fits(control(sponsor::Action),false),
+                  "The correct action fits in the current language");
+        }
+        const auto hint=textOf(control(sponsor::Hint));
+        check(textOf(control(sponsor::Address))==L"TXE2VuxUSFsenJvmz3Z8oSm7dqPLAUWfRE" &&
+              (GetWindowLongPtrW(control(sponsor::Address),GWL_STYLE)&ES_READONLY) &&
+              hint.find(L"USDT")!=hint.npos && hint.find(L"TRC20")!=hint.npos && hint.find(L"TRON")!=hint.npos,
+              "USDT always presents a read-only TRON address with the correct network");
+        RECT client{},frame{};
+        GetClientRect(dialog,&client);GetWindowRect(dialog,&frame);
+        SetWindowPos(dialog,nullptr,0,0,state.scale(460)+frame.right-frame.left-client.right,
+                     state.scale(325)+frame.bottom-frame.top-client.bottom,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+        check(fits(control(sponsor::Heading),false) && fits(control(sponsor::Introduction),true) &&
+              fits(control(sponsor::Hint),true) && fits(control(sponsor::Action),false),
+              "Compact support dialog fits its title, introduction, network and copy action");
+        HWND address=control(sponsor::Address);
+        RECT addressBounds{};GetClientRect(address,&addressBounds);
+        LRESULT last=SendMessageW(address,EM_POSFROMCHAR,GetWindowTextLengthW(address)-1,0);
+        check(last!=-1 && LOWORD(last)<addressBounds.right && HIWORD(last)<addressBounds.bottom,
+              "The final character of the compact receiving address stays in view");
+        // Only the disposable GitHub-hosted Windows VM owns a test clipboard.
+        const char* environment=std::getenv("RUNNER_ENVIRONMENT");
+        const char* actions=std::getenv("GITHUB_ACTIONS");
+        if(language==0 && environment && std::string(environment)=="github-hosted" &&
+           actions && std::string(actions)=="true") {
+            SendMessageW(control(sponsor::Action),BM_CLICK,0,0);
+            check(textOf(control(sponsor::Action))==sponsor_text::get(Key::Copied) && OpenClipboard(dialog),
+                  "Copy address writes to the hosted runner clipboard");
+            auto data=GetClipboardData(CF_UNICODETEXT);
+            const auto* copied=data?static_cast<const wchar_t*>(GlobalLock(data)):nullptr;
+            const bool correct=copied && textOf(control(sponsor::Address))==copied;
+            if(copied)GlobalUnlock(data);
+            CloseClipboard();
+            check(correct,"The clipboard exactly matches the displayed TRON address");
+            std::cout<<"PASS: support address copied and verified on the hosted Windows clipboard\n";
+        }else if(language==0){
+            std::cout<<"SKIP: live clipboard check reserved for a GitHub-hosted Windows runner\n";
+        }
+        SendMessageW(control(sponsor::FirstMethod),BM_CLICK,0,0);
+        check(shown(control(sponsor::Action)) && !shown(control(sponsor::Address)) &&
+              textOf(control(sponsor::Action))==sponsor_text::get(Key::OpenPage),
+              "Returning to PayPal hides the crypto address and restores the payment link action");
+        DestroyWindow(dialog);
+    }
+    i18n::setLanguage(originalLanguage);
+}
+
 void testSaveQueries() {
     rizia::discovery::Save snapshot;
     snapshot.story="StoryPack_Rizia";snapshot.turn="3";snapshot.campaignName="North Palace";
@@ -569,6 +673,7 @@ int main(int argc,char** argv){
         testInspectorLayout(fs::u8path(argv[2]));
         testChineseFonts(fs::u8path(argv[1]));
         testTypography(fs::u8path(argv[2]));
+        testSponsorDialog();
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";
         return 0;

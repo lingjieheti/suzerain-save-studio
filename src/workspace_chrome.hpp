@@ -73,6 +73,13 @@ void navSymbol(HDC dc, int id, int x, int y, COLORREF color) {
             stroke({{9,16},{3,16},{3,2},{14,2},{14,8}}); stroke({{5,6},{11,6}}); stroke({{8,12},{11,15},{17,9}}); break;
         case 6:
             stroke({{1,2},{17,2},{17,6},{1,6},{1,2}}); stroke({{3,7},{3,16},{15,16},{15,7}}); stroke({{7,10},{12,10}}); break;
+        case 8: {
+            POINT curve[]={{9,16},{7,14},{1,10},{1,6},{1,1},{6,0},{9,5},
+                           {12,0},{17,1},{17,6},{17,10},{11,14},{9,16}};
+            for(auto& point:curve){point.x=x+px(point.x);point.y=y+px(point.y);}
+            PolyBezier(dc,curve,static_cast<DWORD>(std::size(curve)));
+            break;
+        }
         default:
             stroke({{1,3},{5,3},{9,5},{13,3},{17,3},{17,15},{13,15},{9,17},{5,15},{1,15},{1,3}}); stroke({{9,5},{9,17}}); break;
     }
@@ -84,8 +91,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool disabled = d->itemState & ODS_DISABLED;
     bool hover = GetPropW(d->hwndItem, L"RiziaHover") != nullptr;
     bool down = d->itemState & ODS_SELECTED;
-    bool nav = id >= NAV_BASE && id < NAV_BASE + 8;
-    bool activeNav = nav && id - NAV_BASE == g.tab;
+    bool nav = (id >= NAV_BASE && id < NAV_BASE + 8) || id==SUPPORT_AUTHOR;
+    bool activeNav = id==NAV_BASE+g.tab;
     bool check = id == AUTOCAP || id == FILTER_CHANGED;
     bool checked = id == AUTOCAP ? g.autoCap : g.changedOnly;
     bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue) ||
@@ -119,8 +126,10 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     RECT tx = r;
     if (nav) {
         bool compact = r.right - r.left < px(64);
-        int glyphX = compact ? (r.right - px(18)) / 2 : px(13);
-        navSymbol(d->hDC, id - NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
+        const bool longSupport=id==SUPPORT_AUTHOR && !compact &&
+            typography::width(d->hDC,g.font,textOf(d->hwndItem))>r.right-r.left-px(47);
+        int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
+        navSymbol(d->hDC, id==SUPPORT_AUTHOR?8:id-NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
                   activeNav ? Theme::accentInk : Theme::sideMuted);
         if (activeNav) {
             const int cy=r.bottom/2;
@@ -128,7 +137,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                     Theme::accent,Theme::accent,3);
         }
         if (!compact) {
-            tx.left += px(42); tx.right -= px(5);
+            tx.left += px(longSupport?27:42); tx.right -= px(5);
             auto title=textOf(d->hwndItem);
             if(id==NAV_BASE+5 && g.previewCount) {
                 auto count=std::to_wstring(g.previewCount);
@@ -139,7 +148,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                 tx.right=badge.left-px(4);
                 title=tr(L"修改预览");
             }
-            drawText(d->hDC, title, tx, activeNav?g.emphasis:g.font, fg);
+            drawText(d->hDC, title, tx, longSupport?g.small:activeNav?g.emphasis:g.font, fg);
         }
     } else if(id==APPEARANCE) {
         const bool compact=workspaceGeometry().compactRail;

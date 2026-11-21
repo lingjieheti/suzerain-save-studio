@@ -12,7 +12,11 @@
 
 如果想在游戏运行时微调资源，请查阅同一文件夹中的[实时面板说明](实时面板.md)。
 
+想支持作者，可点选档窗口底部或编辑器侧栏的 **赞助作者**。选择 PayPal 或 USDT 即可扫码。PayPal 也可打开收款页。USDT 使用 TRON（TRC20）网络，地址可直接复制。
+
 ## English quick start
+
+Open **Support the author** in the save picker or editor sidebar to scan a PayPal or USDT code. For USDT, choose the TRON (TRC20) network.
 
 1. Extract the ZIP and open `SuzerainSaveStudio.exe`. Pick a Sordland or Rizia sample to try the editor.
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker and check the file name. In **Advanced**, search for a field name or paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate it.

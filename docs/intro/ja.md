@@ -4,7 +4,7 @@
 
 『Suzerain』を遊ぶときに使っている、自作のセーブエディターです。ソードランドでもリジアでも、予算を確認したり、資源の値を少し調整したりできます。
 
-[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/SuzerainSaveStudio-0.16.2-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.3/SuzerainSaveStudio-0.16.3-Live-Preview-win-x64.zip)
 
 ## セーブデータを編集する
 

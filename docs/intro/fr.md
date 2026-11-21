@@ -4,7 +4,7 @@
 
 J’ai créé ce petit éditeur pour mes parties de *Suzerain*. Je m’en sers pour retrouver le budget de Sordland dans une sauvegarde ou pour voir combien d’énergie Rizia gagne ou perd à chaque tour.
 
-**[Télécharger la version préliminaire 0.16.2 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.2/SuzerainSaveStudio-0.16.2-Live-Preview-win-x64.zip)**
+**[Télécharger la version préliminaire 0.16.3 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.3/SuzerainSaveStudio-0.16.3-Live-Preview-win-x64.zip)**
 
 ## Modifier une sauvegarde
 

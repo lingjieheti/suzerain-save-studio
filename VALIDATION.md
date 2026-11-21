@@ -1,6 +1,12 @@
-# v0.16.2 Preview — Windows validation
+# v0.16.3 Preview — Windows validation
 
-The Windows x64 package includes the 0.16.2 portable editor and the 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+The Windows x64 package includes the 0.16.3 portable editor and the 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+
+## In-app support in 0.16.3
+
+- Opened **Support the author** from the save picker and the editor in the extracted release. Closing the window preserved the picker search and an unapplied edit in the Rizia sample. The arrow keys switched methods and Escape returned to the editor.
+- Verified the PayPal destination and the TRON address in the app against the published codes.
+- Checked the localized donation controls and complete address across all eleven languages. A compact-window layout check exercised 100%, 125%, 150% and 200% scaling. The full local run passed 943 editor checks and 233 read-only campaign checks. Clipboard writes are exercised only on the disposable GitHub-hosted Windows runner. The unchanged optional companion passed 73 simulated state checks and 296 panel checks.
 
 ## Chinese font selection in 0.16.2
 

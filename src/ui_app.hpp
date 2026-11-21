@@ -5,13 +5,14 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.16.2";
+constexpr wchar_t APP_VERSION[] = L"0.16.3";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
-       FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH };
+       FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH, SUPPORT_AUTHOR };
 #include "appearance.hpp"
 #include "typography.hpp"
+#include "sponsor_text.hpp"
 struct FieldPageState {
     std::wstring query;
     std::string preferred;
@@ -439,7 +440,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.16.2 Preview · Windows 10 / 11 x64\r\n"
+        L"0.16.3 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -501,6 +502,7 @@ fs::path pickFile(bool save=false,int kind=0,HWND owner=nullptr){
     o.lpstrInitialDir=initial.c_str();o.lpstrDefExt=save?(kind==1?L"txt":L"json"):nullptr;o.Flags=OFN_EXPLORER|OFN_NOCHANGEDIR|OFN_PATHMUSTEXIST|(save?OFN_OVERWRITEPROMPT:OFN_FILEMUSTEXIST);
     BOOL ok=save?GetSaveFileNameW(&o):GetOpenFileNameW(&o);return ok?fs::path(buffer.data()):fs::path();
 }
+#include "sponsor_dialog.hpp"
 #include "save_picker.hpp"
 void preset(int number){
     if(!g.doc||!applyInput(false))return;std::map<std::string,std::string> batch;
@@ -590,6 +592,7 @@ void changeLanguage(){
     SendMessageW(g.search,EM_SETCUEBANNER,TRUE,(LPARAM)tr(L"搜索项目或存档字段").c_str());
     updateAppearanceLabel();
     updateCampaign();if(g.doc){rawText(g.path,documentTitle());rawText(g.meta,campaignLabel(g.doc->story)+L" / "+wide(g.doc->version)+L" / "+tr(L"回合")+L" "+wide(g.doc->turn)+L" / "+wide(g.doc->campaignName));}
+    rawText(ctl(SUPPORT_AUTHOR),sponsor_text::get(sponsor_text::Key::Title));
     if(g.tab==7)setHelp();refresh();
 }
 void exportCSV(){
@@ -615,6 +618,7 @@ void createControls(){
     button(L"手动打开",OPEN);button(L"选择存档",LATEST);button(L"文件夹",FOLDER);button(L"重新载入",RELOAD);
     const wchar_t*nav[]={L"资源与经济",L"军备库存",L"家族与人物",L"外交谈判",L"高级字段",L"修改预览",L"备份管理",L"使用指南"};
     for(int i=0;i<8;++i)button(nav[i],NAV_BASE+i);
+    rawText(button(L"",SUPPORT_AUTHOR),sponsor_text::get(sponsor_text::Key::Title));
     g.path=control(L"STATIC",L"未打开存档",SS_PATHELLIPSIS|SS_NOTIFY|SS_NOPREFIX);g.meta=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);
     g.search=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,SEARCH);
     button(L"清除搜索",CLEAR_FIELD_SEARCH);
@@ -643,6 +647,7 @@ void createControls(){
     enableHints();fonts();layout();refresh();
 }
 void command(int id,int code){
+    if(id==SUPPORT_AUTHOR && code==BN_CLICKED){sponsor::show(g.win);return;}
     if(id==APPEARANCE&&code==BN_CLICKED){applyAppearanceCommand(pickAppearance(g.win,ctl(APPEARANCE)));return;}
     if(id==LANGUAGE&&code==CBN_SELCHANGE){changeLanguage();return;}
     if(id==EDITVALUE&&code==EN_CHANGE&&!g.populating){g.editingDirty=true;toast(L"未保存");updateStatus();return;}

@@ -6,11 +6,11 @@
 
 // The picker owns its controls and fonts. Discovery never touches the editor or files.
 namespace save_picker {
-enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, APPEARANCE, CLEAR_SEARCH, START_SCAN=WM_APP+44 };
+enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, APPEARANCE, CLEAR_SEARCH, SUPPORT, START_SCAN=WM_APP+44 };
 inline std::vector<fs::path> extraRoots;
 struct State {
     HWND win{}, list{}, filter{}, clearSearch{}, campaign{}, status{}, path{}, add{}, refresh{}, open{}, cancelButton{}, heading{};
-    HWND browse{}, live{}, appearance{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
+    HWND browse{}, live{}, appearance{}, support{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
     UINT dpi=96;
     HFONT font{}, small{}, bold{}, subheading{}, emphasis{}, number{};
     HIMAGELIST rowHeight{};
@@ -148,10 +148,13 @@ inline void layout(State& s){
     auto previousFont=SelectObject(dc,s.emphasis);
     const auto openCaption=textOf(s.open);SIZE extent{};
     GetTextExtentPoint32W(dc,openCaption.c_str(),static_cast<int>(openCaption.size()),&extent);
+    const int supportWidth=MulDiv(typography::width(dc,s.font,textOf(s.support)),96,s.dpi)+18;
     SelectObject(dc,previousFont);ReleaseDC(s.win,dc);
     const int openWidth=std::clamp(MulDiv(extent.cx,96,s.dpi)+44,141,210);
     const int openX=w-margin-openWidth, cancelX=openX-108;
-    s.move(s.path,margin,footerButtons+6,cancelX-margin-12,23);
+    const int supportX=cancelX-supportWidth-6;
+    s.move(s.path,margin,footerButtons+6,supportX-margin-8,23);
+    s.move(s.support,supportX,footerButtons,supportWidth,34);
     s.move(s.cancelButton,cancelX,footerButtons,100,34);
     s.move(s.open,openX,footerButtons,openWidth,34);
     const int columns=tableWidth-20;
@@ -275,9 +278,10 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             s.browse=child(s,L"BUTTON",L"手动打开",WS_TABSTOP|BS_OWNERDRAW,BROWSE);
             s.appearance=child(s,L"BUTTON",L"",WS_TABSTOP|BS_OWNERDRAW,APPEARANCE);
             s.live=child(s,L"BUTTON",L"实时模式",WS_TABSTOP|BS_OWNERDRAW,LIVE_MODE);
+            s.support=child(s,L"BUTTON",sponsor_text::get(sponsor_text::Key::Title),WS_TABSTOP|BS_OWNERDRAW,SUPPORT);
             s.open=child(s,L"BUTTON",L"打开所选",WS_TABSTOP|BS_OWNERDRAW,IDOK);s.cancelButton=child(s,L"BUTTON",L"取消",WS_TABSTOP|BS_OWNERDRAW,IDCANCEL);
             s.empty=child(s,L"STATIC",L"正在搜索…",SS_OWNERDRAW,0);
-            for(auto button:{s.add,s.refresh,s.mainDemo,s.riziaDemo,s.appearance,s.browse,s.live,s.open,s.cancelButton})SetWindowSubclass(button,buttonProc,1,0);
+            for(auto button:{s.add,s.refresh,s.mainDemo,s.riziaDemo,s.appearance,s.browse,s.live,s.support,s.open,s.cancelButton})SetWindowSubclass(button,buttonProc,1,0);
             applyPickerAppearance(s);RECT owner{},area{};GetWindowRect(g.win,&owner);MONITORINFO mi{};mi.cbSize=sizeof(mi);GetMonitorInfoW(MonitorFromWindow(g.win,MONITOR_DEFAULTTONEAREST),&mi);area=mi.rcWork;
             int width=std::min(s.scale(1010),(int)(area.right-area.left)),height=std::min(s.scale(624),(int)(area.bottom-area.top));
             int x=std::max((int)area.left,std::min((int)area.right-width,(int)(owner.left+owner.right-width)/2));int y=std::max((int)area.top,std::min((int)area.bottom-height,(int)(owner.top+owner.bottom-height)/2));
@@ -297,6 +301,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(id==DEMO_MAIN||id==DEMO_RIZIA){s.chosenDemo=id==DEMO_MAIN?demo::sordland:demo::rizia;s.stop();EndDialog(w,IDOK);return TRUE;}
             if(id==BROWSE){auto picked=pickFile(false,0,w);if(!picked.empty()){s.choice=picked;s.stop();EndDialog(w,IDOK);}return TRUE;}
             if(id==LIVE_MODE){live_setup::show(w);return TRUE;}
+            if(id==SUPPORT && HIWORD(wp)==BN_CLICKED){sponsor::show(w);return TRUE;}
             if(id==APPEARANCE){
                 applyAppearanceCommand(pickAppearance(w,s.appearance));
                 if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected)applyPickerAppearance(s);

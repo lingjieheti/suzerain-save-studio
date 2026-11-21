@@ -2,6 +2,8 @@
 
 这是我自己玩《Suzerain》时做的工具。如果它帮你少翻了几次存档，也欢迎请我喝杯咖啡。金额随意，谢谢支持！
 
+在选档窗口底部或编辑器左侧点 **赞助作者**，可以离线查看收款码。选择 PayPal 可打开收款页，选择 USDT 可复制 TRON（TRC20）地址。
+
 - [PayPal · 打开收款页](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2)
 - [USDT · 查看 TRON（TRC20）收款地址](#usdttrc20)
 
