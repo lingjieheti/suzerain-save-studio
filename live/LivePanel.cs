@@ -8,7 +8,7 @@ namespace SuzerainSaveStudio.Live
 {
     public sealed class LivePanel : MonoBehaviour
     {
-        private const float MaxWidth = 526, MinWidth = 316, Height = 392, Inset = 17;
+        private const float MaxWidth = 526, MinWidth = 316, Height = 430, Inset = 17;
         private static readonly string[] ThemeControls = { "theme-paper", "theme-forest", "theme-fjord", "theme-midnight" };
         private static readonly int[] Steps = { -5, -1, 1, 5 };
         private static readonly string[] StepLabels = { "-5", "-1", "+1", "+5" };
@@ -16,7 +16,8 @@ namespace SuzerainSaveStudio.Live
         private PanelAppearance palette = PanelAppearance.Choices[PanelAppearance.Fjord];
         private enum Feedback { Info, Success, Warning }
 
-        private bool visible, hotkeyHeld, chinese;
+        private bool visible, hotkeyHeld, chinese, hintsEnabled;
+        private readonly ChoiceHover choiceHover = new ChoiceHover();
         private Snapshot snapshot;
         private string key = "", draft = "", noticeZh = "", noticeEn = "";
         private bool confirming, draftEdited;
@@ -36,14 +37,24 @@ namespace SuzerainSaveStudio.Live
 
         public void Awake()
         {
+            LoadPreferences();
             var lang = Application.systemLanguage;
-            chinese = lang == SystemLanguage.Chinese || lang == SystemLanguage.ChineseSimplified ||
-                      lang == SystemLanguage.ChineseTraditional;
+            chinese = PanelPreferences.ReadChinese(lang == SystemLanguage.Chinese || lang == SystemLanguage.ChineseSimplified ||
+                      lang == SystemLanguage.ChineseTraditional);
         }
 
         public void OnApplicationFocus(bool focused)
         {
             if (!focused) hotkeyHeld = false;
+            else LoadPreferences();
+        }
+
+        [HideFromIl2Cpp]
+        private void LoadPreferences()
+        {
+            hintsEnabled = PanelPreferences.ReadChoiceHints();
+            appearance = PanelPreferences.ReadAppearance();
+            palette = PanelAppearance.Choices[appearance];
         }
 
         public void OnDestroy()
@@ -117,14 +128,14 @@ namespace SuzerainSaveStudio.Live
                     hotkeyHeld = true;
                     if (!visible) {
                         visible = true;
-                        appearance = AppearancePreference.Read();
-                        palette = PanelAppearance.Choices[appearance];
+                        LoadPreferences();
                         Refresh();
                     }
                     else ClosePanel();
                 }
                 ev.Use();
             }
+            choiceHover.OnGUI(hintsEnabled && !visible, chinese, palette);
             if (!visible) return;
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape)
             {
@@ -345,6 +356,7 @@ namespace SuzerainSaveStudio.Live
                     order.Add("preview");
                 }
                 order.AddRange(ThemeControls);
+                order.Add("choice-hints");
                 int index = order.IndexOf(focused);
                 if (index < 0) index = ev.shift ? 0 : -1;
                 focused = order[(index+(ev.shift?-1:1)+order.Count)%order.Count];
@@ -473,7 +485,11 @@ namespace SuzerainSaveStudio.Live
             PaperBox(new Rect(0,0,width,Height),palette.Background,palette.Border,13);
             GUI.Label(new Rect(Inset,10,content-129,37),T("实时编辑","Live editor"),title);
             if (Button(new Rect(width-Inset-133,15,70,29),"language",T("English","简体中文"),quiet:true))
+            {
                 chinese = !chinese;
+                if (!PanelPreferences.WriteChinese(chinese))
+                    Notice("界面语言已切换，本次选择未能保存。","Language changed for this session only.","",Feedback.Warning);
+            }
             if (Button(new Rect(width-Inset-57,15,57,29),"close",T("关闭","Close"),quiet:true))
             {
                 ClosePanel(); return;
@@ -654,11 +670,19 @@ namespace SuzerainSaveStudio.Live
                 {
                     appearance = i;
                     palette = choice;
-                    if (!AppearancePreference.Write(i))
+                    if (!PanelPreferences.WriteAppearance(i))
                         Notice("外观已切换，本次选择未能保存。","Theme applied for this session only.","",Feedback.Warning);
                 }
             }
-            GUI.Label(new Rect(Inset,367,content,22),T("Ctrl+F8  显示或隐藏面板","Ctrl+F8  Show or hide panel"),rightCaption);
+            GUI.Label(new Rect(Inset,373,content-84,28),T("悬停显示选项结果","Preview choices on hover"),body);
+            if (Button(new Rect(width-Inset-72,373,72,28),"choice-hints",
+                    hintsEnabled ? T("已开启","On") : T("已关闭","Off"),primary:hintsEnabled))
+            {
+                hintsEnabled = !hintsEnabled;
+                if (!PanelPreferences.WriteChoiceHints(hintsEnabled))
+                    Notice("选项提示已切换，本次选择未能保存。","Choice previews changed for this session only.","",Feedback.Warning);
+            }
+            GUI.Label(new Rect(Inset,405,content,22),T("Ctrl+F8  显示或隐藏面板","Ctrl+F8  Show or hide panel"),rightCaption);
         }
     }
 }

@@ -163,3 +163,13 @@ namespace UnityEngine.UI
         public readonly UnityEngine.RectTransform rectTransform = new();
     }
 }
+
+
+namespace SuzerainSaveStudio.Live
+{
+    internal sealed class ChoiceHover
+    {
+        internal static bool LastEnabled;
+        internal void OnGUI(bool enabled, bool chinese, PanelAppearance palette) => LastEnabled = enabled;
+    }
+}

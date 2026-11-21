@@ -36,3 +36,9 @@ jobs:
       - name: Verify live panel controls and compact layouts
         shell: pwsh
         run: dotnet run --project tests/panel/PanelChecks.csproj -c Release
+      - name: Verify read-only choice previews
+        shell: pwsh
+        run: dotnet run --project tests/choices/ChoiceChecks.csproj -c Release
+      - name: Verify hover behavior and tooltip layout
+        shell: pwsh
+        run: dotnet run --project tests/hover/HoverChecks.csproj -c Release

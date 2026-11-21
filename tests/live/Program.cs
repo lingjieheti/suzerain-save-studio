@@ -209,6 +209,7 @@ internal static class Program
         DraftSteps();
         Readback();
         Hud();
+        ChoicePathChecks.Run();
         Console.WriteLine($"{checks} live state checks passed (in-memory game API doubles).");
     }
 }

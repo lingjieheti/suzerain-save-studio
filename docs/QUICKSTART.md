@@ -14,6 +14,8 @@
 
 想支持作者，可点选档窗口底部或编辑器侧栏的 **赞助作者**。选择 PayPal 或 USDT 即可扫码。PayPal 也可打开收款页。USDT 使用 TRON（TRC20）网络，地址可直接复制。
 
+游戏内想在选择前看结果，按 **Ctrl+F8** 开启 **悬停显示选项结果**，关闭面板后把鼠标移到选项上。桌面端的 **实时模式** 也有同一开关，初始为关闭。
+
 ## English quick start
 
 Open **Support the author** in the save picker or editor sidebar to scan a PayPal or USDT code. For USDT, choose the TRON (TRC20) network.
@@ -21,5 +23,7 @@ Open **Support the author** in the save picker or editor sidebar to scan a PayPa
 1. Extract the ZIP and open `SuzerainSaveStudio.exe`. Pick a Sordland or Rizia sample to try the editor.
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker and check the file name. In **Advanced**, search for a field name or paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate it.
 3. Select the field, enter a new value and choose **Apply**. Press **Ctrl+S** to review the changes. **Save as** creates a separate copy. Return to the game's main menu and load the file you just saved.
+
+For a read-only choice tooltip, enable **Preview choices on hover** in the Ctrl+F8 panel. Close the panel, then hover over the choice. The same switch is available in the editor’s **Live mode** dialog.
 
 For in-game adjustments on Windows Steam, the optional plugin requires BepInEx 6 IL2CPP. Keep the DLL beside the editor, choose **Live mode** at startup, and select the game's executable. In a running campaign, press **Ctrl+F8**, choose a resource, preview your edit and confirm.

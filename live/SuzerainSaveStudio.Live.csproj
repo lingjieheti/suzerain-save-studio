@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>SuzerainSaveStudio.Live</AssemblyName>
-    <Version>0.16.1</Version>
+    <Version>0.17.0</Version>
     <RootNamespace>SuzerainSaveStudio.Live</RootNamespace>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <OutputPath>../build/live/</OutputPath>
@@ -24,6 +24,7 @@
     <LocalReference Include="$(GameRoot)/BepInEx/interop/Assembly-CSharp-firstpass.dll" />
     <LocalReference Include="$(GameRoot)/BepInEx/interop/UnityEngine.CoreModule.dll" />
     <LocalReference Include="$(GameRoot)/BepInEx/interop/UnityEngine.IMGUIModule.dll" />
+    <LocalReference Include="$(GameRoot)/BepInEx/interop/Unity.InputSystem.dll" />
     <LocalReference Include="$(GameRoot)/BepInEx/interop/UnityEngine.UIModule.dll" />
     <LocalReference Include="$(GameRoot)/BepInEx/interop/UnityEngine.UI.dll" />
     <LocalReference Include="$(GameRoot)/BepInEx/interop/UnityEngine.TextRenderingModule.dll" />

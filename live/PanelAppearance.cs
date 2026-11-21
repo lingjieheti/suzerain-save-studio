@@ -53,36 +53,40 @@ internal sealed class PanelAppearance
     };
 }
 
-internal static class AppearancePreference
+internal static class PanelPreferences
 {
     private const string Location = @"Software\SuzerainSaveStudio";
-    private const string Name = "Appearance";
+    internal static int ReadAppearance() => Read("Appearance", PanelAppearance.Choices.Length, PanelAppearance.Fjord);
+    internal static bool WriteAppearance(int index) => index >= 0 && index < PanelAppearance.Choices.Length && Write("Appearance", index);
+    internal static bool ReadChinese(bool defaultChinese) => Read("PanelLanguage", 2, defaultChinese ? 1 : 0) == 1;
+    internal static bool WriteChinese(bool chinese) => Write("PanelLanguage", chinese ? 1 : 0);
+    internal static bool ReadChoiceHints() => Read("ChoiceHints", 2, 0) == 1;
+    internal static bool WriteChoiceHints(bool enabled) => Write("ChoiceHints", enabled ? 1 : 0);
 
-    internal static int Read()
+    private static int Read(string name, int count, int fallback)
     {
-        if (!OperatingSystem.IsWindows()) return PanelAppearance.Fjord;
+        if (!OperatingSystem.IsWindows()) return fallback;
         try
         {
             using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
             using var key = user.OpenSubKey(Location);
-            return key?.GetValue(Name) is int index && index >= 0 && index < PanelAppearance.Choices.Length
-                ? index : PanelAppearance.Fjord;
+            return key?.GetValue(name) is int index && index >= 0 && index < count ? index : fallback;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or SecurityException)
         {
-            return PanelAppearance.Fjord;
+            return fallback;
         }
     }
 
-    internal static bool Write(int index)
+    private static bool Write(string name, int index)
     {
-        if (!OperatingSystem.IsWindows() || index < 0 || index >= PanelAppearance.Choices.Length) return false;
+        if (!OperatingSystem.IsWindows()) return false;
         try
         {
             using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
             using var key = user.CreateSubKey(Location);
             if (key == null) return false;
-            key.SetValue(Name, index, RegistryValueKind.DWord);
+            key.SetValue(name, index, RegistryValueKind.DWord);
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or SecurityException)

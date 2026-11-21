@@ -4,7 +4,9 @@
 
 Criei esta ferramenta para as minhas partidas de *Suzerain*. Uso o editor para conferir o orçamento de Sordland e acompanhar quanta energia Rizia tem em estoque e quanto esse total muda a cada turno.
 
-**[Baixar a versão preliminar 0.16.3 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.3/SuzerainSaveStudio-0.16.3-Live-Preview-win-x64.zip)**
+**[Baixar a versão preliminar 0.17.0 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)**
+
+Para ver os efeitos imediatos de uma escolha, ative a prévia no painel **Ctrl+F8**, feche o painel e passe o cursor sobre a opção. O recurso começa desativado. Algumas consequências futuras podem ficar indefinidas.
 
 ## Editar uma partida salva
 

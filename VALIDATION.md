@@ -1,6 +1,15 @@
-# v0.16.3 Preview — Windows validation
+# v0.17.0 Preview — Windows validation
 
-The Windows x64 package includes the 0.16.3 portable editor and the 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+The Windows x64 archive includes the 0.17.0 editor and optional 0.17.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Choice previews
+
+- The desktop and in-game switches use the same per-user setting. A new profile starts with previews off. A preview reads the option bound to the hovered control. It does not invoke the option, evaluate Lua or save game state.
+- On the Steam Windows 3.1.0 build 175, the release DLL was run with a separate Sordland campaign copy. Hovering the rich, middle-income and poor family origins showed different wealth and public-opinion changes without advancing the dialogue. Wealth still read 0 after comparing all three. Selecting the poor family then took wealth to 1 as previewed. The desktop-enabled switch carried across a game restart and turning it off hid the tooltip. [In-game screenshot](docs/images/choice-preview.jpg)
+- The other control families have local binding and synthetic coverage. Their entire story branches have not been played through for this release.
+- Synthetic tests exercise Lua and Articy instructions, absolute values and deltas, capped summaries, localized output, hidden single-path dialogue nodes, conditional and cyclic paths. UI tests cover disabled options, binding changes on reused buttons, occluded choices, tooltip geometry, the current carousel item, bill actions and theme changes.
+- Local regression runs passed 947 native editor checks, 233 read-only checks across 21 campaign files, 73 simulated live-state checks, 304 panel checks, 47 effect-parser checks, 54 dialogue-path checks and 59 hover checks. The local Windows account skipped symlink creation. The system clipboard test runs on the GitHub-hosted Windows runner.
+- To run the standalone choice and pointer suites, use `dotnet run --project tests/choices/ChoiceChecks.csproj -c Release` and `dotnet run --project tests/hover/HoverChecks.csproj -c Release`. Dialogue-path tests run with the existing live-state project.
 
 ## In-app support in 0.16.3
 

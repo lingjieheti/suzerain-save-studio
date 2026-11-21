@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../live/ChoiceHover.cs" Link="ChoiceHover.cs" />
+    <Compile Include="../../live/ChoiceEffects.cs" Link="ChoiceEffects.cs" />
+    <Compile Include="../../live/PanelAppearance.cs" Link="PanelAppearance.cs" />
+  </ItemGroup>
+</Project>

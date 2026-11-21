@@ -69,20 +69,26 @@ internal static class Program
     {
         const string path = @"Software\SuzerainSaveStudio";
         const string name = "Appearance";
-        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A new profile opens in Fjord");
+        Check(PanelPreferences.ReadAppearance() == PanelAppearance.Fjord, "A new profile opens in Fjord");
+        Check(PanelPreferences.ReadChinese(true) && !PanelPreferences.ReadChinese(false),
+            "On first launch the language follows the supplied game default");
+        Check(PanelPreferences.WriteChinese(true) && PanelPreferences.ReadChinese(false),
+            "An explicit panel language survives the game default changing");
+        Check(PanelPreferences.WriteChinese(false) && !PanelPreferences.ReadChinese(true),
+            "Choosing English persists for future hover previews");
         using var key = root.CreateSubKey(path);
         Check(key.GetValue(name) == null, "Choosing the initial palette does not create a user preference");
         foreach (int index in new[] { 0, 1, 2, 3 })
         {
-            Check(AppearancePreference.Write(index) && AppearancePreference.Read() == index,
+            Check(PanelPreferences.WriteAppearance(index) && PanelPreferences.ReadAppearance() == index,
                 $"An explicit selection of {PanelAppearance.Choices[index].English} persists");
         }
         key.SetValue(name, -1, RegistryValueKind.DWord);
-        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A negative palette index falls back to Fjord");
+        Check(PanelPreferences.ReadAppearance() == PanelAppearance.Fjord, "A negative palette index falls back to Fjord");
         key.SetValue(name, PanelAppearance.Choices.Length, RegistryValueKind.DWord);
-        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "An unknown palette index falls back to Fjord");
+        Check(PanelPreferences.ReadAppearance() == PanelAppearance.Fjord, "An unknown palette index falls back to Fjord");
         key.SetValue(name, "0", RegistryValueKind.String);
-        Check(AppearancePreference.Read() == PanelAppearance.Fjord, "A preference of the wrong type falls back to Fjord");
+        Check(PanelPreferences.ReadAppearance() == PanelAppearance.Fjord, "A preference of the wrong type falls back to Fjord");
         key.DeleteValue(name);
     }
 
@@ -113,6 +119,29 @@ internal static class Program
         Key(KeyCode.Return);
         Check(DialogueLua.Writes.SequenceEqual(new[] { Budget }) && LiveGame.Read().Find(Budget).Value == 27 &&
             GUI.Labels.Any(label => label.Contains("Verified in game")), "Confirmation writes once and rereads the value");
+    }
+
+    private static void ChoiceHints(RegistryKey root)
+    {
+        using var key = root.OpenSubKey(@"Software\SuzerainSaveStudio", true);
+        Check(!PanelPreferences.ReadChoiceHints() && key.GetValue("ChoiceHints") == null, "Hints start off");
+        int writes = DialogueLua.Writes.Count;
+        var draft = GUI.DisplayedDraft;
+        Click("Off");
+        Check(PanelPreferences.ReadChoiceHints() && GUI.Buttons.ContainsKey("On") &&
+            GUI.DisplayedDraft == draft && DialogueLua.Writes.Count == writes, "Toggling hints preserves game and draft");
+        Click("Close");
+        Frame(EventType.Repaint);
+        Check(ChoiceHover.LastEnabled, "Closing the panel enables hover previews");
+        key.SetValue("ChoiceHints", "1", RegistryValueKind.String);
+        Panel.OnApplicationFocus(true);
+        Frame(EventType.Repaint);
+        Check(!ChoiceHover.LastEnabled, "An invalid external preference safely disables previews");
+        Frame(EventType.KeyDown, KeyCode.F8, control: true);
+        Frame(EventType.KeyUp, KeyCode.F8);
+        Frame(EventType.Repaint);
+        Check(!ChoiceHover.LastEnabled && GUI.Buttons.ContainsKey("Off"), "Opening the panel suppresses previews");
+        key.DeleteValue("ChoiceHints");
     }
 
     private static void StaleAndInvalidDrafts()
@@ -289,6 +318,7 @@ internal static class Program
             {
                 ThemePreferences(temporary);
                 DraftAndKeyboard();
+                ChoiceHints(temporary);
                 StaleAndInvalidDrafts();
                 GroupedControlContrast();
                 Layouts(false);

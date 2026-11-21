@@ -1,4 +1,5 @@
 #pragma once
+#include "appearance.hpp"
 
 namespace live_setup {
 struct IntroCopy { const wchar_t *title,*setup,*missing,*action; };
@@ -20,6 +21,30 @@ inline const IntroCopy& introCopy(){
     return copy[i18n::language];
 }
 
+inline bool choiceHintsEnabled(){
+    DWORD value=0,bytes=sizeof(value);
+    return RegGetValueW(HKEY_CURRENT_USER,Theme::settingsKey,L"ChoiceHints",RRF_RT_REG_DWORD,
+                        nullptr,&value,&bytes)==ERROR_SUCCESS && value==1;
+}
+
+inline void setChoiceHints(bool enabled){
+    DWORD value=enabled?1:0;
+    const auto status=RegSetKeyValueW(HKEY_CURRENT_USER,Theme::settingsKey,L"ChoiceHints",REG_DWORD,
+                                      &value,sizeof(value));
+    if(status!=ERROR_SUCCESS) throw WinFailure(winError(status));
+}
+
+inline const wchar_t* choiceHintsLabel(){
+    static const wchar_t* const labels[]={
+        L"在游戏中悬停时显示选项结果",L"在遊戲中將滑鼠移到選項上時顯示結果",L"Preview choices on hover in game",
+        L"ゲーム内の選択肢にカーソルを合わせて結果を表示",L"게임에서 선택지에 마우스를 올리면 결과 표시",
+        L"Im Spiel die Folgen einer Wahl beim Überfahren anzeigen",L"Afficher les effets au survol des choix en jeu",
+        L"Mostrar los efectos al pasar el cursor sobre una opción",L"Mostrar os efeitos ao passar o cursor sobre uma opção",
+        L"Показывать последствия при наведении на вариант",L"Oyunda imleç seçeneğin üzerindeyken etkileri göster"
+    };
+    return labels[i18n::language];
+}
+
 inline bool openIntro(HWND owner,bool canInstall){
     const auto& copy=introCopy();
     const auto title=tr(L"实时模式");
@@ -29,6 +54,9 @@ inline bool openIntro(HWND owner,bool canInstall){
     config.hwndParent=owner;
     config.hInstance=GetModuleHandleW(nullptr);
     config.dwFlags=TDF_ALLOW_DIALOG_CANCELLATION|TDF_POSITION_RELATIVE_TO_WINDOW;
+    const bool hints=choiceHintsEnabled();
+    config.pszVerificationText=choiceHintsLabel();
+    if(hints) config.dwFlags|=TDF_VERIFICATION_FLAG_CHECKED;
     config.pszWindowTitle=title.c_str();
     config.pszMainInstruction=copy.title;
     config.pszContent=canInstall?copy.setup:copy.missing;
@@ -36,11 +64,15 @@ inline bool openIntro(HWND owner,bool canInstall){
     config.cxWidth=285;
     if(canInstall){
         config.dwFlags|=TDF_USE_COMMAND_LINKS;
-        config.cButtons=1;config.pButtons=&command;config.nDefaultButton=IDCANCEL;
-        config.dwCommonButtons=TDCBF_CANCEL_BUTTON;
+        config.cButtons=1;config.pButtons=&command;config.nDefaultButton=IDCLOSE;
+        config.dwCommonButtons=TDCBF_CLOSE_BUTTON;
     }else config.dwCommonButtons=TDCBF_CLOSE_BUTTON;
     int chosen=IDCANCEL;
-    if(SUCCEEDED(TaskDialogIndirect(&config,&chosen,nullptr,nullptr)))return canInstall&&chosen==chooseGameAction;
+    BOOL checked=hints;
+    if(SUCCEEDED(TaskDialogIndirect(&config,&chosen,nullptr,&checked))){
+        if((checked!=FALSE)!=hints) setChoiceHints(checked!=FALSE);
+        return canInstall&&chosen==chooseGameAction;
+    }
     // Common-controls v6 is declared in the manifest. Keep a usable system fallback.
     const auto fallback=std::wstring(config.pszContent)+(canInstall?L"\n\n"+std::wstring(command.pszButtonText):L"");
     return MessageBoxW(owner,fallback.c_str(),title.c_str(),(canInstall?MB_YESNO|MB_DEFBUTTON2:MB_OK)|MB_ICONINFORMATION)==IDYES&&canInstall;

@@ -287,6 +287,18 @@ double textContrast(COLORREF ink, COLORREF surface){
     return (std::max(a,b) + 0.05) / (std::min(a,b) + 0.05);
 }
 
+void testChoiceHintsPreference(){
+    AppearanceTestRegistry registry;
+    check(!live_setup::choiceHintsEnabled(),"Choice previews default to off");
+    live_setup::setChoiceHints(true);
+    check(live_setup::choiceHintsEnabled(),"Enable hover previews");
+    live_setup::setChoiceHints(false);
+    check(!live_setup::choiceHintsEnabled(),"Disable hover previews");
+    const DWORD invalid=2;
+    RegSetKeyValueW(HKEY_CURRENT_USER,Theme::settingsKey,L"ChoiceHints",REG_DWORD,&invalid,sizeof(invalid));
+    check(!live_setup::choiceHintsEnabled(),"Unknown hint settings default to off");
+}
+
 void testChineseFonts(const fs::path& path) {
     using namespace typography;
     AppearanceTestRegistry registry;
@@ -663,6 +675,7 @@ int main(int argc,char** argv){
         check(RegisterClassW(&wc)!=0,"Register test editor");
         const HWND window=CreateWindowW(wc.lpszClassName,L"",WS_OVERLAPPEDWINDOW,0,0,1120,740,nullptr,nullptr,wc.hInstance,nullptr);
         check(window!=nullptr&&g.grid,"Create hidden editor");
+        testChoiceHintsPreference();
         testSaveQueries();
         testSearchControls(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));

@@ -7,6 +7,9 @@
   <ItemGroup>
     <Compile Include="../../live/LiveGame.cs" Link="LiveGame.cs" />
     <Compile Include="../../live/LiveAdjustment.cs" Link="LiveAdjustment.cs" />
+    <Compile Include="../../live/ChoiceEffects.cs" Link="ChoiceEffects.cs" />
+    <Compile Include="../../live/ChoicePath.cs" Link="ChoicePath.cs" />
+    <Compile Include="ChoicePathChecks.cs" />
     <Compile Include="GameTestDoubles.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>

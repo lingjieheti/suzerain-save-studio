@@ -4,7 +4,9 @@
 
 Bu aracı kendi Suzerain kayıtlarımı düzenlemek için yaptım. Sordland'da devlet bütçesini kontrol etmek, Rizia'da ise elimdeki enerjiyi ve tur başına ne kadar değiştiğini görmek için kullanıyorum.
 
-**[Windows 10/11 x64 için 0.16.3 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.3/SuzerainSaveStudio-0.16.3-Live-Preview-win-x64.zip)**
+**[Windows 10/11 x64 için 0.17.0 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.0/SuzerainSaveStudio-0.17.0-Live-Preview-win-x64.zip)**
+
+Bir seçeneğin anlık etkilerini görmek için **Ctrl+F8** panelinden önizlemeyi açın, paneli kapatın ve imleci seçeneğin üzerine getirin. Bu özellik başlangıçta kapalıdır. Daha sonraki sonuçlar belirsiz kalabilir.
 
 ## İlk kullanım
 
