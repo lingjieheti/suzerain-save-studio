@@ -20,6 +20,69 @@ void selectRow(const std::string& key){
     check(g.selected==key,"Native row selection reaches the editor");
 }
 
+void testSaveQueries() {
+    rizia::discovery::Save snapshot;
+    snapshot.story="StoryPack_Rizia";snapshot.turn="3";snapshot.campaignName="North Palace";
+    snapshot.path=L"Autosave_13-10-2025.json";
+    auto matches=[&](const wchar_t* input){
+        return save_picker::matchesSave(snapshot,save_picker::parseSaveQuery(input),save_picker::saveSlot(snapshot.path.filename().wstring()));
+    };
+    check(matches(L"pALAcE　Rizia north") && matches(L"13-10-2025"),"Combine save metadata words and preserve a dated filename");
+    check(matches(L"里奇亚 自动 回合 3") && matches(L"Rizia turn3") && matches(L"3"),"Find an autosave at the requested turn");
+    check(matches(L"第3回合") && matches(L"里奇亚 第 3 回合") && !matches(L"第13回合"),"Recognize Chinese ordinal turn phrases");
+    check(!matches(L"Sordland turn 3") && matches(L"13") && !matches(L"turn 13"),"Only explicit turn queries ignore filename digits");
+    snapshot.turn="13";snapshot.path=L"ManualSave_03-10-2025.json";
+    check(matches(L"手动 回合13") && !matches(L"自动") && !matches(L"turn 3") && !matches(L"3"),"Manual save and exact turn remain distinct");
+    const int language=i18n::language;
+    for(int i=0;i<11;++i) {
+        i18n::setLanguage(i);
+        auto localized=tr(L"手动存档")+L" "+tr(L"回合")+L" 13";
+        check(matches(localized.c_str()),"Localized turn and manual save type match in each interface language");
+    }
+    i18n::setLanguage(language);
+    snapshot.path=L"My-Autosave.json";
+    check(!matches(L"自动"),"A renamed file is not classified as a game autosave");
+    snapshot.path=L"TurnSave_20241121.json";
+    check(matches(L"回合存档 2024") && matches(L"20241121") && !matches(L"3"),"Compact filename dates and turn slot aliases remain searchable");
+    snapshot.path=L"Active_20241121.json";
+    check(matches(L"当前") && !matches(L"自动") && !matches(L"回合存档"),"Active slots remain distinct from auto and turn saves");
+    for(const auto* filename:{L"AUTOSAVE_2024.json",L"ManualSave.json",L"TurnSave_01.json",L"FinalSave_01.json",L"Active_01.json"}){
+        const auto* kind=save_picker::saveSlot(filename);
+        check(kind && save_picker::saveSubtitle(kind,L"") == tr(kind->label) &&
+              save_picker::saveSubtitle(kind,L"Palace") == tr(kind->label)+L" · Palace","Known save slots retain type and optional campaign name");
+    }
+    for(const auto* custom:{L"My-Autosave.json",L"Auto-save_01.json",L"Autosave.custom.json"}) {
+        const auto* kind=save_picker::saveSlot(custom);
+        check(!kind && save_picker::saveSubtitle(kind,L"Palace")==L"Palace" &&
+              save_picker::saveSubtitle(kind,L"").empty(),"Custom save filenames preserve their original subtitle");
+    }
+}
+
+void testSearchControls(const fs::path& sample) {
+    loadDocument(sample,false);
+    navigate(4);
+    auto shown=[](HWND control){return (GetWindowLongPtrW(control,GWL_STYLE)&WS_VISIBLE)!=0;};
+    auto clear=ctl(CLEAR_FIELD_SEARCH);
+    check(!shown(clear),"An empty search leaves the full input usable");
+    const auto allFields=g.rows.size();
+    SetWindowTextW(g.search,L"GovernmentBudget");
+    check(shown(clear) && !g.rows.empty() && g.rows.size()<allFields,"Typing exposes the clear action and filters the grid");
+    RECT input{},button{};
+    GetWindowRect(g.search,&input);GetWindowRect(clear,&button);
+    check(input.right<=button.left && button.right-button.left>=px(24),"Clear button has a separate pointer target");
+    SendMessageW(clear,BM_CLICK,0,0);
+    MSG click{};
+    check(PeekMessageW(&click,g.win,WM_APP+1,WM_APP+1,PM_REMOVE)!=0,"Native clear button posts its action");
+    DispatchMessageW(&click);
+    check(!shown(clear) && textOf(g.search).empty() && g.rows.size()==allFields,"Clear button resets the query and restores all fields");
+    SetWindowTextW(g.search,L"PersonalWealth");
+    MSG key{};key.hwnd=g.search;key.message=WM_KEYDOWN;key.wParam=VK_ESCAPE;
+    check((SendMessageW(g.search,WM_GETDLGCODE,key.wParam,(LPARAM)&key)&DLGC_WANTMESSAGE)!=0,"A filled search handles Escape before dialog navigation");
+    SendMessageW(g.search,WM_KEYDOWN,VK_ESCAPE,0);
+    check(!shown(clear) && textOf(g.search).empty(),"Escape clears a search without leaving the editor");
+    navigate(0);
+}
+
 void testInspectorLayout(const fs::path& sample){
     loadDocument(sample,false);
     navigate(4);
@@ -251,6 +314,17 @@ void testSearch(const fs::path& path){
     command(FILTER_CHANGED,0);
     i18n::setLanguage(2);g.captions.clear();refresh();
     check(g.rows.size()==1&&g.selected==economySelection,"Chinese search works in English UI");
+    const auto beforePaste = pending();
+    for (auto query : {LR"(["BaseGame.GovernmentBudget"]=)", LR"([\"BaseGame.GovernmentBudget\"]=-5,)",
+                       L"  BaseGame.GovernmentBudget = 500  "}) {
+        SetWindowTextW(g.search,query);
+        check(g.rows.size()==1 && g.selected==budget,"A copied guide assignment finds only its exact key");
+    }
+    check(pending()==beforePaste,"The value in a pasted search never edits the save");
+    SetWindowTextW(g.search,LR"(["BaseGame.GovernmentBud"]=)");
+    check(g.rows.empty(),"A wrapped incomplete key does not select a similarly named field");
+    SetWindowTextW(g.search,L"GovernmentBud");
+    check(g.rows.size()>1,"An ordinary keyword keeps matching several fields");
     i18n::setLanguage(0);
 }
 
@@ -281,6 +355,12 @@ void testResourceSearch(const fs::path& path){
     const std::string example = R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={[\"RiziaDLC.Energy_Modifier_AureusGasField\"]=3,[\"RiziaDLC.Resources_EnergyModifiersTotal\"]=2,[\"RiziaDLC.Resources_Energy\"]=4}"})";
     loadDocumentBytes(example,{},0);
     navigate(4);
+    SetWindowTextW(g.search,L"能源");
+    check(g.rows.size()==3 && g.rows.front()==riziaResources[2].stock &&
+          std::set<std::string>(g.rows.begin(),g.rows.end()).size()==3,
+          "A broad search lists the current stock first and keeps each matching modifier once");
+    SetWindowTextW(g.search,L"");
+    check(std::is_sorted(g.rows.begin(),g.rows.end()),"Clearing a search restores alphabetical browsing");
     findOne(L"能源来源","RiziaDLC.Energy_Modifier_AureusGasField");
     findOne(L"能源净变化",riziaResources[2].turnTotal);
     check(textOf(g.desc).find(L"RiziaDLC.Energy_Modifier_")!=std::wstring::npos,
@@ -343,6 +423,8 @@ int main(int argc,char** argv){
         check(RegisterClassW(&wc)!=0,"Register test editor");
         const HWND window=CreateWindowW(wc.lpszClassName,L"",WS_OVERLAPPEDWINDOW,0,0,1120,740,nullptr,nullptr,wc.hInstance,nullptr);
         check(window!=nullptr&&g.grid,"Create hidden editor");
+        testSaveQueries();
+        testSearchControls(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));
         testResourceSearch(fs::u8path(argv[2]));
         testReview(fs::u8path(argv[2]));

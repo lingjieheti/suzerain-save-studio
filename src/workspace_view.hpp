@@ -51,7 +51,10 @@ void layout() {
     place(ctl(PRESET999), toolbarEnd-presetW, a.presetsY, presetW, 31);
     place(ctl(AUTOCAP), a.left, a.presetsY, std::min(270,a.content-2*presetW-14), 31);
     int sw = searchWidth(a);
-    place(g.search, a.left+29, a.toolsY+6, sw-37, 22);
+    const bool showClear=edit && GetWindowTextLengthW(g.search)>0;
+    place(g.search, a.left+29, a.toolsY+6, sw-37-(showClear?24:0), 22);
+    place(ctl(CLEAR_FIELD_SEARCH),a.left+sw-29,a.toolsY+3,26,26);
+    visible(CLEAR_FIELD_SEARCH,showClear);
     bool compactTools=compactFieldTools(a), stacked=stackAdvancedFilters(a);
     int filtersY=a.toolsY+(stacked?37:0);
     int changedW=stacked?std::max(a.list*40/100,pendingFilterWidth()):pendingFilterWidth();

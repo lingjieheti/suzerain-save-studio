@@ -1,10 +1,11 @@
 # 赞助作者
 
-**简体中文** · [繁體中文](docs/intro/zh-TW.md#support) · [English](docs/intro/en.md#support) · [日本語](docs/intro/ja.md#support) · [한국어](docs/intro/ko.md#support) · [Deutsch](docs/intro/de.md#support) · [Français](docs/intro/fr.md#support) · [Español](docs/intro/es.md#support) · [Português (Brasil)](docs/intro/pt-BR.md#support) · [Русский](docs/intro/ru.md#support) · [Türkçe](docs/intro/tr.md#support)
-
 这是我自己玩《Suzerain》时做的工具。如果它帮你少翻了几次存档，也欢迎请我喝杯咖啡。金额随意，谢谢支持！
 
-**[PayPal 付款](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2)** · **[USDT（TRC20）](#usdttrc20)**
+- [PayPal · 打开收款页](https://www.paypal.com/qrcodes/p2pqrc/8CZSV4VY73PB2)
+- [USDT · 查看 TRON（TRC20）收款地址](#usdttrc20)
+
+**简体中文** · [繁體中文](docs/intro/zh-TW.md#support) · [English](docs/intro/en.md#support) · [日本語](docs/intro/ja.md#support) · [한국어](docs/intro/ko.md#support) · [Deutsch](docs/intro/de.md#support) · [Français](docs/intro/fr.md#support) · [Español](docs/intro/es.md#support) · [Português (Brasil)](docs/intro/pt-BR.md#support) · [Русский](docs/intro/ru.md#support) · [Türkçe](docs/intro/tr.md#support)
 
 ## PayPal
 
@@ -13,7 +14,7 @@
 <details>
 <summary>PayPal 收款码</summary>
 
-<a href="docs/sponsor/paypal.jpg"><img src="docs/sponsor/paypal.jpg" width="300" alt="作者的 PayPal 收款码"></a>
+<a href="docs/sponsor/paypal.jpg?raw=true"><img src="docs/sponsor/paypal.jpg" width="300" alt="作者的 PayPal 收款码"></a>
 
 </details>
 
@@ -28,7 +29,7 @@ TXE2VuxUSFsenJvmz3Z8oSm7dqPLAUWfRE
 <details>
 <summary>查看原始充值二维码与网络说明</summary>
 
-<a href="docs/sponsor/usdt-trc20.jpg"><img src="docs/sponsor/usdt-trc20.jpg" width="300" alt="USDT 充值二维码和 TRON（TRC20）网络说明"></a>
+<a href="docs/sponsor/usdt-trc20.jpg?raw=true"><img src="docs/sponsor/usdt-trc20.jpg" width="300" alt="USDT 充值二维码和 TRON（TRC20）网络说明"></a>
 
 </details>
 

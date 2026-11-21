@@ -6,10 +6,10 @@
 
 // The picker owns its controls and fonts. Discovery never touches the editor or files.
 namespace save_picker {
-enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, APPEARANCE, START_SCAN=WM_APP+44 };
+enum { LIST=410, FILTER, ADD_FOLDER, RESCAN, STATUS, PATH, CAMPAIGN_FILTER, BROWSE, DEMO_MAIN, DEMO_RIZIA, LIVE_MODE, APPEARANCE, CLEAR_SEARCH, START_SCAN=WM_APP+44 };
 inline std::vector<fs::path> extraRoots;
 struct State {
-    HWND win{}, list{}, filter{}, campaign{}, status{}, path{}, add{}, refresh{}, open{}, cancelButton{}, heading{};
+    HWND win{}, list{}, filter{}, clearSearch{}, campaign{}, status{}, path{}, add{}, refresh{}, open{}, cancelButton{}, heading{};
     HWND browse{}, live{}, appearance{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
     UINT dpi=96;
     HFONT font{}, small{}, bold{}, subheading{}, emphasis{};
@@ -56,6 +56,14 @@ inline void setFonts(State& s){
     for(auto f:old)if(f)DeleteObject(f);
     if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(47),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
 }
+inline void layoutSearch(State& s){
+    const bool showClear=!s.busy && GetWindowTextLengthW(s.filter)>0;
+    RECT input=s.searchFrame;
+    input.left+=s.scale(29);input.top+=s.scale(4);input.right-=s.scale(showClear?30:7);
+    MoveWindow(s.filter,input.left,input.top,std::max<LONG>(1,input.right-input.left),s.scale(22),TRUE);
+    MoveWindow(s.clearSearch,s.searchFrame.right-s.scale(28),s.searchFrame.top+s.scale(3),s.scale(24),s.scale(24),TRUE);
+    visible(s.clearSearch,showClear);
+}
 inline void layout(State& s){
     if(!s.empty)return;
     RECT r{};GetClientRect(s.win,&r);
@@ -92,7 +100,7 @@ inline void layout(State& s){
     s.move(s.heading,headingX,top+headingOffset,appearanceX-headingX-9,headerH-headingOffset);
     s.move(s.appearance,appearanceX,actionY,appearanceWidth,35);
     s.move(s.browse,browseX,actionY,browseWidth,35);
-    s.move(s.filter,filterX+29,filterY+4,filterW-36,22);
+    layoutSearch(s);
     s.move(s.campaign,filterX+filterW+8,filterY+1,campaignW,210);
     s.move(s.list,tableX,tableTop,tableWidth,std::max(28,tableBottom-tableTop));
     s.move(s.empty,tableX,tableTop,tableWidth,std::max(28,tableBottom-tableTop));
@@ -143,8 +151,7 @@ inline void layout(State& s){
     s.move(s.cancelButton,cancelX,footerButtons,100,34);
     s.move(s.open,openX,footerButtons,openWidth,34);
     const int columns=tableWidth-20;
-    // The campaign name lives below the filename. Keep its native subitem
-    // populated for assistive tools without adding another column to scan.
+    // Slot type and campaign name share the second line and a native subitem.
     int widths[]={0,columns>=510?90:84,0,columns>=510?56:48,columns>=510?143:110};
     widths[0]=std::max(108,columns-widths[1]-widths[2]-widths[3]-widths[4]);
     for(int i=0;i<5;++i)ListView_SetColumnWidth(s.list,i,s.scale(widths[i]));
@@ -156,17 +163,21 @@ inline void selection(State& s){
     EnableWindow(s.open,valid);
     rawText(s.path,valid?s.result.saves[s.rows[i]].path.wstring():L"");
 }
+#include "save_query.hpp"
 inline void fill(State& s){
     fs::path keep=std::move(s.beforeScan);s.beforeScan.clear();
     int current=selected(s);if(current>=0&&current<(int)s.rows.size())keep=s.result.saves[s.rows[current]].path;
     s.populating=true;SendMessageW(s.list,WM_SETREDRAW,FALSE,0);ListView_DeleteAllItems(s.list);s.rows.clear();
-    auto query=lower(trim(textOf(s.filter)));int at=-1;auto campaign=(int)SendMessageW(s.campaign,CB_GETCURSEL,0,0);
+    const auto query=parseSaveQuery(textOf(s.filter));
+    int at=-1;auto campaign=(int)SendMessageW(s.campaign,CB_GETCURSEL,0,0);
     for(size_t n=0;n<s.result.saves.size();++n){const auto& save=s.result.saves[n];
         if((campaign==1&&save.story!="StoryPack_Main")||(campaign==2&&save.story!="StoryPack_Rizia"))continue;
-        if(!query.empty()&&lower(save.path.filename().wstring()+L" "+wide(save.campaignName)+L" "+campaignLabel(save.story)+(save.story=="StoryPack_Main"?L" Sordland":L" Rizia")).find(query)==std::wstring::npos)continue;
-        int row=(int)s.rows.size();s.rows.push_back(n);auto name=save.path.filename().wstring();
+        auto name=save.path.filename().wstring();
+        const auto* slot=saveSlot(name);
+        if(!matchesSave(save,query,slot))continue;
+        int row=(int)s.rows.size();s.rows.push_back(n);
         LVITEMW item{};item.mask=LVIF_TEXT;item.iItem=row;item.pszText=name.data();ListView_InsertItem(s.list,&item);
-        std::wstring cells[]={campaignLabel(save.story),wide(save.campaignName),wide(save.turn),fileTimeText(save.path)};
+        std::wstring cells[]={campaignLabel(save.story),saveSubtitle(slot,wide(save.campaignName)),wide(save.turn),fileTimeText(save.path)};
         for(int c=0;c<4;++c)ListView_SetItemText(s.list,row,c+1,cells[c].data());
         if(save.path==keep)at=row;
     }
@@ -174,7 +185,7 @@ inline void fill(State& s){
     if(at>=0){ListView_SetItemState(s.list,at,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);ListView_EnsureVisible(s.list,at,FALSE);}
     SendMessageW(s.list,WM_SETREDRAW,TRUE,0);InvalidateRect(s.list,nullptr,TRUE);s.populating=false;selection(s);
     std::wstring status;
-    if(s.rows.empty())status=L"0 / "+std::to_wstring(s.result.saves.size());
+    if(s.rows.size()!=s.result.saves.size() || s.rows.empty())status=std::to_wstring(s.rows.size())+L" / "+std::to_wstring(s.result.saves.size());
     else status=std::to_wstring(s.rows.size())+L" 个存档 · 最新在前";
     if(s.result.truncated)status+=L" · 已到搜索上限";
     else if(s.result.errors)status+=L" · 部分文件无法读取";
@@ -182,6 +193,7 @@ inline void fill(State& s){
     setText(s.empty,!s.error.empty()?s.error:s.result.saves.empty()?L"未找到存档，请添加文件夹。":L"没有匹配的存档");
     ShowWindow(s.list,s.rows.empty()?SW_HIDE:SW_SHOW);
     ShowWindow(s.empty,s.rows.empty()?SW_SHOW:SW_HIDE);
+    layoutSearch(s);
 }
 inline void start(State& s){
     if(s.busy)return;
@@ -189,6 +201,7 @@ inline void start(State& s){
     if(current>=0&&current<(int)s.rows.size())s.beforeScan=s.result.saves[s.rows[current]].path;
     s.stop();s.cancel.store(false);s.done.store(false);s.error.clear();s.result={};s.rows.clear();
     s.populating=true;ListView_DeleteAllItems(s.list);s.populating=false;s.busy=true;
+    layoutSearch(s);
     setText(s.status,L"");setText(s.path,L"");setText(s.empty,L"正在搜索…");
     ShowWindow(s.list,SW_HIDE);ShowWindow(s.empty,SW_SHOW);
     for(auto h:{s.open,s.refresh,s.add,s.filter,s.campaign})EnableWindow(h,FALSE);
@@ -236,15 +249,17 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     try{
         if(m==WM_INITDIALOG){p=reinterpret_cast<State*>(lp);SetWindowLongPtrW(w,DWLP_USER,(LONG_PTR)p);auto&s=*p;s.win=w;SetWindowTextW(w,APP_TITLE);s.dpi=GetDpiForWindow(w);if(!s.dpi)s.dpi=96;setFonts(s);
             s.heading=child(s,L"STATIC",L"选择存档",SS_ENDELLIPSIS,0);
-            s.filter=child(s,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,FILTER);auto cue=tr(L"搜索文件名或战役");SendMessageW(s.filter,EM_SETCUEBANNER,TRUE,(LPARAM)cue.c_str());SendMessageW(s.filter,EM_SETLIMITTEXT,160,0);
-            SetWindowSubclass(s.filter,filterCueProc,1,(DWORD_PTR)&s);
+            s.filter=child(s,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,FILTER);
+            s.clearSearch=child(s,L"BUTTON",L"清除搜索",WS_TABSTOP|BS_OWNERDRAW,CLEAR_SEARCH);
+            SetWindowSubclass(s.clearSearch,buttonProc,1,0);
             s.campaign=child(s,L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|CBS_OWNERDRAWFIXED|CBS_HASSTRINGS|WS_VSCROLL,CAMPAIGN_FILTER);
             SetWindowSubclass(s.campaign,campaignFaceProc,1,(DWORD_PTR)&s);
             for(const auto* name:{L"All campaigns",L"Sordland",L"Rizia"}){auto text=tr(name);SendMessageW(s.campaign,CB_ADDSTRING,0,(LPARAM)text.c_str());}SendMessageW(s.campaign,CB_SETCURSEL,0,0);
             s.add=child(s,L"BUTTON",L"添加文件夹",WS_TABSTOP|BS_OWNERDRAW,ADD_FOLDER);s.refresh=child(s,L"BUTTON",L"刷新",WS_TABSTOP|BS_OWNERDRAW,RESCAN);
             s.list=child(s,WC_LISTVIEWW,L"存档列表",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,LIST);
+            configureSearchField(s.filter,s.list,L"搜索文件名、战役或回合");
             ListView_SetExtendedListViewStyle(s.list,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
-            const wchar_t* cols[]={L"文件名",L"Campaign",L"战役",L"回合",L"修改时间"};for(int i=0;i<5;++i){LVCOLUMNW c{};c.mask=LVCF_TEXT|LVCF_WIDTH;auto title=tr(cols[i]);c.pszText=title.data();c.cx=s.scale(120);ListView_InsertColumn(s.list,i,&c);}
+            const wchar_t* cols[]={L"文件名",L"战役",L"存档详情",L"回合",L"修改时间"};for(int i=0;i<5;++i){LVCOLUMNW c{};c.mask=LVCF_TEXT|LVCF_WIDTH;auto title=tr(cols[i]);c.pszText=title.data();c.cx=s.scale(120);ListView_InsertColumn(s.list,i,&c);}
             SetWindowSubclass(ListView_GetHeader(s.list),header,1,(DWORD_PTR)&s);
             s.path=child(s,L"STATIC",L"",SS_PATHELLIPSIS|SS_NOPREFIX,PATH);
             s.status=child(s,L"STATIC",L"正在搜索…",SS_RIGHT|SS_ENDELLIPSIS,STATUS);
@@ -284,6 +299,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}
             if(id==FILTER&&HIWORD(wp)==EN_CHANGE&&!s.busy&&s.list&&s.status&&s.path){fill(s);return TRUE;}
+            if(id==CLEAR_SEARCH&&HIWORD(wp)==BN_CLICKED&&!s.busy){clearSearchField(s.filter);return TRUE;}
             if(id==CAMPAIGN_FILTER&&HIWORD(wp)==CBN_SELCHANGE&&!s.busy){fill(s);return TRUE;}
             if(id==RESCAN&&!s.busy){start(s);return TRUE;}
             if(id==ADD_FOLDER&&!s.busy){auto path=folder(w);if(!path.empty()){s.roots.push_back(path);extraRoots.push_back(path);start(s);}return TRUE;}break;}
@@ -308,6 +324,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             const auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(lp);
             if(item.CtlType==ODT_STATIC&&item.hwndItem==s.empty){drawEmpty(s,item);return TRUE;}
             if(item.CtlType==ODT_COMBOBOX&&item.CtlID==CAMPAIGN_FILTER){drawCampaignItem(s,item);return TRUE;}
+            if(item.CtlType==ODT_BUTTON&&item.CtlID==CLEAR_SEARCH){drawClearSearch(item,s.dpi);return TRUE;}
             if(item.CtlType==ODT_BUTTON){drawButton(s,item);return TRUE;}
             break;}
         case WM_CTLCOLORDLG:return (INT_PTR)g.bg;

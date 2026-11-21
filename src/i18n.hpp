@@ -50,12 +50,20 @@ L"添加文件夹|Add folder|フォルダー追加|폴더 추가|Ordner +|Ajoute
 L"打开所选|Open selected|選択を開く|선택 열기|Auswahl öffnen|Ouvrir la sélection|Abrir selección|Abrir seleção|Открыть выбранное|Seçileni aç",
 L"取消|Cancel|キャンセル|취소|Abbrechen|Annuler|Cancelar|Cancelar|Отмена|İptal",
 L"文件名|File name|ファイル名|파일 이름|Dateiname|Nom du fichier|Archivo|Arquivo|Имя файла|Dosya adı",
-L"战役|Campaign name|キャンペーン名|캠페인 이름|Kampagnenname|Nom de campagne|Nombre de campaña|Nome da campanha|Имя кампании|Senaryo adı",
+L"战役名称|Campaign name|キャンペーン名|캠페인 이름|Kampagnenname|Nom de campagne|Nombre de campaña|Nome da campanha|Имя кампании|Senaryo adı",
+L"存档详情|Save details|セーブ詳細|저장 세부 정보|Spielstanddetails|Détails de la sauvegarde|Detalles de la partida|Detalhes do jogo salvo|Сведения о сохранении|Kayıt ayrıntıları",
 L"所有战役|All campaigns|全キャンペーン|모든 캠페인|Alle Kampagnen|Toutes les campagnes|Todas las campañas|Todas as campanhas|Все кампании|Tüm senaryolar",
 L"回合|Turn|ターン|턴|Runde|Tour|Turno|Turno|Ход|Tur",
 L"修改时间|Modified|更新日時|수정 시간|Geändert|Modifié le|Modificado|Modificado|Изменено|Değiştirilme",
 L"存档列表|Saves|セーブ一覧|저장 목록|Spielstände|Sauvegardes|Partidas|Jogos salvos|Сохранения|Kayıtlar",
 L"存档搜索|Save search|セーブ検索|저장 검색|Spielstandsuche|Recherche de sauvegardes|Buscar partidas|Buscar jogos salvos|Поиск сохранений|Kayıt arama",
+L"清除搜索|Clear search|検索を消去|검색 지우기|Suche leeren|Effacer la recherche|Borrar búsqueda|Limpar pesquisa|Очистить поиск|Aramayı temizle",
+L"搜索文件名、战役或回合|Search file, campaign or turn|ファイル名・戦役・ターンで検索|파일·캠페인·턴 검색|Datei, Kampagne oder Runde suchen|Rechercher un fichier, une campagne ou un tour|Buscar archivo, campaña o turno|Buscar arquivo, campanha ou turno|Поиск по файлу, кампании или ходу|Dosya, senaryo veya tur ara",
+L"自动存档|Autosave|オートセーブ|자동 저장|Automatischer Spielstand|Sauvegarde automatique|Guardado automático|Salvamento automático|Автосохранение|Otomatik kayıt",
+L"手动存档|Manual save|手動セーブ|수동 저장|Manueller Spielstand|Sauvegarde manuelle|Guardado manual|Salvamento manual|Ручное сохранение|Manuel kayıt",
+L"当前存档|Active save|現在のセーブ|현재 저장|Aktiver Spielstand|Sauvegarde active|Partida activa|Jogo salvo ativo|Активное сохранение|Etkin kayıt",
+L"回合存档|Turn save|ターンセーブ|턴 저장|Rundenspielstand|Sauvegarde de tour|Guardado de turno|Salvamento de turno|Сохранение хода|Tur kaydı",
+L"最终存档|Final save|最終セーブ|최종 저장|Abschlussspielstand|Sauvegarde finale|Guardado final|Salvamento final|Финальное сохранение|Son kayıt",
 L"搜索文件名或战役|Search file or campaign|ファイル名・キャンペーン検索|파일 또는 캠페인 검색|Datei oder Kampagne suchen|Fichier ou campagne|Archivo o campaña|Arquivo ou campanha|Файл или кампания|Dosya veya senaryo ara",
 L"选择存档文件夹|Choose save folder|セーブフォルダーを選択|저장 폴더 선택|Spielstandordner wählen|Choisir le dossier|Elegir carpeta de partidas|Escolher pasta de jogos|Выбрать папку сохранений|Kayıt klasörünü seç",
 L"正在搜索…|Searching…|検索中…|검색 중…|Suche läuft…|Recherche…|Buscando…|Buscando…|Поиск…|Aranıyor…",
@@ -85,7 +93,7 @@ L"修改预览|Review changes|変更確認|변경 검토|Prüfen|Vérifier|Revis
 L"备份管理|Backups|バックアップ|백업|Sicherungen|Copies|Copias|Backups|Копии|Yedekler",
 L"使用指南|Help|ヘルプ|도움말|Hilfe|Aide|Ayuda|Ajuda|Справка|Yardım",
 L"组件许可|Licenses|ライセンス|라이선스|Lizenzen|Licences|Licencias|Licenças|Лицензии|Lisanslar",
-L"王国管理|Campaign|キャンペーン|캠페인|Kampagne|Campagne|Campaña|Campanha|Кампания|Senaryo",
+L"战役|Campaign|キャンペーン|캠페인|Kampagne|Campagne|Campaña|Campanha|Кампания|Senaryo",
 L"工作区|Workspace|ワークスペース|작업 공간|Arbeitsbereich|Espace de travail|Espacio de trabajo|Área de trabalho|Рабочая область|Çalışma alanı",
 L"未打开存档|No save open|未読込|열린 저장 없음|Kein Spielstand geöffnet|Aucune sauvegarde ouverte|Ninguna partida abierta|Nenhum jogo aberto|Нет открытого сохранения|Açık kayıt yok",
 L"未打开|Not opened|未読込|열리지 않음|Nicht geöffnet|Non ouvert|Sin abrir|Não aberto|Не открыто|Açılmadı",
@@ -120,6 +128,7 @@ L"保存为|Save as|保存後|저장할 값|Speichern als|Valeur finale|Guardar 
 L"另存为…|Save as…|名前を付けて保存…|다른 이름으로 저장…|Speichern unter…|Enregistrer sous…|Guardar como…|Salvar como…|Сохранить как…|Farklı kaydet…",
 L"清空待保存项|Clear changes|変更を消去|변경 지우기|Leeren|Effacer|Borrar cambios|Limpar alterações|Сбросить|Temizle",
 L"打开备份目录|Backup folder|バックアップ先|백업 폴더|Sicherungsordner|Dossier de secours|Carpeta de copias|Pasta de backups|Папка копий|Yedek klasörü",
+L"请在备份目录外另存一份存档。|Save a copy outside the backup folder.|バックアップフォルダーの外にコピーを保存してください。|백업 폴더 밖에 사본을 저장하세요.|Speichere eine Kopie außerhalb des Sicherungsordners.|Enregistrez une copie en dehors du dossier de sauvegarde.|Guarda una copia fuera de la carpeta de copias de seguridad.|Salve uma cópia fora da pasta de backups.|Сохраните копию вне папки резервных копий.|Bir kopyayı yedek klasörünün dışına kaydedin.",
 L"恢复这份备份|Restore|復元|복원|Wiederherstellen|Restaurer|Restaurar|Restaurar|Восстановить|Geri yükle",
 L"取消恢复|Cancel restore|復元取消|복원 취소|Abbrechen|Annuler|Cancelar|Cancelar|Отмена|İptal",
 L"撤销|Undo|元に戻す|실행 취소|Rückgängig|Annuler|Deshacer|Desfazer|Отменить|Geri al",
@@ -210,7 +219,7 @@ L"回合  |Turn  |ターン  |턴  |Runde  |Tour  |Turno  |Turno  |Ход  |Tur 
         };
         for(auto row:data){Entry e;std::wstring value=row;size_t at=0;while(true){auto next=value.find(L'|',at);e.text.push_back(value.substr(at,next==std::wstring::npos?next:next-at));if(next==std::wstring::npos)break;at=next+1;}if(e.text.size()<2)continue;out.emplace(e.text[0],e);out.emplace(e.text[1],e);}
         out.emplace(L"Diplomacy & military",out.at(L"外交与军事"));
-        out[L"Campaign"]=out.at(L"类型");
+        out.emplace(L"王国管理",out.at(L"战役"));
         return out;
     }();return rows;
 }

@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <cwctype>
 #include "save_core.hpp"
+#include "save_discovery.hpp"
 #include "edit_session.hpp"
 #include "i18n.hpp"
 #include "advanced_field_zh.hpp"
@@ -141,6 +142,9 @@ public:
 // The pre-write backup is retained even if Windows refuses the replacement.
 fs::path atomicSave(const fs::path& target,const std::string& output,const std::string* expected,bool newFileOnly=false) {
     if(gameRunning())throw WinFailure(L"请先退出 Suzerain，再保存或恢复存档。");
+    const auto absoluteTarget=fs::absolute(target).lexically_normal();
+    if(rizia::discovery::inBackupFolder(absoluteTarget)||rizia::discovery::inBackupFolder(fs::weakly_canonical(absoluteTarget)))
+        throw WinFailure(tr(L"请在备份目录外另存一份存档。"));
     auto parsed=rizia::Document::parse(output);
     if(!rizia::isSupportedStory(parsed.story))throw WinFailure(L"Unsupported campaign.");
     SaveLock lock(target);

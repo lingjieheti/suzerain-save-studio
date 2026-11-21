@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cwctype>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace field_search {
@@ -37,6 +38,34 @@ inline std::vector<std::wstring> terms(const std::wstring& query) {
         }
     }
     return result;
+}
+
+// Guides show either Lua table keys or the JSON-escaped spelling seen in a save.
+inline std::string pastedKey(std::wstring_view query) {
+    auto trim = [](std::wstring_view value) {
+        while (!value.empty() && space(value.front())) value.remove_prefix(1);
+        while (!value.empty() && space(value.back())) value.remove_suffix(1);
+        return value;
+    };
+    query = trim(query);
+    const auto equals = query.find(L'=');
+    if (equals != query.npos && query.find_first_of(L"=[]\r\n", equals + 1) != query.npos)
+        return {};
+    auto key = trim(query.substr(0, equals));
+    if (key.size() >= 4 && key.front() == L'[' && key.back() == L']') {
+        key = trim(key.substr(1, key.size() - 2));
+        if (key.size() >= 4 && key.substr(0, 2) == L"\\\"" && key.substr(key.size()-2) == L"\\\"")
+            key = key.substr(2, key.size() - 4);
+        else if (key.size() >= 2 && (key.front() == L'"' || key.front() == L'\'') && key.back() == key.front())
+            key = key.substr(1, key.size() - 2);
+        else return {};
+    } else if (equals == query.npos) return {};
+
+    if (key.find(L'.') == key.npos || !std::all_of(key.begin(), key.end(), [](wchar_t c) {
+        return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z') ||
+               (c >= L'0' && c <= L'9') || c == L'_' || c == L'.';
+    })) return {};
+    return std::string(key.begin(), key.end());
 }
 
 inline bool matches(const std::wstring& index, const std::vector<std::wstring>& terms) {

@@ -11,6 +11,13 @@
 | 在同一回合多签几项建设政令 | 提问者说明了自己为什么关心资源上限。这个目标涉及库存和上限两个数值。[玩家解释](https://www.reddit.com/r/suzerain/comments/1cgsw77/) | 将资源上限和当前库存放在一起，便于核对。 |
 | 在游戏里补一点资源，知道能不能花 | 有玩家向实时修改器作者追问，修改后顶栏未刷新，能否马上支付。WeMod 的玩家也点名需要里奇亚能源与权威。[实时面板讨论](https://www.reddit.com/r/suzerain/comments/1t660o3/meet_wolknerprotocol_a_live_state_editor_for/) · [WeMod 玩家反馈](https://community.wemod.com/t/suzerain-cheats-and-trainer-for-steam/378190) | 在已有预览、确认和回读流程中加入相对加减。 |
 
+## 用攻略中的实际输入复测
+
+在后续的 0.16.0 测试中，我们用攻略里真正出现的输入检查了两项操作。
+
+- **从攻略找到那个字段。** 玩家示例包含方括号、引号和等号，有时连着建议设置的数值。0.15.1 把这些符号当成普通搜索词，复制整段找不到政府预算。0.16.0 接受 Lua 写法和存档 JSON 里的转义写法，按完整键定位，示例中的数值只用于搜索上下文。普通关键词仍可查找多个相关项。[Steam 玩家攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3373743028) · [玩家给出的完整赋值示例](https://www.reddit.com/r/suzerain/comments/17t03ed/)
+- **从多个存档中选对一个。** 玩家需要分辨进行中、自动和回合存档，再在游戏中加载对应文件。我们用同战役不同回合的文件检验选择器，并参考了 Apple 对即时筛选和搜索范围的说明。[Steam 存档指南](https://steamcommunity.com/sharedfiles/filedetails/?id=3341333208) · [Apple 搜索设计指南](https://developer.apple.com/design/human-interface-guidelines/searching)
+
 ## 五款工具的公开做法
 
 | 工具 | 与本次决策相关的设计 |

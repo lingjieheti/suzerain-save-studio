@@ -52,6 +52,42 @@ int main(int argc,char** argv){
         check(readFile(mainPath)==mainOld,"Stale rejection changed save");
         const auto mainBackup=atomicSave(mainPath,mainNew,&mainOld);
         check(readFile(mainPath)==mainNew&&readFile(mainBackup)==mainOld,"Main save/backup not byte-exact");
+        const auto branchPath=root/"main.json.branch.json";
+        write(branchPath, mainOld);
+        const auto branchBackup=atomicSave(branchPath, mainNew, &mainOld);
+        const auto backups=save_backup::list(mainPath,MAX_FILE);
+        check(backups.size()==1&&backups.front().path==mainBackup,
+              "A backup of a similarly named playthrough appeared under the original save");
+        const auto branchBackups=save_backup::list(branchPath,MAX_FILE);
+        check(branchBackups.size()==1&&branchBackups.front().path==branchBackup,
+              "The branch playthrough lost its own backup");
+        const auto archive=root/".rizia-backups";
+        const auto dated=root/"save.20240101-010203-004.json";
+        const auto datedBackup=archive/"save.20240101-010203-004.json.20261121-140512-900.77E7E288-D7A1-48E8-9EDB-0A90F638245D.bak";
+        write(datedBackup,mainOld);
+        const auto datedList=save_backup::list(dated,MAX_FILE);
+        check(datedList.size()==1&&fileTimeText(datedList.front().path,datedList.front().timestamp)==L"2026-11-21  14:05:12",
+              "A timestamp embedded in the original name was shown as the backup date");
+        write(archive/"MAIN.JSON.20200101-020304-000.bak",mainOld);
+        write(archive/"main.json.my-checkpoint.bak",mainOld);
+        write(archive/"main.json.branch.json.my-checkpoint.bak",mainOld);
+        write(archive/"main.json.bak",mainOld);
+        const auto future=fs::file_time_type::clock::now()+std::chrono::hours(24);
+        fs::last_write_time(archive/"main.json.my-checkpoint.bak",future);
+        const auto legacy=save_backup::list(mainPath,MAX_FILE);
+        check(legacy.size()==4&&legacy.front().path.filename()=="main.json.my-checkpoint.bak"&&
+              legacy.back().timestamp==L"20200101-020304-000",
+              "Timestamp-only and manually labeled backups should retain exact ownership");
+        rejects([&]{atomicSave(mainBackup,mainNew,&mainOld);},"Existing recovery point was writable as an ordinary save");
+        check(readFile(mainBackup)==mainOld&&!fs::exists(archive/".rizia-backups"),
+              "Writing a recovery point changed its bytes or created nested backups");
+        fs::create_directories(archive/"subfolder");
+        const auto protectedCopy=archive/"subfolder"/"export.json";
+        rejects([&]{atomicSave(protectedCopy,mainOld,nullptr,true);},"New save created inside a backup subfolder");
+        check(!fs::exists(protectedCopy),"Rejected nested destination was created");
+        const auto recovered=root/"recovered.json";
+        check(atomicSave(recovered,readFile(mainBackup),nullptr,true).empty()&&readFile(recovered)==mainOld,
+              "Saving a separate copy from a protected backup failed");
         const auto riziaBackup=atomicSave(riziaPath,riziaNew,&riziaOld);
         check(readFile(riziaPath)==riziaNew&&readFile(riziaBackup)==riziaOld,"Rizia save/backup not byte-exact");
         rejects([&]{atomicSave(mainPath,readFile(riziaBackup),&mainNew);},"Foreign backup restored over Main");

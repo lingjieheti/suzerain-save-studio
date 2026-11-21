@@ -1,6 +1,15 @@
-# v0.15.1 Preview — Windows validation
+# v0.16.0 Preview — Windows validation
 
-The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.15.1 and it runs independently of the plugin.
+The Windows x64 package pairs the 0.16.0 portable editor with the existing 0.15.1 optional in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+
+## Search and backups in 0.16.0
+
+- Checked combined campaign, slot-type and turn queries in the native picker, including turn 3 versus 13. The fixture suite also covers digits in filenames, the five game slot prefixes and localized turn/type terms.
+- Exercised the executable extracted from the ZIP at picker sizes of 535×440 and 1010×624 and editor sizes of 680×485 and 1160×770 logical pixels. Search, clear, preview, and individual reversion worked using seven synthetic saves. All seven source files retained their original bytes.
+- Reproduced the failed guide lookup in the native editor before fixing it. Copied Lua and JSON-escaped assignments now locate the exact field. Ordinary text still returns multiple results. A Rizia sample with an energy stock, turn total and income modifier exercises their ordering and the return to alphabetical browsing after clearing the search.
+- Tested similar slot names, filenames containing timestamps, manually named backups and older backup names. Backups can be opened and saved as new copies outside the backup directory. Overwriting files in that directory is blocked.
+- Read 15 Sordland and 6 Rizia saves and ran 233 checks on parsing, in-memory edits, export and undo. The 73 simulated live-state and 218 panel checks passed. The bundled companion DLL matches the previous release byte for byte.
+- The local build passed 201 native editor checks and 39 synthetic file I/O checks. The discovery suite skipped its symbolic-link creation case because the local account could not create one. Two packages produced from the same compiled files had identical SHA-256 digests.
 
 ## Fjord in 0.15.1
 

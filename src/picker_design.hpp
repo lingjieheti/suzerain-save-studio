@@ -202,25 +202,6 @@ inline void drawCampaignItem(const State& s,const DRAWITEMSTRUCT& d){
     lettering(d.hDC,label,caption,s.font,selected?Theme::accentInk:Theme::text,DT_LEFT);
     if(d.itemState&ODS_FOCUS)DrawFocusRect(d.hDC,&d.rcItem);
 }
-inline LRESULT CALLBACK filterCueProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
-    if(m==WM_IME_STARTCOMPOSITION)SetPropW(h,L"PickerComposition",reinterpret_cast<HANDLE>(1));
-    if(m==WM_IME_ENDCOMPOSITION)RemovePropW(h,L"PickerComposition");
-    if((m==WM_PAINT||m==WM_PRINTCLIENT)&&GetWindowTextLengthW(h)==0&&!GetPropW(h,L"PickerComposition")){
-        auto& s=*reinterpret_cast<State*>(data);
-        PAINTSTRUCT ps{};HDC dc=m==WM_PAINT?BeginPaint(h,&ps):reinterpret_cast<HDC>(wp);
-        RECT bounds{},text{};GetClientRect(h,&bounds);SendMessageW(h,EM_GETRECT,0,(LPARAM)&text);
-        ::fill(dc,bounds,Theme::input);
-        wchar_t cue[192]{};
-        SendMessageW(h,EM_GETCUEBANNER,(WPARAM)cue,192);
-        lettering(dc,cue,text,s.font,Theme::muted,DT_LEFT);
-        if(m==WM_PAINT)EndPaint(h,&ps);
-        return 0;
-    }
-    const auto result=DefSubclassProc(h,m,wp,lp);
-    if(m==WM_SETTEXT||m==WM_KILLFOCUS||m==WM_SETFOCUS||m==WM_IME_ENDCOMPOSITION)
-        InvalidateRect(h,nullptr,FALSE);
-    return result;
-}
 inline LRESULT CALLBACK header(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
     auto&s=*reinterpret_cast<State*>(data);
     if(m==WM_ERASEBKGND)return 1;
@@ -274,10 +255,11 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
                 symbol(s,d.nmcd.hdc,LIST,cell.left,midY-s.scale(9),selected?Theme::accentInk:Theme::muted);
                 cell.left+=s.scale(26);
             }
-            const auto& secondary=s.result.saves[s.rows[row]].campaignName;
-            if(!secondary.empty()){
+            wchar_t secondary[512]{};
+            ListView_GetItemText(s.list,row,2,secondary,512);
+            if(secondary[0]){
                 RECT detail=cell;detail.top=midY;
-                lettering(d.nmcd.hdc,wide(secondary),detail,s.small,Theme::muted,DT_LEFT);
+                lettering(d.nmcd.hdc,secondary,detail,s.small,Theme::muted,DT_LEFT);
                 cell.bottom=midY+s.scale(3);
             }
         }

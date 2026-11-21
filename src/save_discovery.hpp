@@ -50,10 +50,6 @@ inline std::wstring key(const fs::path& path) {
     return path.wstring();
 #endif
 }
-inline bool backup(const fs::path& path) {
-    for (const auto& part : path) if (folded(part.wstring()) == L".rizia-backups") return true;
-    return false;
-}
 inline bool linked(const fs::path& path, const fs::file_status& status) {
     if (fs::is_symlink(status)) return true;
 #ifdef _WIN32
@@ -68,6 +64,11 @@ inline bool newer(const Save& a, const Save& b) {
     return a.mtime != b.mtime ? a.mtime > b.mtime : key(a.path) < key(b.path);
 }
 } // namespace detail
+
+inline bool inBackupFolder(const fs::path& path) {
+    for (const auto& part : path) if (detail::folded(part.wstring()) == L".rizia-backups") return true;
+    return false;
+}
 
 // The returned metadata is a snapshot. Callers must parse the selected path again
 // before editing, because the game may update it after discovery.
@@ -86,14 +87,14 @@ inline Result scan(const std::vector<fs::path>& roots, const Limits& limits = {}
     // would hide that it points outside the requested directory.
     for (const auto& root : roots) {
         if (cancelled()) return result;
-        if (root.empty() || detail::backup(root)) { ++result.skipped; continue; }
+        if (root.empty() || inBackupFolder(root)) { ++result.skipped; continue; }
         std::error_code ec;
         auto status = fs::symlink_status(root, ec);
         if (ec || !fs::is_directory(status)) { ++result.errors; continue; }
         if (detail::linked(root, status)) { ++result.skipped; continue; }
         auto path = detail::normalize(root, ec);
         if (ec) { ++result.errors; continue; }
-        if (detail::backup(path)) { ++result.skipped; continue; }
+        if (inBackupFolder(path)) { ++result.skipped; continue; }
         if (directories.insert(detail::key(path)).second) pending.push_back({path, 0});
     }
     bool bounded = false;
@@ -116,7 +117,7 @@ inline Result scan(const std::vector<fs::path>& roots, const Limits& limits = {}
             if (cancelled()) return result;
             auto status = entry.symlink_status(ec);
             if (ec) { ++result.errors; ec.clear(); continue; }
-            if (detail::linked(entry.path(), status) || detail::backup(entry.path())) { ++result.skipped; continue; }
+            if (detail::linked(entry.path(), status) || inBackupFolder(entry.path())) { ++result.skipped; continue; }
             if (fs::is_directory(status)) {
                 // These are game logs/cache, not campaign folders. Restrict this
                 // exclusion to Suzerain's own directory, never a generic root.

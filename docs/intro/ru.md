@@ -4,7 +4,7 @@
 
 Я сделал этот редактор для своих партий в Suzerain. В Сордланде я с его помощью проверяю государственный бюджет, а в Ризии смотрю, сколько энергии осталось и как меняются запасы за ход.
 
-**[Скачать предварительную версию 0.15.1 для Windows 10/11 x64 (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.1/SuzerainSaveStudio-0.15.1-Live-Preview-win-x64.zip)**
+**[Скачать предварительную версию 0.16.0 для Windows 10/11 x64 (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.0/SuzerainSaveStudio-0.16.0-Live-Preview-win-x64.zip)**
 
 ## Как начать
 

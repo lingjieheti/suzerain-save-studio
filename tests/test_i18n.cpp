@@ -8,7 +8,7 @@ for(int lang=0;lang<11;++lang){i18n::setLanguage(lang);check(!tr(L"选择存档"
 for(int lang=0;lang<11;++lang){
  i18n::setLanguage(lang);
  check(tr(L"修改预览  3")==tr(L"修改预览")+L"  3","numeric caption");
- check(tr(L"Campaign")!=tr(L"战役"),"distinct picker headings");
+ check(tr(L"Campaign")==tr(L"战役")&&tr(L"Campaign")!=tr(L"类型"),"picker campaign header names its content");
  for(const auto* defs:{&baseDefs,&riziaDefs})for(const auto& def:*defs){
   std::wstring source=def.label,expected=source;
   if(lang<=1){expected=fieldZh(source.c_str());if(lang==1)expected=i18n::traditional(expected);}

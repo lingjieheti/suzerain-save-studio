@@ -3,14 +3,14 @@
 #include "field_search.hpp"
 #include "resource_summary.hpp"
 #include "field_favorites.hpp"
+#include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.15.1";
+constexpr wchar_t APP_VERSION[] = L"0.16.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
-       FIELD_FAVORITE, FILTER_FAVORITES };
+       FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH };
 #include "appearance.hpp"
-struct BackupItem { fs::path path; fs::file_time_type time; uintmax_t size=0; };
 struct FieldPageState {
     std::wstring query;
     std::string preferred;
@@ -34,7 +34,7 @@ struct App {
     std::wstring reviewError;
     size_t previewCount=0;
     std::map<std::string,std::string> review;
-    std::vector<BackupItem> backups; int backupIndex=-1;
+    std::vector<save_backup::Item> backups; int backupIndex=-1;
     std::unique_ptr<rizia::Document> backupDoc;
 } g;
 int px(int n){return MulDiv(n,g.dpi,96);}
@@ -76,6 +76,7 @@ HWND control(const wchar_t*cls,const wchar_t*txt,DWORD style,int id=0){
 }
 HWND button(const wchar_t*txt,int id){auto h=control(L"BUTTON",txt,WS_TABSTOP|BS_OWNERDRAW,id);SetWindowSubclass(h,buttonProc,1,0);return h;}
 #include "workspace_chrome.hpp"
+#include "search_control.hpp"
 #include "appearance_menu.hpp"
 LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
     if(m==WM_ERASEBKGND)return 1;
@@ -249,19 +250,17 @@ std::map<std::string,std::string> preparedChanges(){
     changes.insert(caps.begin(),caps.end());
     g.doc->validateChanges(changes);return changes;
 }
-std::wstring fileTimeText(const fs::path&p){
-    if(lower(p.extension().wstring())==L".bak"){auto n=p.filename().wstring();for(size_t i=0;i+19<n.size();++i){auto s=n.substr(i,19);
-        if(s[8]==L'-'&&s[15]==L'-'&&std::all_of(s.begin(),s.begin()+8,[](wchar_t c){return c>=L'0'&&c<=L'9';})&&std::all_of(s.begin()+9,s.begin()+15,[](wchar_t c){return c>=L'0'&&c<=L'9';}))
-            return s.substr(0,4)+L"-"+s.substr(4,2)+L"-"+s.substr(6,2)+L"  "+s.substr(9,2)+L":"+s.substr(11,2)+L":"+s.substr(13,2);}}
-    WIN32_FILE_ATTRIBUTE_DATA a{};SYSTEMTIME utc{},local{};if(!GetFileAttributesExW(p.c_str(),GetFileExInfoStandard,&a)||!FileTimeToSystemTime(&a.ftLastWriteTime,&utc))return L"未知时间";
-    SystemTimeToTzSpecificLocalTime(nullptr,&utc,&local);wchar_t b[80];swprintf(b,80,L"%04u-%02u-%02u  %02u:%02u:%02u",local.wYear,local.wMonth,local.wDay,local.wHour,local.wMinute,local.wSecond);return b;
+std::wstring fileTimeText(const fs::path&p,std::wstring stamp={}){
+    if(stamp.empty())stamp=save_backup::lastWriteStamp(p);
+    if(stamp.empty())return L"未知时间";
+    return stamp.substr(0,4)+L"-"+stamp.substr(4,2)+L"-"+stamp.substr(6,2)+L"  "+stamp.substr(9,2)+L":"+stamp.substr(11,2)+L":"+stamp.substr(13,2);
 }
 void selectBackup(int index){
     g.restoreArmed=false;g.backupIndex=index;g.backupDoc.reset();
     if(index>=0&&index<(int)g.backups.size()){
         try{auto doc=std::make_unique<rizia::Document>(rizia::Document::parse(readFile(g.backups[index].path)));
             if(doc->story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");g.backupDoc=std::move(doc);
-            setText(g.name,L"备份详情");setText(g.oldValue,fileTimeText(g.backups[index].path));
+            setText(g.name,L"备份详情");setText(g.oldValue,fileTimeText(g.backups[index].path,g.backups[index].timestamp));
             auto bv=[](const char*k){auto*f=g.backupDoc->find(k);return f?wide(f->value):L"—";};
             std::wstring s=L"将恢复到当前打开的存档。\r\n恢复前会再次备份当前文件。\r\n\r\n回合  "+wide(g.backupDoc->turn)+L"   /   "+wide(g.backupDoc->version);
             for(const std::string& k:(isBase()?std::vector<std::string>{"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"}:std::vector<std::string>{"RiziaDLC.Resources_Budget","RiziaDLC.Resources_Authority","RiziaDLC.Resources_Energy"})){s+=L"\r\n"+label(k)+L"    "+wide(g.doc->find(k)?g.doc->find(k)->value:"—")+L"  →  "+bv(k.c_str());}
@@ -274,16 +273,9 @@ void selectBackup(int index){
 void refreshBackups(){
     fs::path keep=(g.backupIndex>=0&&g.backupIndex<(int)g.backups.size())?g.backups[g.backupIndex].path:fs::path();
     g.backups.clear();g.backupIndex=-1;g.backupDoc.reset();
-    if(g.doc&&!g.demoResource){std::error_code ec;auto folder=g.file.parent_path()/L".rizia-backups";
-        if(fs::is_directory(folder,ec))for(fs::directory_iterator it(folder,fs::directory_options::skip_permission_denied,ec),end;it!=end;it.increment(ec)){
-            if(ec){ec.clear();continue;}auto&e=*it;auto name=e.path().filename().wstring(),prefix=g.file.filename().wstring()+L".";
-            if(lower(name).rfind(lower(prefix),0)!=0||lower(e.path().extension().wstring())!=L".bak"||!e.is_regular_file(ec))continue;
-            auto size=e.file_size(ec);if(ec||size==0||size>MAX_FILE)continue;auto time=e.last_write_time(ec);if(ec)continue;g.backups.push_back({e.path(),time,size});
-        }
-        std::sort(g.backups.begin(),g.backups.end(),[](const auto&a,const auto&b){return a.path.filename().wstring()>b.path.filename().wstring();});if(g.backups.size()>200)g.backups.resize(200);
-    }
+    if(g.doc&&!g.demoResource)g.backups=save_backup::list(g.file,MAX_FILE);
     g.populating=true;ListView_DeleteAllItems(g.grid);g.rows.clear();setColumns({{L"备份时间",180},{L"大小",72},{L"原档备份",std::max(170,g.tableW-260)}});
-    for(size_t i=0;i<g.backups.size();++i){const auto&b=g.backups[i];addRow((int)i,{fileTimeText(b.path),std::to_wstring((b.size+1023)/1024)+L" KB",b.path.filename().wstring()});if(b.path==keep)g.backupIndex=(int)i;}
+    for(size_t i=0;i<g.backups.size();++i){const auto&b=g.backups[i];addRow((int)i,{fileTimeText(b.path,b.timestamp),std::to_wstring((b.size+1023)/1024)+L" KB",b.path.filename().wstring()});if(b.path==keep)g.backupIndex=(int)i;}
     if(g.backupIndex<0&&!g.backups.empty())g.backupIndex=0;
     if(g.backupIndex>=0)ListView_SetItemState(g.grid,g.backupIndex,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
     g.populating=false;selectBackup(g.backupIndex);
@@ -299,9 +291,12 @@ void resetFieldBrowser(){
 
 void appendFieldRows(){
     if(!g.doc)return;
-    const auto terms=field_search::terms(g.pages[g.tab].query);
+    const auto& query=g.pages[g.tab].query;
+    const auto key=field_search::pastedKey(query);
+    const auto terms=key.empty()?field_search::terms(query):std::vector<std::wstring>{};
     const auto number=tr(L"数值"), toggle=tr(L"开关");
     auto append=[&](const rizia::Field& field){
+        if(!key.empty() && _stricmp(key.c_str(),field.key.c_str())!=0)return;
         if(g.tab==4&&g.favoritesOnly&&!g.favorites.count(field.key))return;
         const auto change=pending().find(field.key);
         if(g.changedOnly&&change==pending().end())return;
@@ -329,11 +324,21 @@ void appendFieldRows(){
                                     staged,field.is_bool?toggle:number});
     };
     if(g.tab==4){
+        if(!key.empty()){
+            if(const auto* field=g.doc->find(key)){append(*field);return;}
+        }
         if(g.allFields.empty()){
             for(const auto& field:g.doc->fields)g.allFields.push_back(&field);
             std::sort(g.allFields.begin(),g.allFields.end(),[](const auto* a,const auto* b){return a->key<b->key;});
         }
-        for(const auto* field:g.allFields)append(*field);
+        std::set<const rizia::Field*> common;
+        if(!terms.empty()){
+            for(const auto& def:currentDefs())if(const auto* field=g.doc->find(def.key)){
+                common.insert(field);
+                append(*field);
+            }
+        }
+        for(const auto* field:g.allFields)if(!common.count(field))append(*field);
     }else{
         for(const auto& def:currentDefs())if(def.tab==g.tab){
             if(const auto* field=g.doc->find(def.key))append(*field);
@@ -414,7 +419,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.15.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.16.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -562,6 +567,7 @@ void changeLanguage(){
     g.populating=true;
     for(const auto& item:uiText)if(IsWindow(item.first)&&IsChild(g.win,item.first)&&item.first!=g.edit&&item.first!=g.search&&item.first!=g.path&&item.first!=g.meta&&item.first!=ctl(LANGUAGE))SetWindowTextW(item.first,tr(item.second).c_str());
     g.populating=false;
+    SendMessageW(g.search,EM_SETCUEBANNER,TRUE,(LPARAM)tr(L"搜索项目或存档字段").c_str());
     updateAppearanceLabel();
     updateCampaign();if(g.doc){rawText(g.path,documentTitle());rawText(g.meta,campaignLabel(g.doc->story)+L" / "+wide(g.doc->version)+L" / "+tr(L"回合")+L" "+wide(g.doc->turn)+L" / "+wide(g.doc->campaignName));}
     if(g.tab==7)setHelp();refresh();
@@ -582,10 +588,6 @@ LRESULT CALLBACK editProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
     if(m==WM_GETDLGCODE){auto flags=DefSubclassProc(w,m,wp,lp);auto*msg=(MSG*)lp;return (wp==VK_RETURN||(msg&&msg->wParam==VK_RETURN))?flags|DLGC_WANTALLKEYS:flags;}
     if(m==WM_KEYDOWN&&wp==VK_RETURN){applyInput();return 0;}return DefSubclassProc(w,m,wp,lp);
 }
-LRESULT CALLBACK searchProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
-    if(m==WM_PAINT){auto result=DefSubclassProc(w,m,wp,lp);if(GetWindowTextLengthW(w)==0){auto dc=GetDC(w);RECT r;GetClientRect(w,&r);drawText(dc,L"搜索项目或存档字段",r,g.font,Theme::dim);ReleaseDC(w,dc);}return result;}
-    auto result=DefSubclassProc(w,m,wp,lp);if(m==WM_SETFOCUS||m==WM_KILLFOCUS)InvalidateRect(w,nullptr,FALSE);return result;
-}
 void createControls(){
     auto languages=control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,LANGUAGE);for(const auto*name:i18n::names)SendMessageW(languages,CB_ADDSTRING,0,(LPARAM)name);SendMessageW(languages,CB_SETCURSEL,i18n::language,0);
     SetWindowSubclass(languages,languageFaceProc,1,0);
@@ -594,9 +596,11 @@ void createControls(){
     const wchar_t*nav[]={L"资源与经济",L"军备库存",L"家族与人物",L"外交谈判",L"高级字段",L"修改预览",L"备份管理",L"使用指南"};
     for(int i=0;i<8;++i)button(nav[i],NAV_BASE+i);
     g.path=control(L"STATIC",L"未打开存档",SS_PATHELLIPSIS|SS_NOTIFY|SS_NOPREFIX);g.meta=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);
-    g.search=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,SEARCH);SendMessageW(g.search,EM_SETLIMITTEXT,160,0);SetWindowSubclass(g.search,searchProc,1,0);
+    g.search=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,SEARCH);
+    button(L"清除搜索",CLEAR_FIELD_SEARCH);
     button(L"只看待保存",FILTER_CHANGED);button(L"只看收藏",FILTER_FAVORITES);button(L"导入方案",PATCH_IMPORT);
     g.grid=control(WC_LISTVIEWW,L"",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,GRID);
+    configureSearchField(g.search,g.grid,L"搜索项目或存档字段");
     SetWindowTheme(g.grid,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetExtendedListViewStyle(g.grid,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
     ListView_SetBkColor(g.grid,Theme::panel);ListView_SetTextBkColor(g.grid,Theme::panel);ListView_SetTextColor(g.grid,Theme::text);
@@ -634,6 +638,7 @@ void command(int id,int code){
     }
     if(id>=NAV_BASE&&id<NAV_BASE+8){navigate(id-NAV_BASE);return;}
     switch(id){
+    case CLEAR_FIELD_SEARCH:clearSearchField(g.search);break;
     case OPEN:{auto p=pickFile();if(!p.empty())loadDocument(p);break;}case LATEST:chooseSave();break;
     case RELOAD:if(g.demoResource)loadDemo(g.demoResource);else if(g.doc){auto current=g.file;loadDocument(current);}break;
     case FOLDER:{auto p=!g.file.empty()?g.file.parent_path():saveFolder();if(fs::exists(p))ShellExecuteW(g.win,L"open",p.c_str(),nullptr,nullptr,SW_SHOWNORMAL);else message(L"默认目录不存在，请手动打开存档。\r\n"+p.wstring());break;}
@@ -691,7 +696,10 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     case WM_GETMINMAXINFO:{auto*i=(MINMAXINFO*)lp;RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);i->ptMinTrackSize={std::min<LONG>(px(680),area.right-area.left),std::min<LONG>(px(485),area.bottom-area.top)};return 0;}
     case WM_DPICHANGED:g.dpi=HIWORD(wp);{auto*r=(RECT*)lp;SetWindowPos(w,nullptr,r->left,r->top,r->right-r->left,r->bottom-r->top,SWP_NOZORDER|SWP_NOACTIVATE);}fonts();layout();return 0;
     case WM_PAINT:paint();return 0;case WM_ERASEBKGND:return 1;
-    case WM_DRAWITEM:if(((DRAWITEMSTRUCT*)lp)->CtlType==ODT_BUTTON){drawButton((DRAWITEMSTRUCT*)lp);return TRUE;}break;
+    case WM_DRAWITEM:if(((DRAWITEMSTRUCT*)lp)->CtlType==ODT_BUTTON){
+        const auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(lp);
+        if(item.CtlID==CLEAR_FIELD_SEARCH)drawClearSearch(item,g.dpi);else drawButton(&item);
+        return TRUE;}break;
     case WM_CTLCOLORLISTBOX:SetTextColor((HDC)wp,Theme::text);SetBkColor((HDC)wp,Theme::input);return (LRESULT)g.input;
     case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.path||h==g.meta||h==g.notice||h==g.desc||h==g.valueLabel?Theme::muted:Theme::text);
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
@@ -748,11 +756,6 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     ShowWindow(w,show);UpdateWindow(w);
     int argc=0;auto argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(argv&&argc>1){if(std::wstring(argv[1])==L"--licenses"){g.licenseMode=true;navigate(7);}else loadDocument(fs::path(argv[1]),false);}else PostMessageW(w,WM_APP+2,0,0);if(argv)LocalFree(argv);
     MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){
-        if(msg.message==WM_KEYDOWN&&msg.wParam==VK_ESCAPE&&GetFocus()==g.search){
-            if(GetWindowTextLengthW(g.search))SetWindowTextW(g.search,L"");
-            else SetFocus(g.grid);
-            continue;
-        }
         if(msg.message==WM_KEYDOWN&&(GetKeyState(VK_CONTROL)&0x8000)){
             if(msg.wParam=='O'){command(OPEN,0);continue;}if(msg.wParam=='S'){navigate(5);continue;}
             if(msg.wParam=='L'){command(LATEST,0);continue;}
