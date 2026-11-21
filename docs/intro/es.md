@@ -4,7 +4,7 @@
 
 Hice esta herramienta para mis propias partidas de *Suzerain*. La uso para consultar el presupuesto de Sordland o ver cuánta energía tiene Rizia y cuánto cambia esa reserva en cada turno.
 
-**[Descargar la versión preliminar 0.16.0 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.0/SuzerainSaveStudio-0.16.0-Live-Preview-win-x64.zip)**
+**[Descargar la versión preliminar 0.16.1 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)**
 
 ## Editar una partida guardada
 

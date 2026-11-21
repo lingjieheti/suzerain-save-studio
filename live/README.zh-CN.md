@@ -7,9 +7,11 @@
 | 索德兰 | 政府预算、私人资产 |
 | 里奇亚 | 预算、权威、能源 |
 
-![游戏内面板布局预览，使用模拟数据离线渲染，示例王国预算为 18，下方显示四个加减按钮](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.15.1/docs/images/live-panel-preview.png)
+![Windows Steam 版《Suzerain》主菜单中的 Ctrl+F8 实时面板，正在等待载入战役](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.16.1/docs/images/live-panel-preview.png)
 
-上图为离线布局预览。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。
+上图截自游戏主菜单。载入战役后，面板会列出当前可调的资源。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。
+
+0.16.1 使用游戏自带的界面字体显示中文和英文。标题与主按钮加粗，库存和确认前后的数值使用较大的常规字。窄屏下，较长的英文资源名和数值会按可用宽度缩小。
 
 首次打开默认使用清爽的 **雾蓝**。点面板的外观选项即可切换 **暖纸、林间、雾蓝、午夜**。桌面编辑器与游戏内面板共用主题偏好，重新打开面板时会读取最近的选择。正在输入或等待确认的数值会保留。
 

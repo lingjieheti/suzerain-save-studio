@@ -264,7 +264,7 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
             }
         }
         if(column==4&&caption.size()==20&&caption[10]==L' '){
-            auto old=SelectObject(d.nmcd.hdc,s.font);SIZE size{};
+            auto old=SelectObject(d.nmcd.hdc,s.number);SIZE size{};
             GetTextExtentPoint32W(d.nmcd.hdc,caption.c_str(),(int)caption.size(),&size);
             if(size.cx>cell.right-cell.left){
                 caption=caption.substr(0,10)+L" "+caption.substr(12,5);
@@ -274,7 +274,8 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
             SelectObject(d.nmcd.hdc,old);
         }
         const auto ink=column==0 ? (selected?Theme::accentInk:Theme::text) : Theme::muted;
-        lettering(d.nmcd.hdc,caption,cell,column==0?s.emphasis:s.font,ink,DT_LEFT);
+        HFONT face=column>=3?s.number:column==0?s.emphasis:s.font;
+        lettering(d.nmcd.hdc,caption,cell,face,ink,DT_LEFT);
     }
     if(selected&&GetFocus()==s.list){RECT ring=rowBox;InflateRect(&ring,-s.scale(2),-s.scale(2));DrawFocusRect(d.nmcd.hdc,&ring);}
     return CDRF_SKIPDEFAULT;

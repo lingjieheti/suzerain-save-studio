@@ -8,11 +8,11 @@
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 
-**[下载 v0.16.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.0/SuzerainSaveStudio-0.16.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.16.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.1) · [♡ 赞助作者](SPONSOR.md)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
-[桌面编辑器大图](docs/images/rizia-workspace.png) · [存档选择器](docs/images/save-picker.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [实时面板离线预览](docs/images/live-panel-preview.png)
+[桌面编辑器大图](docs/images/rizia-workspace.png) · [存档选择器](docs/images/save-picker.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [游戏主菜单中的实时面板](docs/images/live-panel-preview.png)
 
 ## 快速上手
 
@@ -32,7 +32,9 @@
 
 ## 选择外观
 
-存档列表第一行显示文件名，第二行显示自动、手动等档位类型和玩家的战役名称。编辑器并排显示库存、每回合变化和上限。游戏内面板把相对加减放在一组，确认页放大显示原值和目标值。
+桌面编辑器的四套外观采用相同的文字层级。简体中文优先使用电脑已有的 Noto Sans SC，缺少时使用微软雅黑 UI。桌面数值表格和输入框使用等宽数字，方便逐位核对原值和新值。[查看桌面字体调整前后对比](docs/images/typography.png)
+
+存档列表第一行显示文件名，第二行显示自动、手动等档位类型和玩家的战役名称。编辑器并排显示库存、每回合变化和上限。游戏内的 Ctrl+F8 面板使用游戏自带字体显示中文和英文。标题和主按钮加粗，库存与确认前后的数值以较大字号显示。
 
 在存档选择器或编辑器点 **外观**，即可切换主题。首次打开默认使用 **雾蓝**：冷白底色、浅灰蓝侧栏、细分隔线和蓝色主按钮。三项资源放在同一行，数值与每回合变化并排可查。也可以选陶土色的 **暖纸**、薄荷绿的 **林间**，或深色的 **午夜**。升级时会沿用你已经选好的外观。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
 
@@ -60,6 +62,8 @@
 Use `Rizia auto turn 3` in the save picker to narrow the list to that campaign, slot type and turn. Paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` into **Advanced** to find that exact field. Enter your preferred amount in the inspector to make the edit.
 
 Bookmark any available field in its inspector and find it again under **Advanced** with the favorites filter. Sordland and Rizia keep separate lists. In the live panel, use **−5, −1, +1, +5** to prepare a change, then preview and confirm it.
+
+The desktop editor uses equal-width digits in numeric columns and inputs. The Ctrl+F8 panel uses the game's own font for English and Chinese, with bold headings and larger resource values. [View the panel in the game’s main menu](docs/images/live-panel-preview.png)
 
 New installations open in **Fjord**, with a cool white workspace and a single row for resources. Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
 

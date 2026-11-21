@@ -1,6 +1,14 @@
-# v0.16.0 Preview — Windows validation
+# v0.16.1 Preview — Windows validation
 
-The Windows x64 package pairs the 0.16.0 portable editor with the existing 0.15.1 optional in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+The Windows x64 package includes the 0.16.1 portable editor and optional 0.16.1 in-game plugin. The editor uses MinGW-w64 GCC 13.2.0.
+
+## Typography in 0.16.1
+
+- Compared the released 0.16.0 editor and the extracted 0.16.1 executable on the same Windows desktop at 200% scaling. Six views used the same synthetic saves and window dimensions. Additional wide and compact Chinese and English views exercised all four themes. The theme/language capture harness isolated user preferences. [Before and after](docs/images/typography.png)
+- The native editor suite passed 609 checks. Font measurements cover 100%, 150% and 200% scaling, equal advances for the digits 0–9 and enough vertical space for search and numeric input. At compact width, localized table headings were checked in all eleven languages. A separate two-campaign check measured 396 resource-label extents at three window sizes.
+- Installed the packaged companion DLL on the Windows Steam build (3.1.0, build 175). Opened the panel at the main menu with Ctrl+F8 and switched from English to Simplified Chinese. The title, waiting state, buttons, four theme names and shortcut appeared correctly in both languages. All 21 campaign save files retained their original SHA-256 hashes. [In-game screenshot](docs/images/live-panel-preview.png)
+- The live suites passed 73 simulated campaign checks and 296 simulated panel checks, including long signed values at compact widths. Live resource writes were tested with the simulated campaigns for this typography update.
+- The full local desktop suite passed, including 39 synthetic file-I/O checks and 233 read-only checks on 15 Sordland and 6 Rizia saves. The local discovery suite skipped the symbolic-link creation case because the Windows account could not create the link.
 
 ## Search and backups in 0.16.0
 

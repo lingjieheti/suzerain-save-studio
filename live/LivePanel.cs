@@ -28,7 +28,6 @@ namespace SuzerainSaveStudio.Live
         private Feedback feedback;
         private string focused = "", activate = "";
         private GUIStyle title, number, comparison, fieldName, body, caption, rightCaption, action, primaryAction, themeLabel, input;
-        private Font panelFont, displayFont;
         private GameObject pointerCanvas;
         private RectTransform pointerTarget;
         private int targetWidth, targetHeight;
@@ -50,8 +49,6 @@ namespace SuzerainSaveStudio.Live
         public void OnDestroy()
         {
             if (pointerCanvas != null) UnityEngine.Object.Destroy(pointerCanvas);
-            if (panelFont != null) UnityEngine.Object.Destroy(panelFont);
-            if (displayFont != null) UnityEngine.Object.Destroy(displayFont);
         }
 
         public void OnDisable() => ClosePanel();
@@ -369,24 +366,26 @@ namespace SuzerainSaveStudio.Live
             if (styledAppearance == appearance) return;
             if (title == null)
             {
-                panelFont = Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Microsoft YaHei" },16);
-                displayFont = Font.CreateDynamicFontFromOSFont(new[] { "Georgia", "SimSun", "Microsoft YaHei" },25);
-                title = Style(25,displayFont);
-                number = Style(24,displayFont);
-                comparison = Style(23,panelFont);
-                fieldName = Style(13,panelFont);
-                body = Style(16,panelFont);
-                caption = Style(13,panelFont);
+                // In this Unity player OS-created Fonts can fail TextCore's conversion,
+                // leaving text and alignment from the previous control. The GUISkin
+                // supplies a working font and its English/Chinese glyph fallback.
+                title = Style(24);
+                title.fontStyle = FontStyle.Bold;
+                number = Style(26);
+                comparison = Style(24);
+                fieldName = Style(14);
+                body = Style(15);
+                caption = Style(13);
                 caption.wordWrap = true;
-                rightCaption = Style(13,panelFont,TextAnchor.MiddleRight);
-                action = Style(14,panelFont,TextAnchor.MiddleCenter);
-                primaryAction = Style(14,panelFont,TextAnchor.MiddleCenter);
-                themeLabel = Style(13,panelFont,TextAnchor.MiddleCenter);
-                input = Style(20,panelFont);
+                rightCaption = Style(13,TextAnchor.MiddleRight);
+                action = Style(14,TextAnchor.MiddleCenter);
+                primaryAction = Style(14,TextAnchor.MiddleCenter);
+                primaryAction.fontStyle = FontStyle.Bold;
+                themeLabel = Style(13,TextAnchor.MiddleCenter);
+                input = Style(20);
                 input.padding = new RectOffset(9,8,0,0);
                 input.contentOffset = Vector2.zero;
             }
-            title.font = number.font = palette.SerifHeadings ? displayFont : panelFont;
             SetInk(title,palette.Text);
             SetInk(number,palette.Text);
             SetInk(comparison,palette.Text);
@@ -402,11 +401,10 @@ namespace SuzerainSaveStudio.Live
         }
 
         [HideFromIl2Cpp]
-        private static GUIStyle Style(int size,Font font,TextAnchor align = TextAnchor.MiddleLeft)
+        private static GUIStyle Style(int size,TextAnchor align = TextAnchor.MiddleLeft)
         {
             var style = new GUIStyle();
             style.fontSize = size;
-            style.font = font;
             style.alignment = align;
             style.clipping = TextClipping.Clip;
             return style;
@@ -533,13 +531,16 @@ namespace SuzerainSaveStudio.Live
                     focused = field.Key;
                     Notice("","");
                 }
-                GUI.Label(new Rect(r.x+10,r.y+5,r.width-20,22),FieldName(field.Key),fieldName);
-                DrawValue(new Rect(r.x+10,r.y+27,r.width-18,33),field.Value.ToString(CultureInfo.InvariantCulture),number);
+                var nameRect = new Rect(r.x+10,r.y+5,r.width-20,22);
+                var name = FieldName(field.Key);
+                if (nameRect.width < 136) DrawFittedLabel(nameRect,name,fieldName);
+                else GUI.Label(nameRect,name,fieldName);
+                DrawFittedLabel(new Rect(r.x+10,r.y+27,r.width-18,33),field.Value.ToString(CultureInfo.InvariantCulture),number);
             }
         }
 
         [HideFromIl2Cpp]
-        private static void DrawValue(Rect rect,string value,GUIStyle style)
+        private static void DrawFittedLabel(Rect rect,string value,GUIStyle style)
         {
             int normalSize = style.fontSize;
             if (value.Length > 5)
@@ -560,7 +561,7 @@ namespace SuzerainSaveStudio.Live
             if (confirming)
             {
                 GUI.Label(new Rect(x,178,inside,24),T("确认修改","Confirm change")+"  ·  "+FieldName(key),body);
-                DrawValue(new Rect(x,202,inside,32),
+                DrawFittedLabel(new Rect(x,202,inside,32),
                     original.ToString(CultureInfo.InvariantCulture)+"   →   "+proposed.ToString(CultureInfo.InvariantCulture),comparison);
                 float confirmW = Math.Min(166,inside*.60f);
                 if (Button(new Rect(x+inside-confirmW-84,237,77,32),"cancel",T("取消","Cancel")))

@@ -5,12 +5,13 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.16.0";
+constexpr wchar_t APP_VERSION[] = L"0.16.1";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
        FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH };
 #include "appearance.hpp"
+#include "typography.hpp"
 struct FieldPageState {
     std::wstring query;
     std::string preferred;
@@ -20,7 +21,7 @@ struct FieldCaption { std::wstring label, searchText; };
 struct App {
     HWND win{},path{},meta{},grid{},search{},name{},desc{},edit{},oldValue{},valueLabel{},notice{},helpText{},empty{};
     std::map<int,HWND> controls;
-    HFONT font{},small{},title{},large{},bold{},mono{},brand{};
+    HFONT font{},small{},title{},large{},bold{},mono{},brand{},emphasis{},tableNumber{},compactNumber{};
     HBRUSH bg{},panel{},input{}; HIMAGELIST rowHeight{};
     UINT dpi=96; int tab=0; bool populating=false,editingDirty=false,autoCap=true,changedOnly=false,restoreArmed=false;
     bool boolValue=false,licenseMode=false; int gridTop=350,tableW=0,rightX=0; std::wstring noticeText=L"未打开存档";
@@ -93,20 +94,20 @@ LRESULT CALLBACK headerProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
     return DefSubclassProc(h,m,wp,lp);
 }
 void fonts(){
-    HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand};
-    auto f=[](int size,int weight,const wchar_t*face=L"Microsoft YaHei UI"){return CreateFontW(-px(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face);};
-    const wchar_t* body=Theme::bodyFace();
-    const wchar_t* numberFace=Theme::index()>=2?L"Segoe UI":L"Georgia";
-    g.font=f(14,FW_NORMAL,body);g.small=f(13,FW_NORMAL,body);
-    g.title=f(29,Theme::index()>=2?FW_SEMIBOLD:FW_NORMAL,Theme::headingFace());
-    g.large=f(32,FW_NORMAL,numberFace);g.bold=f(18,FW_SEMIBOLD,body);g.mono=f(22,FW_NORMAL,L"Segoe UI");
-    g.brand=f(22,FW_NORMAL,numberFace);
+    HFONT old[]={g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber};
+    const auto faces=typography::chooseFaces(i18n::language);
+    auto make=[](int dip,const wchar_t* face){return typography::make(g.dpi,dip,face);};
+    g.font=make(14,faces.text);g.small=make(13,faces.text);g.emphasis=make(14,faces.emphasis);
+    g.title=make(26,faces.emphasis);g.bold=make(17,faces.emphasis);
+    g.large=make(32,typography::numbers);g.compactNumber=make(19,typography::numbers);
+    g.tableNumber=make(15,typography::numbers);g.mono=make(20,typography::numbers);
+    g.brand=make(21,L"Segoe UI Semibold");
     if(g.win)EnumChildWindows(g.win,[](HWND h,LPARAM){SendMessageW(h,WM_SETFONT,(WPARAM)g.font,TRUE);return TRUE;},0);
-    for(HWND h:{g.path,g.meta,g.desc,g.notice,g.oldValue,g.valueLabel})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)g.small,TRUE);
+    for(HWND h:{g.path,g.meta,g.notice,g.oldValue,g.valueLabel})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)g.small,TRUE);
     if(g.name)SendMessageW(g.name,WM_SETFONT,(WPARAM)g.bold,TRUE);
     if(g.edit)SendMessageW(g.edit,WM_SETFONT,(WPARAM)g.mono,TRUE);
     if(g.grid){
-        auto rows=ImageList_Create(1,px(31),ILC_COLOR32,1,1);
+        auto rows=ImageList_Create(1,px(34),ILC_COLOR32,1,1);
         if(rows){ListView_SetImageList(g.grid,rows,LVSIL_SMALL);if(g.rowHeight)ImageList_Destroy(g.rowHeight);g.rowHeight=rows;}
     }
     for(auto h:old)if(h)DeleteObject(h);
@@ -419,7 +420,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.16.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.16.1 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -766,5 +767,5 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
         }
         if(!IsDialogMessageW(w,&msg)){TranslateMessage(&msg);DispatchMessageW(&msg);}
     }
-    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;
+    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;
 }

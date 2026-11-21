@@ -139,7 +139,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                 tx.right=badge.left-px(4);
                 title=tr(L"修改预览");
             }
-            drawText(d->hDC, title, tx, g.font, fg);
+            drawText(d->hDC, title, tx, activeNav?g.emphasis:g.font, fg);
         }
     } else if(id==APPEARANCE) {
         const bool compact=workspaceGeometry().compactRail;
@@ -147,7 +147,9 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         RECT mark{px(9),cy-px(5),px(19),cy+px(5)};
         rounded(d->hDC,mark,Theme::accent,Theme::accent,5);
         tx.left=px(26);tx.right-=px(17);
-        auto caption=compact?std::wstring(Theme::name(Theme::index())):textOf(d->hwndItem);
+        auto caption=textOf(d->hwndItem);
+        if(compact || typography::width(d->hDC,g.small,caption)>tx.right-tx.left)
+            caption=Theme::name(Theme::index());
         drawText(d->hDC,caption,tx,g.small,fg);
         int x=r.right-px(11);
         auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),Theme::muted);auto old=SelectObject(d->hDC,pen);
@@ -166,7 +168,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             }
             tx.left += px(25);
         }
-        drawText(d->hDC, textOf(d->hwndItem), tx, g.font, fg,
+        drawText(d->hDC, textOf(d->hwndItem), tx, primary?g.emphasis:g.font, fg,
                  (check ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE);
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
@@ -221,7 +223,11 @@ void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
         wchar_t value[2048]{};ListView_GetItemText(g.grid,row,col,value,2048);
         COLORREF ink=col==0?Theme::text:Theme::muted;
         if((col==2 && changed) || (col==0 && selected))ink=Theme::accentInk;
-        literalText(dc,value,cell,col==3?g.small:g.font,ink,gridAlignment(col));
+        HFONT face=col==3?g.small:g.font;
+        if(col==0 && selected)face=g.emphasis;
+        if(g.tab<=5 && (col==1 || col==2) && ((*value>=L'0' && *value<=L'9') || *value==L'-' || *value==L'+'))
+            face=g.tableNumber;
+        literalText(dc,value,cell,face,ink,gridAlignment(col));
     }
     if(!selected) {
         RECT rule{px(13),r.bottom-1,r.right-px(9),r.bottom};fill(dc,rule,Theme::stripe);

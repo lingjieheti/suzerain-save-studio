@@ -4,7 +4,7 @@
 
 這是我玩《Suzerain》時為自己做的存檔編輯器，平常用來查預算、調整資源。在這裡分享給同樣喜歡索德蘭和里奇亞的玩家。
 
-[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.0/SuzerainSaveStudio-0.16.0-Live-Preview-win-x64.zip)
+[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)
 
 ## 編輯存檔
 

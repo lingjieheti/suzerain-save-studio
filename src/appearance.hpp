@@ -81,13 +81,6 @@ inline constexpr Names translations[] = {
 };
 inline const wchar_t* label() { return translations[i18n::language].label; }
 inline const wchar_t* name(int id) { return translations[i18n::language].skins[valid(id) ? id : fjordIndex]; }
-inline const wchar_t* bodyFace() {
-    return i18n::language<=1?L"Microsoft YaHei UI":i18n::language==3?L"Yu Gothic UI":i18n::language==4?L"Malgun Gothic":L"Segoe UI";
-}
-inline const wchar_t* headingFace() {
-    if(selected >= 2) return bodyFace();
-    return i18n::language<=1?L"SimSun":i18n::language==3?L"Yu Mincho":i18n::language==4?L"Batang":L"Georgia";
-}
 inline int radius(int paperRadius) {
     if(paperRadius <= 7) return paperRadius;
     if(selected == fjordIndex) return std::clamp(paperRadius - 2, 7, 14);

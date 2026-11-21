@@ -12,7 +12,7 @@ struct State {
     HWND win{}, list{}, filter{}, clearSearch{}, campaign{}, status{}, path{}, add{}, refresh{}, open{}, cancelButton{}, heading{};
     HWND browse{}, live{}, appearance{}, practiceTitle{}, practiceHint{}, mainDemo{}, riziaDemo{}, empty{};
     UINT dpi=96;
-    HFONT font{}, small{}, bold{}, subheading{}, emphasis{};
+    HFONT font{}, small{}, bold{}, subheading{}, emphasis{}, number{};
     HIMAGELIST rowHeight{};
     std::vector<fs::path> roots;
     rizia::discovery::Result result;
@@ -27,7 +27,7 @@ struct State {
     std::atomic_bool cancel{false}, done{false};
     bool busy=false, populating=false;
     std::wstring error;
-    ~State(){ stop(); if(rowHeight)ImageList_Destroy(rowHeight); for(auto f:{font,small,bold,subheading,emphasis})if(f)DeleteObject(f); }
+    ~State(){ stop(); if(rowHeight)ImageList_Destroy(rowHeight); for(auto f:{font,small,bold,subheading,emphasis,number})if(f)DeleteObject(f); }
     void stop(){cancel.store(true);if(worker.joinable())worker.join();busy=false;}
     int scale(int n)const{return MulDiv(n,dpi,96);}
     void move(HWND h,int x,int y,int w,int he){MoveWindow(h,scale(x),scale(y),scale(std::max(1,w)),scale(std::max(1,he)),TRUE);}
@@ -41,10 +41,12 @@ inline HWND child(State& s,const wchar_t* cls,const wchar_t* text,DWORD style,in
     SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return h;
 }
 inline void setFonts(State& s){
-    auto make=[&](int size,int weight,const wchar_t* face=nullptr){return CreateFontW(-s.scale(size),0,0,0,weight,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY,DEFAULT_PITCH,face?face:Theme::bodyFace());};
-    HFONT old[]={s.font,s.small,s.bold,s.subheading,s.emphasis};
-    s.font=make(14,FW_NORMAL);s.small=make(12,FW_NORMAL);s.bold=make(32,FW_NORMAL,Theme::headingFace());
-    s.subheading=make(21,FW_NORMAL,Theme::headingFace());s.emphasis=make(14,FW_SEMIBOLD);
+    const auto faces=typography::chooseFaces(i18n::language);
+    auto make=[&](int dip,const wchar_t* face){return typography::make(s.dpi,dip,face);};
+    HFONT old[]={s.font,s.small,s.bold,s.subheading,s.emphasis,s.number};
+    s.font=make(14,faces.text);s.small=make(13,faces.text);s.bold=make(27,faces.emphasis);
+    s.subheading=make(18,faces.emphasis);s.emphasis=make(14,faces.emphasis);
+    s.number=make(14,typography::numbers);
     EnumChildWindows(s.win,[](HWND h,LPARAM p){auto&s=*reinterpret_cast<State*>(p);SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return TRUE;},(LPARAM)&s);
     for(auto h:{s.status,s.path,s.practiceHint})if(h)SendMessageW(h,WM_SETFONT,(WPARAM)s.small,TRUE);
     if(s.heading)SendMessageW(s.heading,WM_SETFONT,(WPARAM)s.bold,TRUE);
@@ -54,7 +56,7 @@ inline void setFonts(State& s){
         SendMessageW(s.campaign,CB_SETITEMHEIGHT,0,s.scale(26));
     }
     for(auto f:old)if(f)DeleteObject(f);
-    if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(47),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
+    if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(49),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
 }
 inline void layoutSearch(State& s){
     const bool showClear=!s.busy && GetWindowTextLengthW(s.filter)>0;

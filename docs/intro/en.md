@@ -4,7 +4,7 @@
 
 I made this tool for my own *Suzerain* campaigns. I use it to check the government budget in Sordland, see how Rizia’s energy changes each turn, and keep the fields I edit most in one place.
 
-**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.0/SuzerainSaveStudio-0.16.0-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.0)
+**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.16.1/SuzerainSaveStudio-0.16.1-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.16.1)
 
 ## Try a save
 

@@ -35,7 +35,13 @@ void layout() {
         place(ctl(item.first), tx, a.shortScreen ? 7 : 14, bw, 32);
         tx += bw + 6;
     }
-    int themeWidth=a.compactRail?116:145;
+    int themeWidth=116;
+    if(!a.compactRail) {
+        auto dc=GetDC(g.win);
+        const int caption=typography::width(dc,g.small,textOf(ctl(APPEARANCE)));
+        ReleaseDC(g.win,dc);
+        themeWidth=std::clamp(MulDiv(caption,96,g.dpi)+46,145,200);
+    }
     int themeRight=toolbarEnd-(a.compactRail?121:0);
     place(ctl(APPEARANCE),themeRight-themeWidth,a.shortScreen?44:55,themeWidth,29);
     int pathWidth=themeRight-themeWidth-a.left-8;
@@ -83,9 +89,9 @@ void layout() {
     if(edit)place(ctl(FIELD_FAVORITE),rx+rw-favoriteW,y-3,favoriteW,25);
     if (edit) {
         y += a.shortScreen ? 27 : 34;
-        place(g.valueLabel,rx,y,rw,18);
+        place(g.valueLabel,rx,y,rw,20);
         y += 20;
-        place(g.edit,rx+8,y+4,rw-16,27);
+        place(g.edit,rx+8,y+3,rw-16,29);
         place(ctl(BOOL_FALSE),rx,y,(rw-6)/2,35);
         place(ctl(BOOL_TRUE),rx+(rw-6)/2+6,y,rw-(rw-6)/2-6,35);
         y += 42;
@@ -150,21 +156,28 @@ void layout() {
         RECT client{}; GetClientRect(g.grid,&client);
         int avail=MulDiv(client.right,96,g.dpi)-3;
         int widths[4]{};
+        auto dc=GetDC(g.grid);
+        auto columnWidth=[&](const wchar_t* caption,int insets) {
+            return MulDiv(typography::width(dc,g.small,tr(caption)),96,g.dpi)+insets;
+        };
         if (backup) {
             widths[0]=std::min(156,avail*40/100); widths[1]=std::min(72,avail/5); widths[2]=avail-widths[0]-widths[1];
         } else if (review) {
-            widths[1]=widths[2]=std::clamp(avail/5,51,108); widths[0]=avail-widths[1]-widths[2];
+            const int budget=std::clamp(avail/5,51,108);
+            widths[1]=std::max(budget,columnWidth(L"原值",18));
+            widths[2]=std::max(budget,columnWidth(L"保存为",18));
+            widths[0]=avail-widths[1]-widths[2];
         } else {
-            auto dc=GetDC(g.grid);auto old=SelectObject(dc,g.small);
             int typeW=0;
-            for(const wchar_t* caption : {L"类型",L"数值",L"开关"}) {
-                auto s=tr(caption);SIZE size{};GetTextExtentPoint32W(dc,s.c_str(),(int)s.size(),&size);
-                typeW=std::max(typeW,MulDiv(size.cx,96,g.dpi)+16);
-            }
-            SelectObject(dc,old);ReleaseDC(g.grid,dc);
-            widths[3]=std::clamp(std::max(avail/9,typeW),44,94); widths[1]=widths[2]=std::clamp(avail/6,48,92);
+            for(const wchar_t* caption : {L"类型",L"数值",L"开关"})
+                typeW=std::max(typeW,columnWidth(caption,16));
+            widths[3]=std::clamp(std::max(avail/9,typeW),44,94);
+            const int budget=std::clamp(avail/6,48,92);
+            widths[1]=std::max(budget,columnWidth(L"原值",18));
+            widths[2]=std::max(budget,columnWidth(L"待保存",18));
             widths[0]=avail-widths[1]-widths[2]-widths[3];
         }
+        ReleaseDC(g.grid,dc);
         for (int i=0;i<4;++i) ListView_SetColumnWidth(g.grid,i,px(std::max(0,widths[i])));
         if (auto header=ListView_GetHeader(g.grid)) InvalidateRect(header,nullptr,FALSE);
     }
@@ -238,7 +251,7 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
         if(showSymbol)resourceSymbol(dc,i,base,x+pad,labelY+2,inks[i]);
         int available=inner-(showSymbol?23:0);
         int labelW=tall?available:available*3/5;
-          HFONT numberFont=tall?g.large:g.bold;
+          HFONT numberFont=tall?g.large:g.compactNumber;
           auto old=SelectObject(dc,numberFont);SIZE extent{};
           GetTextExtentPoint32W(dc,balance.c_str(),static_cast<int>(balance.size()),&extent);
           SelectObject(dc,old);
@@ -249,7 +262,7 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
         // Reserve a second column for income and cap only on the tall DLC card.
         int numberX=tall?x+pad:labelX+labelW+3;
         int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
-        if(extent.cx>px(numberW))numberFont=tall?g.bold:g.small;
+        if(extent.cx>px(numberW))numberFont=tall?g.compactNumber:g.tableNumber;
         drawText(dc,balance,rect(numberX,tall?y+33:base?y+15:y+1,numberW,tall?45:26),numberFont,
                  pending().count(key)?Theme::accentInk:Theme::text,
                  (tall?DT_LEFT:DT_RIGHT)|DT_VCENTER|DT_SINGLELINE);

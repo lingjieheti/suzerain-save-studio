@@ -199,6 +199,17 @@ internal static class Program
             {
                 Click(chinese ? theme.Chinese : theme.English);
                 Check(GUI.Fills[1] == theme.Background, "Selected palette is used by the live panel");
+                var heading = GUI.LabelTypes[chinese ? "实时编辑" : "Live editor"];
+                var name = GUI.LabelTypes[chinese ? "王国预算" : "Royal budget"];
+                var value = GUI.LabelTypes["10"];
+                var primary = GUI.ButtonTypes[chinese ? "预览修改" : "Preview change"];
+                Check(GUI.LabelTypes.Values.All(label => label.Font == null) &&
+                    GUI.ButtonTypes.Values.All(button => button.Font == null),
+                    "Every painted label and action inherits the player's registered GUI font");
+                Check(heading.Weight == FontStyle.Bold && primary.Weight == FontStyle.Bold &&
+                    heading.Size > name.Size, "Heading and primary action have emphasis in both languages");
+                Check(value.Weight == FontStyle.Normal && value.Size > name.Size,
+                    "Resource figures stay prominent and use regular digits in every palette");
                 var group = GUI.Group;
                 float scale = GUI.GroupScale;
                 Check(group.x >= 0 && group.y >= 0 && (group.x + group.width) * scale <= width + .01f &&
@@ -213,6 +224,50 @@ internal static class Program
                     previousRight = rect.x + rect.width;
                 }
             }
+        }
+    }
+
+    private static void CompactType()
+    {
+        LoadCampaign("StoryPack_Main");
+        DialogueLua.Put(Budget, int.MinValue);
+        Poll();
+        Click("English");
+        Screen.width = 334;
+        Screen.height = 415;
+        Frame(EventType.Repaint);
+        void Fits(string text)
+        {
+            var draw = GUI.LabelTypes[text];
+            var style = new GUIStyle { font = draw.Font, fontSize = draw.Size };
+            Check(style.CalcSize(new GUIContent(text)).x <= draw.Bounds.width,
+                "Compact label fits: " + text);
+        }
+        Fits("Government budget");
+        Fits("-2147483648");
+        GUI.TypedText = "2147483647";
+        Frame(EventType.Repaint);
+        Click("Preview change");
+        Fits("-2147483648   →   2147483647");
+    }
+
+    private static void MenuLabels()
+    {
+        Managers.Instance = null;
+        PersistenceManager.Instance = null;
+        Poll();
+        foreach (bool zh in new[] { false, true, false })
+        {
+            if (!GUI.Buttons.ContainsKey(zh ? "English" : "简体中文"))
+                Click(zh ? "简体中文" : "English");
+            var title = zh ? "实时编辑" : "Live editor";
+            var hint = zh ? "Ctrl+F8  显示或隐藏面板" : "Ctrl+F8  Show or hide panel";
+            var state = zh ? "当前没有可编辑的战役" : "No editable campaign";
+            var header = GUI.LabelTypes[title];
+            var footer = GUI.LabelTypes[hint];
+            Check(GUI.Labels.Count(s => s==title)==1 && GUI.Labels.Count(s => s==hint)==1 &&
+                GUI.Labels.Contains(state) && header.Bounds.y < 20 && footer.Bounds.y > 350 &&
+                header.Size > footer.Size, "The title, empty state and footer survive a complete menu repaint");
         }
     }
 
@@ -239,6 +294,8 @@ internal static class Program
                 Layouts(false);
                 Click("简体中文");
                 Layouts(true);
+                CompactType();
+                MenuLabels();
             }
             finally
             {

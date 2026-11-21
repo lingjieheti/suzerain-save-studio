@@ -183,6 +183,72 @@ double textContrast(COLORREF ink, COLORREF surface){
     return (std::max(a,b) + 0.05) / (std::min(a,b) + 0.05);
 }
 
+void testTypography(const fs::path& path) {
+    loadDocumentBytes(readFile(path),path,0);
+    navigate(0);
+    const auto originalDpi=g.dpi;
+    const int originalTheme=Theme::index(), originalLanguage=i18n::language;
+    const auto dc=GetDC(g.win);
+    for (const auto dpi : {96u,144u,192u}) {
+        g.dpi=dpi;
+        SetWindowPos(g.win,nullptr,0,0,px(840),px(650),SWP_NOMOVE|SWP_NOZORDER);
+        for (const auto language : {0,1,2,3,4}) {
+            i18n::setLanguage(language);
+            for (int theme=0;theme<Theme::count;++theme) {
+                Theme::use(theme);
+                fonts();
+                layout();
+                for (const auto digits : {g.large,g.compactNumber,g.tableNumber,g.mono}) {
+                    auto old=SelectObject(dc,digits);
+                    int widths[10]{};
+                    const bool measured=GetCharWidth32W(dc,L'0',L'9',widths)!=0;
+                    SelectObject(dc,old);
+                    const auto range=std::minmax_element(std::begin(widths),std::end(widths));
+                    check(measured && *range.first>0 && *range.first==*range.second,
+                          "Dashboard, table and input digits retain equal advance widths");
+                }
+                for (const auto field : {g.search,g.edit}) {
+                    auto old=SelectObject(dc,reinterpret_cast<HFONT>(SendMessageW(field,WM_GETFONT,0,0)));
+                    TEXTMETRICW metrics{};
+                    const bool measured=GetTextMetricsW(dc,&metrics)!=0;
+                    SelectObject(dc,old);
+                    RECT area{};GetClientRect(field,&area);
+                    const auto context=std::string(field==g.search?"Search":"Value")+" input at "+
+                        std::to_string(dpi)+" DPI, language "+std::to_string(language)+", theme "+
+                        std::to_string(theme)+" requires "+std::to_string(metrics.tmHeight)+
+                        "px; available "+std::to_string(area.bottom-area.top)+"px";
+                    check(measured && metrics.tmHeight<=area.bottom-area.top,
+                          context.c_str());
+                }
+            }
+        }
+    }
+    g.dpi=96;
+    SetWindowPos(g.win,nullptr,0,0,px(680),px(630),SWP_NOMOVE|SWP_NOZORDER);
+    for (int language=0;language<static_cast<int>(std::size(i18n::names));++language) {
+        i18n::setLanguage(language);fonts();
+        for (int tab : {0,5}) {
+            navigate(tab);
+            for (int col : {1,2}) {
+                const auto heading=tr(col==1?L"原值":tab==5?L"保存为":L"待保存");
+                check(ListView_GetColumnWidth(g.grid,col)>=typography::width(dc,g.small,heading)+px(16),
+                      "Original and proposed value headings fit in the compact table");
+            }
+        }
+    }
+    i18n::setLanguage(2);fonts();
+    SetWindowPos(g.win,nullptr,0,0,px(1160),px(770),SWP_NOMOVE|SWP_NOZORDER);
+    for (int theme=0;theme<Theme::count;++theme) {
+        Theme::use(theme);updateAppearanceLabel();layout();
+        RECT area{};GetClientRect(ctl(APPEARANCE),&area);
+        check(typography::width(dc,g.small,textOf(ctl(APPEARANCE)))<=area.right-area.left-px(43),
+              "The wide appearance button fits the full English theme name");
+    }
+    ReleaseDC(g.win,dc);
+    g.dpi=originalDpi;i18n::setLanguage(originalLanguage);Theme::use(originalTheme);
+    fonts();layout();
+}
+
 void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
@@ -431,6 +497,7 @@ int main(int argc,char** argv){
         testAppearance(fs::u8path(argv[1]));
         testFavorites(fs::u8path(argv[1]),fs::u8path(argv[2]));
         testInspectorLayout(fs::u8path(argv[2]));
+        testTypography(fs::u8path(argv[2]));
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";
         return 0;

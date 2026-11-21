@@ -35,6 +35,7 @@ namespace UnityEngine
     public enum EventType { Layout, Repaint, KeyDown, KeyUp, MouseDown, MouseUp, ScrollWheel, Used }
     public enum KeyCode { None, F8, Escape, Tab, Space, Return, KeypadEnter }
     public enum TextAnchor { MiddleCenter, MiddleLeft, MiddleRight }
+    public enum FontStyle { Normal, Bold }
     public enum TextClipping { Clip }
     public enum ScaleMode { StretchToFill }
 
@@ -73,6 +74,7 @@ namespace UnityEngine
     {
         public Font font;
         public int fontSize;
+        public FontStyle fontStyle;
         public bool wordWrap;
         public readonly GUIStyleState normal = new(), hover = new(), active = new(), focused = new();
         public RectOffset padding;
@@ -107,6 +109,8 @@ namespace UnityEngine
         public static float GroupScale;
         public static readonly Dictionary<string, Rect> Buttons = new();
         public static readonly List<string> Labels = new();
+        public static readonly Dictionary<string, (Font Font, FontStyle Weight, int Size, Rect Bounds)> LabelTypes = new();
+        public static readonly Dictionary<string, (Font Font, FontStyle Weight)> ButtonTypes = new();
         public static readonly List<Color> Fills = new();
         public static string TypedText, DisplayedDraft;
 
@@ -120,14 +124,23 @@ namespace UnityEngine
             GroupScale = matrix.ScaleFactor;
             Buttons.Clear();
             Labels.Clear();
+            LabelTypes.Clear();
+            ButtonTypes.Clear();
             Fills.Clear();
             DisplayedDraft = null;
         }
         public static void EndGroup() { }
-        public static void Label(Rect rect, string text, GUIStyle style) => Labels.Add(text);
+        public static void Label(Rect rect, string text, GUIStyle style)
+        {
+            Labels.Add(text);
+            LabelTypes[text] = (style.font,style.fontStyle,style.fontSize,rect);
+        }
         public static bool Button(Rect rect, string label, GUIStyle style)
         {
-            if (label.Length > 0) Buttons.Add(label, rect);
+            if (label.Length > 0) {
+                Buttons.Add(label,rect);
+                ButtonTypes[label] = (style.font,style.fontStyle);
+            }
             return enabled && Event.current.type == EventType.MouseUp && rect.Contains(Event.current.mousePosition);
         }
         public static string TextField(Rect rect, string draft, int maxLength, GUIStyle style)
