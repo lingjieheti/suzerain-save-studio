@@ -1,6 +1,14 @@
-# v0.14.0 Preview — Windows validation
+# v0.15.0 Preview — Windows validation
 
-The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.14.0 and it runs independently of the plugin.
+The Windows x64 archive contains the portable editor and its optional in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0. Its version resource reports 0.15.0 and it runs independently of the plugin.
+
+## Visual update in 0.15.0
+
+- Tested the Windows workspace with the built-in Rizia sample and the picker with six synthetic saves. Checked wide (1160×770), compact (840×650) and minimum (680×485) editor windows. In the minimum advanced layout the search field occupies its own row. All three filter/import controls have space for their labels in each of the 11 desktop languages. The selection, keyboard focus, long field titles and scrollable notes have dedicated checks in the native suite.
+- Captured all four themes from the Windows executable. At 535×440 the picker keeps the primary action visible, including the longer French and Russian captions. The capture process restores the previously selected user preferences.
+
+- The live panel groups resource choices and adjustment buttons. The confirmation view measures the complete value pair using the interface font so the arrow and long signed numbers fit the available space.
+- The production plugin built against the local Steam/BepInEx installation. The release passed 73 simulated campaign checks and 206 panel checks, including 24 contrast checks covering grouped controls across the four palettes. The panel screenshots in this release were rendered from the production UI code with sample values.
 
 ## Player-requested changes in 0.14.0
 
@@ -14,7 +22,7 @@ The Windows x64 archive contains the portable editor and its optional in-game pl
 - Used multi-word Chinese and raw-key queries on common and advanced pages, including an empty result. Verified selection memory, invalid-input handling, individual reversion, undo/redo and the counts for linked Rizia resource caps.
 - Inspected the wide and compact editor layouts in Chinese and English at 200% Windows scaling. The editor screenshots use embedded examples. The save library screenshot uses six synthetic campaign files. Its search, empty results, keyboard focus and campaign choices were exercised in a native Windows dialog.
 - Opened a scratch copy of a synthetic save through the executable, applied a budget increase and confirmed that only the expected numeric bytes changed. The pre-save backup matched the original byte for byte. Restoring through the Backups page reproduced the original and kept the modified version as a second backup.
-- All 30 synthetic file I/O and setup checks and 119 native editor checks passed, including external modifications, concurrent saves, campaign isolation, the sample overwrite guard, existing plugin handling and theme changes during an active edit.
+- All 30 synthetic file I/O and setup checks and 159 native editor checks passed, including external modifications, concurrent saves, campaign isolation, the sample overwrite guard, existing plugin handling and theme changes during an active edit.
 
 ## Appearance
 

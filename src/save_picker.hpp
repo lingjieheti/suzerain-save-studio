@@ -54,7 +54,7 @@ inline void setFonts(State& s){
         SendMessageW(s.campaign,CB_SETITEMHEIGHT,0,s.scale(26));
     }
     for(auto f:old)if(f)DeleteObject(f);
-    if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(38),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
+    if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(47),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
 }
 inline void layout(State& s){
     if(!s.empty)return;
@@ -65,14 +65,15 @@ inline void layout(State& s){
     const int margin=s.stacked?16:26;
     const int inner=w-2*margin, top=compact?7:17, headerH=compact?43:55;
     const int bodyY=top+headerH+6;
-    const int gap=s.stacked?8:16, rail=std::clamp(inner/4,206,270);
+    const int gap=s.stacked?8:20, rail=std::clamp(inner/4,206,270);
     const int cardW=s.stacked?inner:inner-rail-gap;
     const int pad=s.stacked?10:14;
     s.footerY=h-(compact?48:62);
     const int bodyBottom=s.footerY-(compact?7:12);
-    const int cardBottom=s.stacked?bodyBottom-(compact?84:97)-gap:bodyBottom;
-    const int tableX=margin+1, tableTop=bodyY+(compact?45:55);
-    const int tableWidth=cardW-2, tableBottom=cardBottom-(compact?38:46);
+    const int cardBottom=s.stacked?bodyBottom-(compact?97:104)-gap:bodyBottom;
+    const int tableInset=s.stacked?5:9;
+    const int tableX=margin+tableInset, tableTop=bodyY+(compact?45:55);
+    const int tableWidth=cardW-2*tableInset, tableBottom=cardBottom-(compact?38:46);
     const int campaignW=std::clamp(cardW/3,120,165);
     const int filterX=margin+pad, filterY=bodyY+(compact?7:12);
     const int filterW=cardW-pad*2-campaignW-8;
@@ -109,32 +110,42 @@ inline void layout(State& s){
     if(textOf(s.practiceHint)!=hint)rawText(s.practiceHint,hint);
     if(s.stacked){
         const int y=cardBottom+gap;
-        s.practice=s.box(margin,y,inner,bodyBottom-y);
-        s.move(s.practiceTitle,margin+pad,y+5,158,26);
-        s.move(s.practiceHint,margin+pad+159,y+5,inner-pad*2-159,compact?31:35);
-        const int itemWidth=(inner-pad*2-12)/3;
-        const int by=y+(compact?37:43), bh=compact?33:39;
+        const int liveWidth=std::clamp(inner/4,118,160);
+        const int practiceW=inner-liveWidth-gap;
+        s.practice=s.box(margin,y,practiceW,bodyBottom-y);
+        s.move(s.practiceTitle,margin+pad,y+3,practiceW-pad*2,26);
+        s.move(s.practiceHint,margin+pad,y+29,practiceW-pad*2,32);
+        const int itemWidth=(practiceW-pad*2-6)/2;
+        const int by=y+62, bh=compact?29:34;
         s.move(s.mainDemo,margin+pad,by,itemWidth,bh);
         s.move(s.riziaDemo,margin+pad+itemWidth+6,by,itemWidth,bh);
-        s.move(s.live,margin+pad+2*(itemWidth+6),by,itemWidth,bh);
+        s.move(s.live,margin+practiceW+gap,y,liveWidth,bodyBottom-y);
     }else{
-        const int x=margin+cardW+gap, step=compact?35:43;
-        const int buttonY=bodyY+(compact?80:100);
-        const int boxH=buttonY-bodyY+step*2+21;
+        const int x=margin+cardW+gap, step=compact?37:46;
+        const int buttonY=bodyY+(compact?77:93);
+        const int boxH=buttonY-bodyY+step*2+13;
         s.practice=s.box(x,bodyY,rail,boxH);
-        s.move(s.practiceTitle,x+16,bodyY+13,rail-32,29);
-        s.move(s.practiceHint,x+16,bodyY+45,rail-32,buttonY-bodyY-45);
-        s.move(s.mainDemo,x+11,buttonY,rail-22,step);
-        s.move(s.riziaDemo,x+11,buttonY+step+5,rail-22,step);
-        s.move(s.live,x,bodyY+boxH+10,rail,compact?49:61);
+        s.move(s.practiceTitle,x+11,bodyY+6,rail-22,29);
+        s.move(s.practiceHint,x+11,bodyY+39,rail-22,buttonY-bodyY-39);
+        s.move(s.mainDemo,x+3,buttonY,rail-6,step);
+        s.move(s.riziaDemo,x+3,buttonY+step,rail-6,step);
+        s.move(s.live,x+3,bodyY+boxH+7,rail-6,compact?45:54);
     }
     const int footerButtons=s.footerY+(compact?6:12);
-    s.move(s.path,margin,footerButtons+6,inner-265,23);
-    s.move(s.cancelButton,w-margin-249,footerButtons,100,34);
-    s.move(s.open,w-margin-141,footerButtons,141,34);
+    HDC dc=GetDC(s.win);
+    auto previousFont=SelectObject(dc,s.emphasis);
+    const auto openCaption=textOf(s.open);SIZE extent{};
+    GetTextExtentPoint32W(dc,openCaption.c_str(),static_cast<int>(openCaption.size()),&extent);
+    SelectObject(dc,previousFont);ReleaseDC(s.win,dc);
+    const int openWidth=std::clamp(MulDiv(extent.cx,96,s.dpi)+44,141,210);
+    const int openX=w-margin-openWidth, cancelX=openX-108;
+    s.move(s.path,margin,footerButtons+6,cancelX-margin-12,23);
+    s.move(s.cancelButton,cancelX,footerButtons,100,34);
+    s.move(s.open,openX,footerButtons,openWidth,34);
     const int columns=tableWidth-20;
-    const bool showNames=columns>=605;
-    int widths[]={0,showNames?89:82,showNames?112:0,54,columns>=510?143:118};
+    // The campaign name lives below the filename. Keep its native subitem
+    // populated for assistive tools without adding another column to scan.
+    int widths[]={0,columns>=510?90:84,0,columns>=510?56:48,columns>=510?143:110};
     widths[0]=std::max(108,columns-widths[1]-widths[2]-widths[3]-widths[4]);
     for(int i=0;i<5;++i)ListView_SetColumnWidth(s.list,i,s.scale(widths[i]));
     InvalidateRect(s.win,nullptr,FALSE);
@@ -245,7 +256,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             s.appearance=child(s,L"BUTTON",L"",WS_TABSTOP|BS_OWNERDRAW,APPEARANCE);
             s.live=child(s,L"BUTTON",L"实时模式",WS_TABSTOP|BS_OWNERDRAW,LIVE_MODE);
             s.open=child(s,L"BUTTON",L"打开所选",WS_TABSTOP|BS_OWNERDRAW,IDOK);s.cancelButton=child(s,L"BUTTON",L"取消",WS_TABSTOP|BS_OWNERDRAW,IDCANCEL);
-            s.empty=child(s,L"STATIC",L"正在搜索…",SS_CENTER|SS_CENTERIMAGE|SS_ENDELLIPSIS,0);
+            s.empty=child(s,L"STATIC",L"正在搜索…",SS_OWNERDRAW,0);
             for(auto button:{s.add,s.refresh,s.mainDemo,s.riziaDemo,s.appearance,s.browse,s.live,s.open,s.cancelButton})SetWindowSubclass(button,buttonProc,1,0);
             applyPickerAppearance(s);RECT owner{},area{};GetWindowRect(g.win,&owner);MONITORINFO mi{};mi.cbSize=sizeof(mi);GetMonitorInfoW(MonitorFromWindow(g.win,MONITOR_DEFAULTTONEAREST),&mi);area=mi.rcWork;
             int width=std::min(s.scale(1010),(int)(area.right-area.left)),height=std::min(s.scale(624),(int)(area.bottom-area.top));
@@ -295,6 +306,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             break;}
         case WM_DRAWITEM:{
             const auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(lp);
+            if(item.CtlType==ODT_STATIC&&item.hwndItem==s.empty){drawEmpty(s,item);return TRUE;}
             if(item.CtlType==ODT_COMBOBOX&&item.CtlID==CAMPAIGN_FILTER){drawCampaignItem(s,item);return TRUE;}
             if(item.CtlType==ODT_BUTTON){drawButton(s,item);return TRUE;}
             break;}
@@ -303,7 +315,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         case WM_CTLCOLORLISTBOX:{auto dc=(HDC)wp;SetTextColor(dc,Theme::text);SetBkColor(dc,Theme::input);return (INT_PTR)g.input;}
         case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;
             SetTextColor(dc,h==s.path||h==s.status||h==s.practiceHint||h==s.empty?Theme::muted:Theme::text);
-            bool panel=h==s.status||h==s.practiceTitle||h==s.practiceHint||h==s.empty;
+            bool panel=h==s.status||((h==s.practiceTitle||h==s.practiceHint)&&s.stacked);
             SetBkColor(dc,h==s.filter?Theme::input:panel?Theme::panel:Theme::bg);
             return (INT_PTR)(h==s.filter?g.input:panel?g.panel:g.bg);}
         case WM_CLOSE:s.stop();EndDialog(w,IDCANCEL);return TRUE;

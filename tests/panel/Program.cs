@@ -130,6 +130,35 @@ internal static class Program
             LiveGame.Read().Find(RiziaBudget).Value == 10, "A cap change invalidates the pending confirmation");
     }
 
+    private static double Luminance(Color color)
+    {
+        static double Linear(byte channel)
+        {
+            double value = channel / 255.0;
+            return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
+    }
+
+    private static void GroupedControlContrast()
+    {
+        foreach (var theme in PanelAppearance.Choices)
+        {
+            void Contrast(Color foreground, Color background, double minimum, string element)
+            {
+                double first = Luminance(foreground), second = Luminance(background);
+                double ratio = (Math.Max(first, second) + 0.05) / (Math.Min(first, second) + 0.05);
+                Check(ratio >= minimum, $"{theme.English} {element}: contrast {ratio:F2}");
+            }
+            Contrast(theme.Muted, theme.Hover, 4.5, "resource label on the shared background");
+            Contrast(theme.Text, theme.Hover, 4.5, "step and theme buttons");
+            Contrast(theme.Muted, theme.Surface, 4.5, "selected resource label");
+            Contrast(theme.Text, theme.Surface, 4.5, "selected resource value");
+            Contrast(theme.Accent, theme.Surface, 3, "selected item indicator");
+            Contrast(theme.OnAccent, theme.Accent, 4.5, "primary action");
+        }
+    }
+
     private static void Layouts(bool chinese)
     {
         var labels = new[] { "-5", "-1", "+1", "+5", chinese ? "预览修改" : "Preview change" };
@@ -176,6 +205,7 @@ internal static class Program
             {
                 DraftAndKeyboard();
                 StaleAndInvalidDrafts();
+                GroupedControlContrast();
                 Layouts(false);
                 Click("简体中文");
                 Layouts(true);

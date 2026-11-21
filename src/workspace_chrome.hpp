@@ -7,6 +7,8 @@ struct WorkspaceGeometry {
     bool compactRail, shortScreen;
 };
 
+bool stackAdvancedFilters(const WorkspaceGeometry& a) { return g.tab==4 && a.list<560; }
+
 WorkspaceGeometry workspaceGeometry() {
     RECT bounds{};
     GetClientRect(g.win, &bounds);
@@ -24,12 +26,13 @@ WorkspaceGeometry workspaceGeometry() {
     a.inspector = std::clamp(a.content / 3, 180, 286);
     a.right = a.width - margin - a.inspector;
     a.list = a.right - a.left - a.gap;
-    a.headerBottom = a.shortScreen ? 78 : 102;
+    a.headerBottom = a.shortScreen ? 78 : 106;
     if (g.tab == 0 && a.height >= 540)
-        a.metricHeight = a.height < 710 ? 54 : 76;
-    a.presetsY = a.headerBottom + (a.metricHeight ? a.metricHeight + 9 : 0);
+        a.metricHeight = a.height < 710 ? 58 : 90;
+    a.presetsY = a.headerBottom + (a.metricHeight ? a.metricHeight + 11 : 0);
     a.toolsY = g.tab == 0 ? a.presetsY + 39 : a.headerBottom;
     a.listY = a.toolsY + (spacious ? 46 : 40);
+    if(stackAdvancedFilters(a))a.listY+=36;
     a.footer = a.height - (a.shortScreen ? 46 : 54);
     a.bottom = a.footer - 10;
     return a;
@@ -88,10 +91,11 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue) ||
                   (id == FILTER_FAVORITES && g.favoritesOnly) ||
                   (id == FIELD_FAVORITE && g.favorites.count(g.selected));
-    bool primary = (id == LATEST && !g.doc) || id == APPLY || (id == CONFIRM_SAVE && !g.demoResource) ||
+    bool primary = (id == LATEST && !g.doc) || (id == APPLY && (g.editingDirty || pending().empty())) || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
-                   (id == SAVE && (!pending().empty() || g.editingDirty));
-    bool quiet = id==FOLDER || id==RELOAD || id==HISTORY_UNDO || id==HISTORY_REDO;
+                   (id == SAVE && !g.editingDirty && !pending().empty());
+    bool quiet = id==FOLDER || id==RELOAD || id==OPEN || id==UNDOONE || id==FIELD_FAVORITE ||
+                 id==HISTORY_UNDO || id==HISTORY_REDO;
     bool inspector = id==APPLY || id==UNDOONE || id==BOOL_FALSE || id==BOOL_TRUE ||
                      id==SAVEAS || id==CONFIRM_SAVE || id==PATCH_EXPORT || id==REVIEW_REVERT ||
                      id==UNDOALL || id==BACKUP_RESTORE || id==BACKUP_CANCEL || id==COPY_KEY || id==EXPORT_CSV || id==FIELD_FAVORITE;
@@ -117,9 +121,24 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         int glyphX = compact ? (r.right - px(18)) / 2 : px(13);
         navSymbol(d->hDC, id - NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
                   activeNav ? Theme::accentInk : Theme::sideMuted);
+        if (activeNav) {
+            const int cy=r.bottom/2;
+            rounded(d->hDC,{r.left+px(2),cy-px(7),r.left+px(5),cy+px(7)},
+                    Theme::accent,Theme::accent,3);
+        }
         if (!compact) {
             tx.left += px(42); tx.right -= px(5);
-            drawText(d->hDC, textOf(d->hwndItem), tx, g.font, fg);
+            auto title=textOf(d->hwndItem);
+            if(id==NAV_BASE+5 && g.previewCount) {
+                auto count=std::to_wstring(g.previewCount);
+                int badgeWidth=px(12+8*static_cast<int>(count.size()));
+                RECT badge{r.right-px(8)-badgeWidth,r.bottom/2-px(9),r.right-px(8),r.bottom/2+px(9)};
+                rounded(d->hDC,badge,Theme::select,Theme::select,15);
+                drawText(d->hDC,count,badge,g.small,Theme::accentInk,DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+                tx.right=badge.left-px(4);
+                title=tr(L"修改预览");
+            }
+            drawText(d->hDC, title, tx, g.font, fg);
         }
     } else if(id==APPEARANCE) {
         const bool compact=workspaceGeometry().compactRail;
@@ -151,7 +170,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
         RECT focus = r; InflateRect(&focus, -px(4), -px(4));
-        auto pen=CreatePen(PS_DOT,1,primary?Theme::onAccent:Theme::focus);
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),primary?Theme::onAccent:Theme::focus);
         auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
         RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,px(5),px(5));
         SelectObject(d->hDC,oldBrush);SelectObject(d->hDC,oldPen);DeleteObject(pen);
@@ -181,9 +200,14 @@ void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
     auto state=ListView_GetItemState(g.grid,row,LVIS_SELECTED|LVIS_FOCUSED);
     bool selected=(state&LVIS_SELECTED)!=0;
     bool changed=g.tab==5 || (g.tab<5 && row>=0 && row<(int)g.rows.size() && pending().count(g.rows[row]));
-    fill(dc,r,selected?Theme::select:Theme::panel);
+    fill(dc,r,Theme::panel);
+    if(selected) {
+        RECT band=r;
+        InflateRect(&band,-px(3),-px(2));
+        rounded(dc,band,Theme::select,Theme::select,11);
+    }
     if(selected || changed) {
-        RECT mark{r.left,r.top+px(5),r.left+px(selected?3:2),r.bottom-px(5)};
+        RECT mark{r.left+px(4),r.top+px(8),r.left+px(selected?7:6),r.bottom-px(8)};
         fill(dc,mark,selected?Theme::accent:Theme::focus);
     }
     auto header=ListView_GetHeader(g.grid);
@@ -198,11 +222,13 @@ void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
         if((col==2 && changed) || (col==0 && selected))ink=Theme::accentInk;
         literalText(dc,value,cell,col==3?g.small:g.font,ink,gridAlignment(col));
     }
-    RECT rule{0,r.bottom-1,r.right,r.bottom};fill(dc,rule,Theme::stripe);
+    if(!selected) {
+        RECT rule{px(13),r.bottom-1,r.right-px(9),r.bottom};fill(dc,rule,Theme::stripe);
+    }
     if((state&LVIS_FOCUSED) && GetFocus()==g.grid) {
-        auto pen=CreatePen(PS_DOT,1,Theme::focus);auto old=SelectObject(dc,pen);
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),Theme::focus);auto old=SelectObject(dc,pen);
         auto brush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
-        Rectangle(dc,r.left+1,r.top+1,r.right-1,r.bottom-1);
+        RoundRect(dc,r.left+px(3),r.top+px(2),r.right-px(3),r.bottom-px(2),px(10),px(10));
         SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);
     }
 }
@@ -284,6 +310,19 @@ LRESULT CALLBACK detailProc(HWND h, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR, DW
         auto font=reinterpret_cast<HFONT>(SendMessageW(h,WM_GETFONT,0,0));
         auto old=SelectObject(dc,font);
         TEXTMETRICW metrics{};GetTextMetricsW(dc,&metrics);SelectObject(dc,old);ReleaseDC(h,dc);
+        if(g.tab<5 && h==g.desc) {
+            RECT bounds{};GetWindowRect(h,&bounds);
+            MapWindowPoints(nullptr,g.win,reinterpret_cast<POINT*>(&bounds),2);
+            const auto area=workspaceGeometry();
+            const int inset=area.shortScreen?10:16;
+            int room=std::max(px(12),px(area.bottom-inset)-static_cast<int>(bounds.top));
+            int height=std::min(room,std::max(px(32),static_cast<int>(lines*metrics.tmHeight)+px(8)));
+            if(bounds.bottom-bounds.top!=height) {
+                SetWindowPos(h,nullptr,0,0,bounds.right-bounds.left,height,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+                InvalidateRect(g.win,nullptr,FALSE);
+                return 0;
+            }
+        }
         bool needed=GetWindowTextLengthW(h)>0 && lines*metrics.tmHeight > content.bottom-content.top;
         if (needed != ((GetWindowLongPtrW(h,GWL_STYLE)&WS_VSCROLL)!=0))
             ShowScrollBar(h,SB_VERT,needed);

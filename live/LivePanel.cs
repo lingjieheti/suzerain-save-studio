@@ -27,7 +27,7 @@ namespace SuzerainSaveStudio.Live
         private float width;
         private Feedback feedback;
         private string focused = "", activate = "";
-        private GUIStyle title, number, fieldName, body, caption, rightCaption, action, primaryAction, themeLabel, input;
+        private GUIStyle title, number, comparison, fieldName, body, caption, rightCaption, action, primaryAction, themeLabel, input;
         private Font panelFont, displayFont;
         private GameObject pointerCanvas;
         private RectTransform pointerTarget;
@@ -373,6 +373,7 @@ namespace SuzerainSaveStudio.Live
                 displayFont = Font.CreateDynamicFontFromOSFont(new[] { "Georgia", "SimSun", "Microsoft YaHei" },25);
                 title = Style(25,displayFont);
                 number = Style(24,displayFont);
+                comparison = Style(23,panelFont);
                 fieldName = Style(13,panelFont);
                 body = Style(16,panelFont);
                 caption = Style(13,panelFont);
@@ -388,6 +389,7 @@ namespace SuzerainSaveStudio.Live
             title.font = number.font = palette.SerifHeadings ? displayFont : panelFont;
             SetInk(title,palette.Text);
             SetInk(number,palette.Text);
+            SetInk(comparison,palette.Text);
             SetInk(body,palette.Text);
             SetInk(action,palette.Text);
             SetInk(input,palette.Text);
@@ -485,8 +487,6 @@ namespace SuzerainSaveStudio.Live
             Fill(new Rect(Inset,59,7,7),ready ? palette.Success : palette.Muted,3.5f);
             GUI.Label(new Rect(Inset+14,49,content-97,26),campaign,caption);
             if (Button(new Rect(width-Inset-74,49,74,26),"refresh",T("刷新","Refresh"),quiet:true)) Refresh();
-            Fill(new Rect(Inset,83,content,1),palette.Border);
-
             bool hasFields = snapshot != null && snapshot.Fields.Count > 0;
             if (hasFields) DrawFields(content,ready);
             if (!ready || !hasFields)
@@ -507,35 +507,43 @@ namespace SuzerainSaveStudio.Live
         private void DrawFields(float content,bool ready)
         {
             int count = snapshot.Fields.Count;
-            float cardWidth = (content-7*(count-1))/count;
+            const float margin = 3;
+            float cell = (content-2*margin)/count;
+            Fill(new Rect(Inset,88,content,74),palette.Hover,11);
             for (int i=0;i<count;i++)
             {
                 var field = snapshot.Fields[i];
-                Rect r = new Rect(Inset+i*(cardWidth+7),95,cardWidth,64);
+                Rect r = new Rect(Inset+margin+i*cell,91,cell,68);
                 bool selected = field.Key == key;
                 bool enabled = !confirming && ready;
                 bool focus = enabled && focused == field.Key;
-                Color fill = selected ? palette.Selection : enabled && r.Contains(Event.current.mousePosition) ? palette.Hover : palette.Surface;
-                PaperBox(r,fill,focus ? palette.Text : (selected ? palette.Accent : palette.Border),8,focus ? 2 : 1);
+                if (selected || focus || (enabled && r.Contains(Event.current.mousePosition)))
+                    PaperBox(r,palette.Surface,focus ? palette.Text : palette.Border,9,focus ? 2 : 1);
+                if (selected)
+                    Fill(new Rect(r.x+1,r.y+15,3,r.height-30),palette.Accent,1.5f);
                 if (enabled && Press(r,field.Key,"",action) && !selected)
                 {
                     Select(field);
                     focused = field.Key;
                     Notice("","");
                 }
-                GUI.Label(new Rect(r.x+10,r.y+4,r.width-20,22),FieldName(field.Key),fieldName);
-                var numRect = new Rect(r.x+10,r.y+26,r.width-20,33);
-                string value = field.Value.ToString(CultureInfo.InvariantCulture);
-                int normalSize = number.fontSize;
-                if (value.Length > 5)
-                {
-                    float measured = number.CalcSize(new GUIContent(value)).x;
-                    if (measured > numRect.width)
-                        number.fontSize = Math.Max(11,(int)(normalSize*numRect.width/measured));
-                }
-                GUI.Label(numRect,value,number);
-                number.fontSize=normalSize;
+                GUI.Label(new Rect(r.x+10,r.y+5,r.width-20,22),FieldName(field.Key),fieldName);
+                DrawValue(new Rect(r.x+10,r.y+27,r.width-18,33),field.Value.ToString(CultureInfo.InvariantCulture),number);
             }
+        }
+
+        [HideFromIl2Cpp]
+        private static void DrawValue(Rect rect,string value,GUIStyle style)
+        {
+            int normalSize = style.fontSize;
+            if (value.Length > 5)
+            {
+                float measured = style.CalcSize(new GUIContent(value)).x;
+                if (measured > rect.width)
+                    style.fontSize = Math.Max(11,(int)(normalSize*rect.width/measured));
+            }
+            GUI.Label(rect,value,style);
+            style.fontSize = normalSize;
         }
 
         [HideFromIl2Cpp]
@@ -546,8 +554,8 @@ namespace SuzerainSaveStudio.Live
             if (confirming)
             {
                 GUI.Label(new Rect(x,178,inside,24),T("确认修改","Confirm change")+"  ·  "+FieldName(key),body);
-                GUI.Label(new Rect(x,204,inside,26),
-                    original.ToString(CultureInfo.InvariantCulture)+"   →   "+proposed.ToString(CultureInfo.InvariantCulture),body);
+                DrawValue(new Rect(x,202,inside,32),
+                    original.ToString(CultureInfo.InvariantCulture)+"   →   "+proposed.ToString(CultureInfo.InvariantCulture),comparison);
                 float confirmW = Math.Min(166,inside*.60f);
                 if (Button(new Rect(x+inside-confirmW-84,237,77,32),"cancel",T("取消","Cancel")))
                 {
@@ -586,11 +594,18 @@ namespace SuzerainSaveStudio.Live
                 Notice("","");
             }
             float buttonW = Math.Min(145,inside*.43f);
-            const float gap = 4;
-            float stepWidth = Math.Min(50,(inside-buttonW-8-(Steps.Length-1)*gap)/Steps.Length);
+            float stepWidth = Math.Min(50,(inside-buttonW-10)/Steps.Length);
+            Fill(new Rect(x,237,stepWidth*Steps.Length,32),palette.Hover,8);
             for (int i=0;i<Steps.Length;i++)
-                if (Button(new Rect(x+i*(stepWidth+gap),237,stepWidth,32),StepLabels[i],StepLabels[i]))
+            {
+                var step = new Rect(x+i*stepWidth,237,stepWidth,32);
+                if (i>0) Fill(new Rect(step.x,245,1,16),palette.Border);
+                bool focusedStep = focused == StepLabels[i];
+                if (focusedStep || step.Contains(Event.current.mousePosition))
+                    PaperBox(step,palette.Surface,focusedStep ? palette.Text : palette.Border,7,focusedStep ? 2 : 1);
+                if (Press(step,StepLabels[i],StepLabels[i],action))
                     Adjust(selected,Steps[i]);
+            }
             if (Button(new Rect(x+inside-buttonW,237,buttonW,32),"preview",T("预览修改","Preview change"),true))
                 Preview(selected);
         }
@@ -612,16 +627,18 @@ namespace SuzerainSaveStudio.Live
             Fill(new Rect(Inset,329,content,1),palette.Border);
             GUI.Label(new Rect(Inset,336,41,28),T("外观","Theme"),caption);
             float labelWidth = content >= 345 ? 57 : 43;
-            float choiceWidth = (content - labelWidth - 12) / 4;
+            float choiceWidth = (content-labelWidth-4)/ThemeControls.Length;
+            Fill(new Rect(Inset+labelWidth,334,content-labelWidth,32),palette.Hover,8);
             for (int i = 0; i < ThemeControls.Length; i++)
             {
                 var choice = PanelAppearance.Choices[i];
-                var rect = new Rect(Inset+labelWidth+i*(choiceWidth+4),335,choiceWidth,30);
+                var rect = new Rect(Inset+labelWidth+2+i*choiceWidth,336,choiceWidth,28);
                 bool selected = i == appearance, focus = focused == ThemeControls[i];
                 bool hovered = rect.Contains(Event.current.mousePosition);
-                Color face = selected ? palette.Selection : hovered ? palette.Hover : palette.Surface;
                 if (selected || focus || hovered)
-                    PaperBox(rect,face,focus ? palette.Text : selected ? palette.Accent : face,6,focus ? 2 : 1);
+                    PaperBox(rect,palette.Surface,focus ? palette.Text : palette.Border,7,focus ? 2 : 1);
+                if (selected)
+                    Fill(new Rect(rect.x+rect.width/2-6,rect.y+rect.height-3,12,2),palette.Accent,1);
                 if (choiceWidth >= 89) Fill(new Rect(rect.x+10,rect.y+11.5f,7,7),choice.Accent,3.5f);
                 if (Press(rect,ThemeControls[i],T(choice.Chinese,choice.English),themeLabel) && !selected)
                 {

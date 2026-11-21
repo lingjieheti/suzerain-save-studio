@@ -20,6 +20,60 @@ void selectRow(const std::string& key){
     check(g.selected==key,"Native row selection reaches the editor");
 }
 
+void testInspectorLayout(const fs::path& sample){
+    loadDocument(sample,false);
+    navigate(4);
+    auto bounds=[](HWND child){
+        RECT r{};GetWindowRect(child,&r);
+        MapWindowPoints(nullptr,g.win,reinterpret_cast<POINT*>(&r),2);
+        return r;
+    };
+    auto settle=[](){
+        MSG msg{};int dispatched=0;
+        while(dispatched<16 && PeekMessageW(&msg,g.desc,WM_APP,0xBFFF,PM_REMOVE)){
+            DispatchMessageW(&msg);++dispatched;
+        }
+        check(dispatched<16,"Inspector text wrapping settles after resize");
+    };
+    SetWindowPos(g.win,nullptr,0,0,px(1160),px(770),SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+    SetWindowTextW(g.desc,L"One line of context.");
+    settle();
+    RECT shortNote=bounds(g.desc);
+    check(shortNote.bottom-shortNote.top<px(60) && (GetWindowLongPtrW(g.desc,GWL_STYLE)&WS_VSCROLL)==0,
+          "Brief field descriptions use a compact inspector");
+    SetWindowPos(g.win,nullptr,0,0,px(680),px(485),SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+    std::wstring longNote;
+    for(int i=0;i<40;++i)longNote+=L"Field context and the raw variable name.\r\n";
+    SetWindowTextW(g.desc,longNote.c_str());
+    settle();
+    const auto area=workspaceGeometry();
+    const RECT longBounds=bounds(g.desc),apply=bounds(ctl(APPLY)),search=bounds(g.search);
+    check(longBounds.bottom<=px(area.bottom) && longBounds.bottom-longBounds.top>=px(12) &&
+          (GetWindowLongPtrW(g.desc,GWL_STYLE)&WS_VSCROLL)!=0,"Long notes scroll above the compact footer");
+    check(search.right>search.left && apply.bottom<=longBounds.top && apply.right<=px(area.width),
+          "Compact search and inspector actions remain visible above long notes");
+    SetWindowTextW(g.desc,L"Short.");
+    settle();
+    check((GetWindowLongPtrW(g.desc,GWL_STYLE)&WS_VSCROLL)==0 &&
+          bounds(g.desc).bottom< longBounds.bottom,"Shortening a description releases the scroll area");
+    int previousLanguage=i18n::language;
+    for(int language=0;language<11;++language) {
+        i18n::setLanguage(language);fonts();layout();
+        auto dc=GetDC(g.win);auto old=SelectObject(dc,g.font);
+        for(const auto& item: {std::pair<int,const wchar_t*>{FILTER_CHANGED,L"只看待保存"},
+                                {FILTER_FAVORITES,L"只看收藏"},{PATCH_IMPORT,L"导入方案"}}) {
+            auto caption=tr(item.second);SIZE size{};
+            GetTextExtentPoint32W(dc,caption.c_str(),static_cast<int>(caption.size()),&size);
+            RECT button=bounds(ctl(item.first));
+            check(button.right-button.left>=size.cx+px(item.first==FILTER_CHANGED?25:6) &&
+                  button.top>=bounds(g.search).bottom && button.bottom<=bounds(g.grid).top,
+                  "Compact advanced filter fits its localized label below the search field");
+        }
+        SelectObject(dc,old);ReleaseDC(g.win,dc);
+    }
+    i18n::setLanguage(previousLanguage);fonts();layout();
+}
+
 void CALLBACK dismissValidationWarning(HWND,UINT,UINT_PTR,DWORD){
     EnumThreadWindows(GetCurrentThreadId(),[](HWND popup,LPARAM)->BOOL{
         wchar_t kind[16]{};
@@ -294,6 +348,7 @@ int main(int argc,char** argv){
         testReview(fs::u8path(argv[2]));
         testAppearance(fs::u8path(argv[1]));
         testFavorites(fs::u8path(argv[1]),fs::u8path(argv[2]));
+        testInspectorLayout(fs::u8path(argv[2]));
         DestroyWindow(window);
         std::cout<<"PASS: "<<checks<<" native editor checks\n";
         return 0;

@@ -4,7 +4,7 @@
 
 Ich habe dieses kleine Werkzeug für meine eigenen *Suzerain*-Partien entwickelt. Damit behalte ich in Sordland den Staatshaushalt im Blick und sehe in Rizia, wie viel Energie ich habe und wie sich der Vorrat pro Runde verändert.
 
-**[Vorschauversion 0.14.0 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.14.0/SuzerainSaveStudio-0.14.0-Live-Preview-win-x64.zip)**
+**[Vorschauversion 0.15.0 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.0/SuzerainSaveStudio-0.15.0-Live-Preview-win-x64.zip)**
 
 ## Einen Spielstand bearbeiten
 

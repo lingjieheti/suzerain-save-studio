@@ -8,7 +8,7 @@
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 
-**[下载 v0.14.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.14.0/SuzerainSaveStudio-0.14.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.14.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.15.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.15.0/SuzerainSaveStudio-0.15.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.15.0) · [♡ 赞助作者](SPONSOR.md)
 
 ![四种桌面外观实机对照，均使用内置里奇亚战役示例](docs/images/appearances.png)
 
@@ -31,6 +31,8 @@
 [查看收藏界面](docs/images/field-favorites.png) · [玩家反馈与五款同类工具对照](docs/PLAYER-RESEARCH.zh-CN.md)
 
 ## 选择外观
+
+存档列表把文件名和战役名排成两行，方便分辨多个手动存档。编辑器并排显示库存、每回合变化和上限；侧栏和表格用相同的标记指示当前位置。游戏内面板把相对加减放在一组，确认页放大显示原值和目标值。
 
 在存档选择器或编辑器点 **外观**，即可切换主题。默认的 **暖纸** 用暖白底和陶土色按钮。喜欢冷色可以选薄荷绿的 **林间** 或冰蓝的 **雾蓝**，夜间可选石墨灰的 **午夜**。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
 

@@ -4,7 +4,7 @@
 #include "resource_summary.hpp"
 #include "field_favorites.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.14.0";
+constexpr wchar_t APP_VERSION[] = L"0.15.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -157,6 +157,7 @@ void updateStatus(){
     EnableWindow(ctl(BACKUP_RESTORE),g.backupDoc!=nullptr);EnableWindow(ctl(BACKUP_FOLDER),loaded&&!g.demoResource);
     setText(ctl(NAV_BASE+5),L"修改预览"+(!g.previewCount?L"":L"  "+std::to_wstring(g.previewCount)));
     SetWindowTextW(g.win,((any?L"* ":L"")+std::wstring(APP_TITLE)+L"").c_str());
+    InvalidateRect(ctl(APPLY),nullptr,FALSE);InvalidateRect(ctl(SAVE),nullptr,FALSE);
     for(int i=0;i<8;++i)InvalidateRect(ctl(NAV_BASE+i),nullptr,FALSE);InvalidateRect(g.win,nullptr,FALSE);
 }
 void setColumns(const std::vector<std::pair<std::wstring,int>>&columns){
@@ -413,7 +414,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.14.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.15.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -601,7 +602,7 @@ void createControls(){
     ListView_SetBkColor(g.grid,Theme::panel);ListView_SetTextBkColor(g.grid,Theme::panel);ListView_SetTextColor(g.grid,Theme::text);
     
     g.empty=control(L"STATIC",L"",SS_CENTER);
-    g.name=control(L"STATIC",L"选择一个项目",SS_NOPREFIX|SS_ENDELLIPSIS);g.oldValue=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);g.valueLabel=control(L"STATIC",L"新值",0);g.desc=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL);
+    g.name=control(L"STATIC",L"选择一个项目",SS_NOPREFIX);g.oldValue=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);g.valueLabel=control(L"STATIC",L"新值",0);g.desc=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL);
     button(L"收藏字段",FIELD_FAVORITE);
     SetWindowSubclass(g.desc,detailProc,1,0);
     g.edit=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,EDITVALUE);SendMessageW(g.edit,EM_SETLIMITTEXT,80,0);SetWindowSubclass(g.edit,editProc,1,0);
@@ -695,6 +696,9 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.path||h==g.meta||h==g.notice||h==g.desc||h==g.valueLabel?Theme::muted:Theme::text);
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
+        if(((HWND)lp==g.edit || (HWND)lp==g.search) &&
+           (HIWORD(wp)==EN_SETFOCUS || HIWORD(wp)==EN_KILLFOCUS))
+            InvalidateRect(w,nullptr,FALSE);
         // Complete the native button's input callback before rebuilding child controls.
         if(HIWORD(wp)==BN_CLICKED){PostMessageW(w,WM_APP+1,wp,lp);return 0;}
         command(LOWORD(wp),HIWORD(wp));return 0;

@@ -7,9 +7,17 @@ int navY(const WorkspaceGeometry& a, int index) {
     return navStart(a) + index * navStep(a) + (index >= 5 ? navGap(a) : 0);
 }
 bool compactFieldTools(const WorkspaceGeometry& a) { return a.list < (g.tab==4 ? 560 : 450); }
+int pendingFilterWidth() {
+    const auto text=tr(L"只看待保存");
+    auto dc=GetDC(g.win);auto old=SelectObject(dc,g.font);
+    SIZE extent{};GetTextExtentPoint32W(dc,text.c_str(),static_cast<int>(text.size()),&extent);
+    SelectObject(dc,old);ReleaseDC(g.win,dc);
+    return 33+MulDiv(extent.cx,96,g.dpi);
+}
 int searchWidth(const WorkspaceGeometry& a) {
+    if(stackAdvancedFilters(a))return a.list;
     bool compact=compactFieldTools(a);
-    return a.list - (compact ? 92 : 132) - 6 - (g.tab==4 ? (compact ? 153 : 213) : 0);
+    return a.list - pendingFilterWidth() - 6 - (g.tab==4 ? (compact ? 153 : 213) : 0);
 }
 int inspectorPad(const WorkspaceGeometry& a) { return a.inspector < 218 ? 9 : 18; }
 
@@ -44,11 +52,15 @@ void layout() {
     place(ctl(AUTOCAP), a.left, a.presetsY, std::min(270,a.content-2*presetW-14), 31);
     int sw = searchWidth(a);
     place(g.search, a.left+29, a.toolsY+6, sw-37, 22);
-    bool compactTools=compactFieldTools(a);
-    place(ctl(FILTER_CHANGED), a.left+sw+5, a.toolsY, compactTools ? 92 : 132, 32);
-    int favoritesX=a.left+sw+10+(compactTools?92:132);
-    place(ctl(FILTER_FAVORITES),favoritesX,a.toolsY,compactTools?70:100,32);
-    place(ctl(PATCH_IMPORT), a.right-a.gap-(compactTools?74:104), a.toolsY, compactTools?74:104, 32);
+    bool compactTools=compactFieldTools(a), stacked=stackAdvancedFilters(a);
+    int filtersY=a.toolsY+(stacked?37:0);
+    int changedW=stacked?std::max(a.list*40/100,pendingFilterWidth()):pendingFilterWidth();
+    int favoritesW=stacked?a.list*26/100:compactTools?70:100;
+    int patchW=stacked?a.list-changedW-favoritesW-10:compactTools?74:104;
+    int filtersX=stacked?a.left:a.left+sw+5;
+    place(ctl(FILTER_CHANGED),filtersX,filtersY,changedW,32);
+    place(ctl(FILTER_FAVORITES),filtersX+changedW+5,filtersY,favoritesW,32);
+    place(ctl(PATCH_IMPORT),a.right-a.gap-patchW,filtersY,patchW,32);
     place(ctl(BACKUP_REFRESH), a.left, a.toolsY, 96, 32);
     place(ctl(BACKUP_FOLDER), a.left+102, a.toolsY, std::min(165,a.list-102), 32);
     place(ctl(HELP_USAGE), a.left, a.toolsY, 120, 32);
@@ -60,7 +72,7 @@ void layout() {
 
     const int pad = inspectorPad(a), rx = a.right+pad, rw = a.inspector-2*pad;
     int y = a.toolsY+(a.shortScreen?12:19);
-    int nameH = edit ? (a.shortScreen ? 25 : 34) : (a.shortScreen ? 32 : 43);
+    int nameH = edit ? (a.inspector<235?47:a.shortScreen?25:34) : (a.shortScreen ? 32 : 43);
     place(g.name,rx,y,rw,nameH);
     y += nameH + 3;
     int favoriteW=std::clamp(rw/2,70,100);
@@ -156,70 +168,96 @@ void layout() {
     InvalidateRect(g.win,nullptr,FALSE);
 }
 
-void paintRiziaMetric(HDC dc, const RiziaResource& resource, const rizia::ChangeMap& linkedCaps,
-                     int x, int y, int width, int height) {
-    bool tall = height >= 70;
-    int pad = tall ? 15 : 10;
-    int right = x + width - pad;
-    int inner = width - 2 * pad;
-    auto balance = val(resource.stock);
-    auto numberFont = tall ? g.large : g.bold;
-    auto old = SelectObject(dc, numberFont);
-    SIZE valueSize{};
-    GetTextExtentPoint32W(dc, balance.c_str(), static_cast<int>(balance.size()), &valueSize);
-    SelectObject(dc, old);
-    int valueW = std::min(inner / 2, std::max(28, MulDiv(valueSize.cx, 96, g.dpi) + 3));
-    int rowY = y + (tall ? 7 : 2);
-    int rowH = tall ? 38 : 28;
-    drawText(dc, resource.balanceLabel, rect(x+pad,rowY,inner-valueW-4,rowH),
-             tall ? g.font : g.small, Theme::muted);
-    drawText(dc, balance, rect(right-valueW,rowY,valueW,rowH), numberFont,
-             pending().count(resource.stock) ? Theme::accentInk : Theme::text, DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
-
-    const auto linked = linkedCaps.find(resource.cap);
-    const auto cap = linked == linkedCaps.end() ? val(resource.cap) : wide(linked->second);
-    const auto capText = tr(L"上限 ") + cap;
-    const auto turnText = tr(L"每回合") + L" " + turnDelta(val(resource.turnTotal));
-    auto oldSmall = SelectObject(dc, g.small);
-    SIZE capSize{};
-    GetTextExtentPoint32W(dc, capText.c_str(), static_cast<int>(capText.size()), &capSize);
-    SelectObject(dc, oldSmall);
-    int capW = std::min(inner / 2, MulDiv(capSize.cx, 96, g.dpi) + 3);
-    int bottomRow = y + height - (tall ? 27 : 22);
-    drawText(dc, turnText, rect(x+pad,bottomRow,inner-capW-5,19), g.small,
-             pending().count(resource.turnTotal) ? Theme::accentInk : Theme::muted);
-    drawText(dc, capText, rect(right-capW,bottomRow,capW,19), g.small,
-             linked != linkedCaps.end() || pending().count(resource.cap) ? Theme::accentInk : Theme::muted,
-             DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
+void resourceSymbol(HDC dc,int kind,bool base,int x,int y,COLORREF ink) {
+    auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),ink);
+    auto oldPen=SelectObject(dc,pen),oldBrush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+    auto line=[&](std::initializer_list<POINT> points) {
+        bool first=true;
+        for(auto p:points) {
+            if(first)MoveToEx(dc,px(x+p.x),px(y+p.y),nullptr);
+            else LineTo(dc,px(x+p.x),px(y+p.y));
+            first=false;
+        }
+    };
+    if(kind==0) {
+        Ellipse(dc,px(x+1),px(y+2),px(x+15),px(y+8));
+        line({{1,5},{1,10},{3,12},{7,13},{11,13},{14,11},{14,5}});
+        line({{1,8},{4,10},{9,11},{13,9}});
+    } else if(kind==1 && base) {
+        RoundRect(dc,px(x+1),px(y+3),px(x+16),px(y+14),px(4),px(4));
+        line({{11,7},{15,7},{15,10},{11,10},{11,7}});
+    } else if(kind==1) {
+        line({{1,4},{5,7},{8,2},{11,7},{15,4},{13,12},{3,12},{1,4}});
+        line({{3,15},{13,15}});
+    } else if(base) {
+        line({{1,14},{1,3}});line({{1,14},{15,14}});
+        line({{3,10},{7,7},{9,9},{15,3}});
+    } else {
+        line({{9,1},{2,9},{7,9},{6,15},{14,6},{9,6},{9,1}});
+    }
+    SelectObject(dc,oldBrush);SelectObject(dc,oldPen);DeleteObject(pen);
 }
 
 void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
-    const char* mainKeys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
+    const char* keys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
     const wchar_t* labels[]={L"预算",L"个人财富",L"经济水平"};
-    rounded(dc,rect(a.left,a.headerBottom,a.content,a.metricHeight),Theme::head,Theme::line,14);
-    int cw=a.content/3;
+    const COLORREF inks[]={Theme::accentInk,Theme::green,Theme::blue};
+    const bool base=isBase(), tall=a.metricHeight>=70;
+    const int gap=a.content>=780?10:6, unit=(a.content-2*gap)/3;
     rizia::ChangeMap linkedCaps;
-    if (!isBase()) {
-        try { linkedCaps = linkedCapChanges(); }
-        catch (const std::exception&) { /* Conflicting edits are shown as entered until corrected in Review. */ }
+    if(!base) {
+        try { linkedCaps=linkedCapChanges(); }
+        catch(const std::exception&) { /* Keep conflicting explicit values visible until Review. */ }
     }
     for(int i=0;i<3;++i) {
-        int x=a.left+i*cw, y=a.headerBottom, width=i==2 ? a.left+a.content-x : cw;
-        if(i>0)fill(dc,rect(x,y+12,1,a.metricHeight-24),Theme::line);
-        if (!isBase()) {
-            paintRiziaMetric(dc, riziaResources[i], linkedCaps, x, y, width, a.metricHeight);
-            continue;
-        }
-        const auto key = mainKeys[i];
-        auto value=effective(key); bool tall=a.metricHeight>=70;
-        int valueWidth=std::max(48,width/2-9);
-        if (tall) {
-            drawText(dc,labels[i],rect(x+17,y+7,width-32,19),g.small,Theme::muted);
-            drawText(dc,value.empty()?L"—":wide(value),rect(x+16,y+28,width-32,39),g.large,pending().count(key)?Theme::accentInk:Theme::text);
-        } else {
-            drawText(dc,labels[i],rect(x+12,y+5,width-valueWidth-20,a.metricHeight-10),g.font,Theme::muted);
-            drawText(dc,value.empty()?L"—":wide(value),rect(x+width-valueWidth-9,y+4,valueWidth,a.metricHeight-8),g.large,pending().count(key)?Theme::goldDark:Theme::text,DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
-        }
+        int x=a.left+i*(unit+gap), y=a.headerBottom;
+        int width=i==2?a.left+a.content-x:unit;
+        int pad=tall?14:9, inner=width-2*pad;
+        const auto& resource=riziaResources[i];
+        const char* key=base?keys[i]:resource.stock;
+        const auto balance=val(key);
+        rounded(dc,rect(x,y,width,a.metricHeight),Theme::panel,Theme::line,21);
+
+        bool showSymbol=tall || width>=220;
+        int labelX=x+pad+(showSymbol?23:0);
+        int labelY=y+(tall?11:base?18:3);
+        if(showSymbol)resourceSymbol(dc,i,base,x+pad,labelY+2,inks[i]);
+        int available=inner-(showSymbol?23:0);
+        int labelW=tall?available:available*3/5;
+        drawText(dc,base?labels[i]:resource.balanceLabel,rect(labelX,labelY,labelW,20),g.small,Theme::muted);
+
+        // Reserve a second column for income and cap only on the tall DLC card.
+        int numberX=tall?x+pad:labelX+labelW+3;
+        int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
+        HFONT numberFont=tall?g.large:g.bold;
+        auto old=SelectObject(dc,numberFont);SIZE extent{};
+        GetTextExtentPoint32W(dc,balance.c_str(),static_cast<int>(balance.size()),&extent);
+        SelectObject(dc,old);
+        if(extent.cx>px(numberW))numberFont=tall?g.bold:g.small;
+        drawText(dc,balance,rect(numberX,tall?y+33:base?y+15:y+1,numberW,tall?45:26),numberFont,
+                 pending().count(key)?Theme::accentInk:Theme::text,
+                 (tall?DT_LEFT:DT_RIGHT)|DT_VCENTER|DT_SINGLELINE);
+        if(base)continue;
+
+        const auto linked=linkedCaps.find(resource.cap);
+        const auto capText=tr(L"上限 ")+(linked==linkedCaps.end()?val(resource.cap):wide(linked->second));
+        const auto turnText=tr(L"每回合")+L" "+turnDelta(val(resource.turnTotal));
+        // In short windows, keep both secondary values on a single baseline.
+        RECT turnBox=tall?rect(x+pad+numberW,y+33,inner-numberW,20):rect(x+pad,y+30,inner*55/100,21);
+        RECT capBox=tall?rect(x+pad+numberW,y+55,inner-numberW,20):rect(x+pad+inner*55/100,y+30,inner-inner*55/100,21);
+        drawText(dc,turnText,turnBox,g.small,pending().count(resource.turnTotal)?Theme::accentInk:Theme::muted,
+                 (tall?DT_RIGHT:DT_LEFT)|DT_VCENTER|DT_SINGLELINE);
+        drawText(dc,capText,capBox,g.small,linked!=linkedCaps.end()||pending().count(resource.cap)?Theme::accentInk:Theme::muted,
+                 DT_RIGHT|DT_VCENTER|DT_SINGLELINE);
+    }
+}
+
+void paintInputFrame(HDC dc,RECT box,HWND input,int radius) {
+    const bool focused=GetFocus()==input;
+    rounded(dc,box,focused?Theme::focus:Theme::input,focused?Theme::focus:Theme::line,radius);
+    if(focused) {
+        InflateRect(&box,-px(2),-px(2));
+        rounded(dc,box,Theme::input,Theme::input,radius-2);
     }
 }
 
@@ -251,21 +289,23 @@ void paint() {
     if(g.tab<7) {
         int listY=g.tab==5?a.toolsY:a.listY;
         rounded(dc,rect(a.left,listY,a.list,a.bottom-listY),Theme::panel,Theme::line,9);
-        rounded(dc,rect(a.right,a.toolsY,a.inspector,a.bottom-a.toolsY),Theme::panel,Theme::line,14);
+        RECT inspector=rect(a.right,a.toolsY,a.inspector,a.bottom-a.toolsY);
+        RECT notes{};GetWindowRect(g.desc,&notes);MapWindowPoints(nullptr,g.win,(POINT*)&notes,2);
+        if(g.tab<5)inspector.bottom=std::min<LONG>(inspector.bottom,notes.bottom+px(a.shortScreen?10:16));
+        rounded(dc,inspector,Theme::panel,Theme::line,19);
         if(!a.shortScreen){
-            RECT notes{};GetWindowRect(g.desc,&notes);MapWindowPoints(nullptr,g.win,(POINT*)&notes,2);
             RECT divider{notes.left,notes.top-px(7),notes.right,notes.top-px(7)+1};
             fill(dc,divider,Theme::line);
         }
         if(g.tab<5) {
-            rounded(dc,rect(a.left,a.toolsY,searchWidth(a),32),Theme::input,GetFocus()==g.search?Theme::accent:Theme::line,8);
+            paintInputFrame(dc,rect(a.left,a.toolsY,searchWidth(a),32),g.search,10);
             auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),Theme::dim);auto old=SelectObject(dc,pen);auto ob=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
             Ellipse(dc,px(a.left+9),px(a.toolsY+9),px(a.left+19),px(a.toolsY+19));
             MoveToEx(dc,px(a.left+17),px(a.toolsY+17),nullptr);LineTo(dc,px(a.left+22),px(a.toolsY+22));
             SelectObject(dc,ob);SelectObject(dc,old);DeleteObject(pen);
             if(IsWindowVisible(g.edit)) {
                 RECT box{};GetWindowRect(g.edit,&box);MapWindowPoints(nullptr,g.win,(POINT*)&box,2);InflateRect(&box,px(8),px(4));
-                rounded(dc,box,Theme::input,GetFocus()==g.edit?Theme::focus:Theme::line,9);
+                paintInputFrame(dc,box,g.edit,10);
             }
         }
     } else rounded(dc,rect(a.left,a.listY,a.content,a.bottom-a.listY),Theme::panel,Theme::line,8);

@@ -14,6 +14,11 @@ inline void lettering(HDC dc,const std::wstring& caption,RECT box,HFONT font,COL
     DrawTextW(dc,caption.c_str(),(int)caption.size(),&box,align|DT_SINGLELINE|DT_VCENTER|DT_END_ELLIPSIS|DT_NOPREFIX);
     SelectObject(dc,old);
 }
+inline int textWidth(HDC dc,const std::wstring& caption,HFONT font){
+    SIZE extent{};auto previous=SelectObject(dc,font);
+    GetTextExtentPoint32W(dc,caption.c_str(),static_cast<int>(caption.size()),&extent);
+    SelectObject(dc,previous);return extent.cx;
+}
 inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
     HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),color);
     auto old=SelectObject(dc,pen),brush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
@@ -37,6 +42,9 @@ inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
         case LIVE_MODE:
             line({{0,10},{4,10},{7,3},{10,15},{13,8},{17,8}});break;
         case IDOK:line({{2,9},{15,9}});line({{10,4},{15,9},{10,14}});break;
+        case LIST:
+            line({{3,1},{10,1},{15,6},{15,17},{3,17},{3,1}});
+            line({{10,1},{10,6},{15,6}});line({{6,11},{12,11}});break;
         default:
             line({{2,4},{8,4},{10,6},{16,6},{16,15},{2,15},{2,4}});
             line({{4,2},{10,2},{12,4},{17,4}});break;
@@ -45,7 +53,11 @@ inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
 }
 inline void paintFrame(State& s,HDC dc){
     surface(s,dc,s.library,Theme::panel,Theme::line,14);
-    surface(s,dc,s.practice,Theme::panel,Theme::line,14);
+    if(s.stacked)surface(s,dc,s.practice,Theme::panel,Theme::line,14);
+    else {
+        RECT rule{s.practice.left+s.scale(11),s.practice.bottom-1,s.practice.right-s.scale(11),s.practice.bottom};
+        ::fill(dc,rule,Theme::line);
+    }
     surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,10);
     symbol(s,dc,FILTER,s.searchFrame.left+s.scale(8),s.searchFrame.top+s.scale(6),Theme::muted);
     if(!IsRectEmpty(&s.headingIcon)){
@@ -68,48 +80,69 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     const int id=d.CtlID;
     const bool primary=id==IDOK,live=id==LIVE_MODE;
     const bool demo=id==DEMO_MAIN||id==DEMO_RIZIA;
-    const bool inCard=id==ADD_FOLDER||id==RESCAN||demo||(live&&s.stacked);
+    const bool inCard=id==ADD_FOLDER||id==RESCAN||(demo&&s.stacked);
     const bool disabled=(d.itemState&ODS_DISABLED)!=0,pressed=(d.itemState&ODS_SELECTED)!=0;
     const bool hover=GetPropW(d.hwndItem,L"RiziaHover")!=nullptr;
     const bool focus=(d.itemState&ODS_FOCUS)!=0;
-    COLORREF bg=primary?Theme::accent:live?Theme::select:Theme::panel;
-    COLORREF edge=primary?Theme::accent:live?Theme::select:Theme::line;
-    COLORREF fg=primary?Theme::onAccent:live?Theme::accentInk:Theme::text;
+    COLORREF bg=primary?Theme::accent:Theme::panel;
+    COLORREF edge=primary?Theme::accent:Theme::line;
+    COLORREF fg=primary?Theme::onAccent:Theme::text;
     if(disabled){bg=Theme::head;edge=Theme::line;fg=Theme::dim;}
     else if(pressed||hover){bg=primary?Theme::accentHover:Theme::head;edge=primary?bg:Theme::accent;}
     RECT box=d.rcItem;
     ::fill(d.hDC,box,inCard?Theme::panel:Theme::bg);
     --box.right;--box.bottom;
-    bool plain=(id==IDCANCEL||id==RESCAN)&&!hover&&!focus&&!pressed;
+    const bool railItem=(demo||live)&&!s.stacked;
+    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||railItem)&&!hover&&!focus&&!pressed;
     if(!plain)surface(s,d.hDC,box,bg,focus?Theme::focus:edge,11,focus?2:1);
     const int width=box.right-box.left;
-    bool hasIcon=id!=IDCANCEL&&(width>=s.scale(100)||id==RESCAN);
     int hmid=(box.top+box.bottom)/2;
     auto label=textOf(d.hwndItem);
     RECT textBox=box;
     HFONT font=primary||demo||live?s.emphasis:s.font;
+    int labelWidth=textWidth(d.hDC,label,font);
+    if(width<labelWidth+s.scale(8)){
+        font=s.small;
+        labelWidth=textWidth(d.hDC,label,font);
+    }
+    const bool hasIcon=id!=IDCANCEL&&width>=labelWidth+s.scale(35);
     if(id==APPEARANCE){
         const int x=box.left+s.scale(12),r=s.scale(5);
         RECT swatch{x,hmid-r,x+2*r,hmid+r};
         surface(s,d.hDC,swatch,Theme::accent,Theme::accent,10);
         textBox.left=x+2*r+s.scale(8);textBox.right-=s.scale(24);
-        SIZE extent{};auto old=SelectObject(d.hDC,font);
-        GetTextExtentPoint32W(d.hDC,label.c_str(),(int)label.size(),&extent);
-        SelectObject(d.hDC,old);
-        if(extent.cx>textBox.right-textBox.left)label=Theme::name(Theme::index());
+        if(labelWidth>textBox.right-textBox.left)label=Theme::name(Theme::index());
         lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
         chevron(s,d.hDC,box.right-s.scale(13),hmid,Theme::muted);
-    }else if(live&&!s.stacked){
-        int iconX=box.left+s.scale(13);
-        symbol(s,d.hDC,id,iconX,hmid-s.scale(8),Theme::accentInk);
-        textBox.left=iconX+s.scale(28);textBox.right-=s.scale(7);
-        RECT top=textBox,bottom=textBox;
-        top.bottom=hmid+s.scale(1);bottom.top=hmid+s.scale(1);
-        lettering(d.hDC,label,top,font,fg,DT_LEFT);
-        lettering(d.hDC,live_setup::inGameShortcut(),bottom,s.small,Theme::muted,DT_LEFT);
+    }else if(live&&s.stacked){
+        const int center=(box.left+box.right)/2;
+        symbol(s,d.hDC,id,center-s.scale(9),hmid-s.scale(28),Theme::accentInk);
+        RECT title=box,hint=box;
+        title.top=hmid-s.scale(9);title.bottom=hmid+s.scale(13);
+        hint.top=title.bottom;hint.bottom=box.bottom-s.scale(2);
+        lettering(d.hDC,label,title,font,fg,DT_CENTER);
+        lettering(d.hDC,live_setup::inGameShortcut(),hint,s.small,Theme::muted,DT_CENTER);
+    }else if(railItem){
+        const int tileX=box.left+s.scale(8), tileSize=s.scale(31);
+        RECT tile{tileX,hmid-tileSize/2,tileX+tileSize,hmid+(tileSize+1)/2};
+        const auto tint=live?Theme::select:Theme::head;
+        surface(s,d.hDC,tile,tint,tint,12);
+        symbol(s,d.hDC,id,tile.left+s.scale(7),hmid-s.scale(8),live?Theme::accentInk:Theme::muted);
+        textBox.left=tile.right+s.scale(10);textBox.right-=s.scale(20);
+        if(live){
+            RECT top=textBox,bottom=textBox;
+            top.bottom=hmid+s.scale(2);bottom.top=hmid+s.scale(1);
+            lettering(d.hDC,label,top,font,fg,DT_LEFT);
+            lettering(d.hDC,live_setup::inGameShortcut(),bottom,s.small,Theme::muted,DT_LEFT);
+        }else lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
+        HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),Theme::muted);
+        auto old=SelectObject(d.hDC,pen);
+        const int end=box.right-s.scale(11);
+        MoveToEx(d.hDC,end-s.scale(3),hmid-s.scale(4),nullptr);
+        LineTo(d.hDC,end+s.scale(1),hmid);LineTo(d.hDC,end-s.scale(3),hmid+s.scale(4));
+        SelectObject(d.hDC,old);DeleteObject(pen);
     }else if(hasIcon){
-        SIZE extent{};auto old=SelectObject(d.hDC,font);GetTextExtentPoint32W(d.hDC,label.c_str(),(int)label.size(),&extent);SelectObject(d.hDC,old);
-        int start=demo&&!s.stacked?box.left+s.scale(13):box.left+std::max(s.scale(6),(width-(int)extent.cx-s.scale(24))/2);
+        const int start=box.left+(width-labelWidth-s.scale(24))/2;
         symbol(s,d.hDC,id,start,hmid-s.scale(8),primary?fg:Theme::accentInk);
         textBox.left=start+s.scale(23);textBox.right-=s.scale(5);
         lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
@@ -119,6 +152,20 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         DrawFocusRect(d.hDC,&ring);
     }
 }
+inline void drawEmpty(const State& s,const DRAWITEMSTRUCT& d){
+    RECT bounds=d.rcItem;
+    ::fill(d.hDC,bounds,Theme::panel);
+    const int midX=(bounds.left+bounds.right)/2,midY=(bounds.top+bounds.bottom)/2;
+    if(bounds.bottom-bounds.top>=s.scale(100)){
+        const int half=s.scale(21),cy=midY-s.scale(13);
+        RECT tile{midX-half,cy-half,midX+half,cy+half};
+        surface(s,d.hDC,tile,Theme::head,Theme::head,18);
+        symbol(s,d.hDC,FILTER,midX-s.scale(8),cy-s.scale(8),Theme::muted);
+        bounds.top=midY+s.scale(12);bounds.bottom=bounds.top+s.scale(28);
+    }
+    bounds.left+=s.scale(8);bounds.right-=s.scale(8);
+    lettering(d.hDC,textOf(d.hwndItem),bounds,s.font,Theme::muted,DT_CENTER);
+}
 inline void paintCampaignFace(const State& s,HWND h,HDC dc){
     RECT box{};GetClientRect(h,&box);
     ::fill(dc,box,Theme::panel);
@@ -127,7 +174,9 @@ inline void paintCampaignFace(const State& s,HWND h,HDC dc){
     const bool focus=GetFocus()==h;
     surface(s,dc,box,enabled?Theme::input:Theme::head,focus?Theme::focus:Theme::line,9,focus?2:1);
     RECT caption=box;caption.left+=s.scale(9);caption.right-=s.scale(23);
-    lettering(dc,textOf(h),caption,s.font,enabled?Theme::text:Theme::dim,DT_LEFT);
+    const auto label=textOf(h);
+    const auto font=textWidth(dc,label,s.font)>caption.right-caption.left?s.small:s.font;
+    lettering(dc,label,caption,font,enabled?Theme::text:Theme::dim,DT_LEFT);
     chevron(s,dc,box.right-s.scale(13),(box.top+box.bottom)/2,Theme::muted);
 }
 inline LRESULT CALLBACK campaignFaceProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR data){
@@ -191,16 +240,25 @@ inline LRESULT CALLBACK header(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_
     return DefSubclassProc(h,m,wp,lp);
 }
 inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
-    if(d.nmcd.dwDrawStage==CDDS_PREPAINT)return CDRF_NOTIFYITEMDRAW;
+    if(d.nmcd.dwDrawStage==CDDS_PREPAINT)return CDRF_NOTIFYITEMDRAW|CDRF_NOTIFYPOSTPAINT;
+    if(d.nmcd.dwDrawStage==CDDS_POSTPAINT&&!s.rows.empty()){
+        RECT last{},space{};
+        if(ListView_GetItemRect(s.list,static_cast<int>(s.rows.size())-1,&last,LVIR_BOUNDS)){
+            GetClientRect(s.list,&space);
+            space.top=last.bottom;
+            if(space.top<space.bottom)::fill(d.nmcd.hdc,space,Theme::panel);
+        }
+        return CDRF_DODEFAULT;
+    }
     if(d.nmcd.dwDrawStage!=CDDS_ITEMPREPAINT)return CDRF_DODEFAULT;
     int row=(int)d.nmcd.dwItemSpec;
     if(row<0||row>=(int)s.rows.size()||s.busy)return CDRF_DODEFAULT;
     RECT rowBox{};ListView_GetItemRect(s.list,row,&rowBox,LVIR_BOUNDS);
     const bool selected=(ListView_GetItemState(s.list,row,LVIS_SELECTED)&LVIS_SELECTED)!=0;
-    ::fill(d.nmcd.hdc,rowBox,selected?Theme::select:Theme::panel);
+    ::fill(d.nmcd.hdc,rowBox,Theme::panel);
     if(selected){
-        RECT mark{rowBox.left,rowBox.top+s.scale(5),rowBox.left+s.scale(3),rowBox.bottom-s.scale(5)};
-        ::fill(d.nmcd.hdc,mark,Theme::accent);
+        RECT shape=rowBox;InflateRect(&shape,-s.scale(1),-s.scale(2));
+        surface(s,d.nmcd.hdc,shape,Theme::select,Theme::select,13);
     }
     for(int column=0;column<5;++column){
         RECT cell{};Header_GetItemRect(ListView_GetHeader(s.list),column,&cell);
@@ -210,6 +268,19 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
         wchar_t value[256]{};
         ListView_GetItemText(s.list,row,column,value,256);
         std::wstring caption=value;
+        if(column==0){
+            const int midY=(cell.top+cell.bottom)/2;
+            if(cell.right-cell.left>=s.scale(174)){
+                symbol(s,d.nmcd.hdc,LIST,cell.left,midY-s.scale(9),selected?Theme::accentInk:Theme::muted);
+                cell.left+=s.scale(26);
+            }
+            const auto& secondary=s.result.saves[s.rows[row]].campaignName;
+            if(!secondary.empty()){
+                RECT detail=cell;detail.top=midY;
+                lettering(d.nmcd.hdc,wide(secondary),detail,s.small,Theme::muted,DT_LEFT);
+                cell.bottom=midY+s.scale(3);
+            }
+        }
         if(column==4&&caption.size()==20&&caption[10]==L' '){
             auto old=SelectObject(d.nmcd.hdc,s.font);SIZE size{};
             GetTextExtentPoint32W(d.nmcd.hdc,caption.c_str(),(int)caption.size(),&size);
