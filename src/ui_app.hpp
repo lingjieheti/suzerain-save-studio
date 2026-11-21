@@ -602,16 +602,35 @@ void changeLanguage(){
     rawText(ctl(SUPPORT_AUTHOR),sponsor_text::get(sponsor_text::Key::Title));
     if(g.tab==7)setHelp();refresh();
 }
+std::string renderFieldCsv(const rizia::Document& doc,const rizia::ChangeMap& changes){
+    auto cell=[](const std::string& value,bool numeric=false){
+        std::string out="\"";
+        const auto first=value.find_first_not_of(' ');
+        if(first!=value.npos && std::string_view("=+-@\t\r\n").find(value[first])!=std::string_view::npos &&
+           !(numeric && rizia::detail::validNumberSyntax(value)))out+="'";
+        for(char c:value){
+            if(c=='"')out+='"';
+            out+=c;
+        }
+        return out+'"';
+    };
+    std::string data="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n";
+    for(const auto& field:doc.fields){
+        const auto edit=changes.find(field.key);
+        const auto& current=edit==changes.end()?field.value:edit->second;
+        const bool numeric=!field.is_bool;
+        data+=cell(doc.story)+","+cell(field.key)+","+cell(utf8(label(field.key)))+","+
+              cell(field.value,numeric)+","+cell(current,numeric)+","+cell(numeric?"number":"boolean")+"\r\n";
+    }
+    return data;
+}
 void exportCSV(){
     if(!g.doc||!applyInput(false))return;
     std::vector<wchar_t> buffer(32768);std::wstring name=L"Suzerain-fields.csv";std::copy(name.begin(),name.end(),buffer.begin());
     OPENFILENAMEW o{};o.lStructSize=sizeof(o);o.hwndOwner=g.win;o.lpstrFile=buffer.data();o.nMaxFile=(DWORD)buffer.size();o.lpstrFilter=L"CSV (*.csv)\0*.csv\0\0";o.lpstrDefExt=L"csv";o.Flags=OFN_OVERWRITEPROMPT|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR;
     if(!GetSaveFileNameW(&o))return;fs::path path(buffer.data());
     if(lower(path.extension().wstring())!=L".csv"||samePath(path,g.file)||lower(path.parent_path().filename().wstring())==L".rizia-backups")throw WinFailure(L"Choose a .csv file outside the backup folder.");
-    auto cell=[](std::string value){std::string out="\"";if(!value.empty()&&std::string("=+-@\t\r").find(value[0])!=std::string::npos)out+="'";for(char c:value){if(c=='\"')out+='\"';out+=c;}return out+"\"";};
-    std::string data="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n";
-    for(const auto& f:g.doc->fields)data+=cell(g.doc->story)+","+cell(f.key)+","+cell(utf8(label(f.key)))+","+cell(f.value)+","+cell(effective(f.key))+","+cell(f.is_bool?"boolean":"number")+"\r\n";
-    writePatch(path,data);toast(L"CSV exported.");
+    writePatch(path,renderFieldCsv(*g.doc,pending()));toast(L"CSV exported.");
 }
 #include "workspace_view.hpp"
 LRESULT CALLBACK editProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){

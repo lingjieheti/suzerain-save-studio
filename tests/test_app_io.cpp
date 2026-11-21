@@ -124,9 +124,19 @@ int main(int argc,char** argv){
         const auto mainPatch=rizia::serializePatch({{"BaseGame.Budget","9"}},"StoryPack_Main");
         writePatch(root/"main.patch.txt",mainPatch);
         check(rizia::parsePatch(readFile(root/"main.patch.txt"),"StoryPack_Main").at("BaseGame.Budget")=="9","Patch writer roundtrip failed");
-        const std::string csv="\xEF\xBB\xBF" "Campaign,Field,Original,Current\r\nStoryPack_Main,BaseGame.Budget,7,8\r\n";
-        writePatch(root/"fields.csv",csv);
-        check(readFile(root/"fields.csv")==csv,"CSV bytes changed by writer");
+        const auto csvDoc=rizia::Document::parse(R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.GovernmentBudget']=-3,['BaseGame.-3']=-0,['BaseGame. =1+2']=2e+1,['BaseGame.Note,\"Q\"']=false}"})");
+        rizia::EditSession csvSession(csvDoc);
+        csvSession.applyBatch({{"BaseGame.GovernmentBudget","-2.50e-1"},{"BaseGame.Note,\"Q\"","true"}});
+        activeStory=csvDoc.story;
+        i18n::setLanguage(2);
+        writePatch(root/"fields.csv",renderFieldCsv(csvDoc,csvSession.pending()));
+        const auto csv=readFile(root/"fields.csv");
+        const std::string expectedCsv="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n"
+            "\"StoryPack_Main\",\"BaseGame.GovernmentBudget\",\"Government budget\",\"-3\",\"-2.50e-1\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame.-3\",\"'-3\",\"-0\",\"-0\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame. =1+2\",\"' =1+2\",\"2e+1\",\"2e+1\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame.Note,\"\"Q\"\"\",\"Note,\"\"Q\"\"\",\"false\",\"true\",\"boolean\"\r\n";
+        check(csv==expectedCsv,"Field CSV must preserve signed numbers and booleans and escape risky text labels");
         const auto gameFolder=root/"sample-game";
         const auto gameExe=gameFolder/"Suzerain.exe";
         const auto host=gameFolder/"BepInEx";
