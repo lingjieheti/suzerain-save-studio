@@ -2,7 +2,7 @@
 
 🌐 [Escolher idioma](../../README.md#languages)
 
-Criei esta ferramenta para as minhas partidas de *Suzerain*. Uso o editor para conferir o orçamento de Sordland e acompanhar quanta energia Rizia tem em estoque e quanto esse total muda a cada turno.
+Antes, quando queria mudar alguma coisa nas minhas partidas de *Suzerain*, eu quase sempre mexia no arquivo de save. A cada mudança, tinha que carregar a partida duas vezes. Cansei disso e fiz este editor. Com ele, dá para editar os saves e ajustar os recursos durante o jogo. Depois de ativar a prévia das escolhas, passe o cursor sobre uma opção e dê um toque na tecla Ctrl para ver os efeitos diretos conhecidos daquela escolha. O editor também tem outros pequenos recursos. [Se tiver alguma sugestão, vou gostar de ouvir.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
 **[Baixar a versão preliminar 0.18.0 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)**
 

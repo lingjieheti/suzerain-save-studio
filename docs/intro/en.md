@@ -2,7 +2,7 @@
 
 🌐 [Languages](../../README.md#languages)
 
-I made this tool for my own *Suzerain* campaigns. I use it to check the government budget in Sordland, see how Rizia’s energy changes each turn, and keep the fields I edit most in one place.
+I used to edit my *Suzerain* saves by hand. Loading the same save twice every time got old, so I made this tool for myself. You can edit a save file or adjust resources while you play. With choice previews turned on, hover over a choice and tap **Ctrl** to see its known direct effects. I’ve added a few other little features along the way. [I’d love to hear your suggestions.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
 **[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.18.0)
 

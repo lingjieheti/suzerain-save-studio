@@ -2,7 +2,7 @@
 
 🌐 [Sprache wählen](../../README.md#languages)
 
-Ich habe dieses kleine Werkzeug für meine eigenen *Suzerain*-Partien entwickelt. Damit behalte ich in Sordland den Staatshaushalt im Blick und sehe in Rizia, wie viel Energie ich habe und wie sich der Vorrat pro Runde verändert.
+Früher habe ich in *Suzerain* fast alles über die Spielstände geändert. Nach jeder Änderung musste ich den Spielstand zweimal laden. Das war mir auf Dauer zu umständlich, also habe ich diesen Editor gebaut. Damit kannst du Spielstände bearbeiten oder Ressourcen direkt im Spiel anpassen. Wenn du die Auswahlvorschau einschaltest, kannst du mit der Maus auf eine Antwort zeigen und kurz die Strg-Taste (Ctrl) drücken. Dann siehst du die bekannten unmittelbaren Folgen dieser Wahl. Ein paar weitere kleine Funktionen sind auch dabei. [Ich freue mich über deine Vorschläge.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
 **[Vorschauversion 0.18.0 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)**
 

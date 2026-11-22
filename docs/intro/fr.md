@@ -2,7 +2,7 @@
 
 🌐 [Changer de langue](../../README.md#languages)
 
-J’ai créé ce petit éditeur pour mes parties de *Suzerain*. Je m’en sers pour retrouver le budget de Sordland dans une sauvegarde ou pour voir combien d’énergie Rizia gagne ou perd à chaque tour.
+Avant, pour changer quelque chose dans mes parties de *Suzerain*, je passais surtout par les fichiers de sauvegarde. Il fallait charger la partie deux fois à chaque modification. J’ai fini par en avoir assez et j’ai créé cet éditeur. Il permet de modifier une sauvegarde ou d’ajuster les ressources en cours de partie. Une fois l’aperçu des choix activé, survolez une option et appuyez brièvement sur Ctrl pour voir ses effets directs connus. Vous y trouverez aussi quelques autres petites fonctionnalités. [Vos suggestions sont les bienvenues.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
 **[Télécharger la version préliminaire 0.18.0 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)**
 

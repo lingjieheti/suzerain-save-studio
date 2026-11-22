@@ -4,7 +4,7 @@
 
 **简体中文** · [繁體中文](docs/intro/zh-TW.md) · [English](docs/intro/en.md) · [日本語](docs/intro/ja.md) · [한국어](docs/intro/ko.md) · [Deutsch](docs/intro/de.md) · [Français](docs/intro/fr.md) · [Español](docs/intro/es.md) · [Português (Brasil)](docs/intro/pt-BR.md) · [Русский](docs/intro/ru.md) · [Türkçe](docs/intro/tr.md)
 
-这是我自己玩《Suzerain》时做的小工具，平时用它查预算、改存档，也在游戏里微调资源。放在这里分享给同样喜欢索德兰和里奇亚的玩家。
+我以前玩《Suzerain》主要靠改存档，每次都要读两遍档，觉得有点麻烦，就给自己做了这个修改器。现在既可以改存档，也可以直接在游戏里调资源。开启选项预览后，把鼠标放在选项上，轻按一下 **Ctrl** 就能看到已知的直接效果。还有一些顺手做的小功能，欢迎大家[提提建议](https://github.com/lingjieheti/suzerain-save-studio/issues)～
 
 支持 Windows 10 / 11 x64。解压后双击即可编辑存档，也可以先打开内置示例试试。
 

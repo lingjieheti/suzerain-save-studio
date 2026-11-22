@@ -2,7 +2,7 @@
 
 🌐 [Diğer diller](../../README.md#languages)
 
-Bu aracı kendi Suzerain kayıtlarımı düzenlemek için yaptım. Sordland'da devlet bütçesini kontrol etmek, Rizia'da ise elimdeki enerjiyi ve tur başına ne kadar değiştiğini görmek için kullanıyorum.
+Eskiden *Suzerain* oynarken bir şeyi değiştirmek istediğimde çoğunlukla kayıt dosyasını düzenlerdim. Her değişiklikte kaydı iki kez yüklemem gerekiyordu. Bu işten sıkılınca bu aracı yaptım. Kayıt dosyalarınızı düzenleyebilir, oyun sırasında da kaynak miktarlarını doğrudan değiştirebilirsiniz. Seçim önizlemesini açtıktan sonra imleci bir seçeneğin üzerine getirip Ctrl tuşuna kısaca basarak o seçimin bilinen doğrudan etkilerini görebilirsiniz. Araçta birkaç küçük özellik daha var. [Önerilerinizi duymak isterim.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
 **[Windows 10/11 x64 için 0.18.0 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)**
 
