@@ -1,6 +1,10 @@
-# v0.17.5 Preview — Windows validation
+# v0.18.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.17.5 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.18.0 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Desktop save editing in 0.18.0
+
+The maintenance changes were tested on Windows with synthetic Sordland and Rizia saves. Coverage includes conflicts when saving to an existing or new slot, signed numeric values in CSV, GB and PW search, large save directories, and field-specific errors during patch import. Native picker checks covered local modification time searches across four themes and two window widths. [Test cases and results in PR #1](https://github.com/lingjieheti/suzerain-save-studio/pull/1)
 
 ## Support options in 0.17.5
 

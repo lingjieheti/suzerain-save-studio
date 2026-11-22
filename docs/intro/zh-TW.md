@@ -4,7 +4,7 @@
 
 這是我玩《Suzerain》時為自己做的存檔編輯器，平常用來查預算、調整資源。在這裡分享給同樣喜歡索德蘭和里奇亞的玩家。
 
-[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)
+[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)
 
 按 **Ctrl+F8** 開啟面板，啟用選項結果預覽後關閉面板。將滑鼠指向選項，輕按一下左邊或右邊的 **Ctrl** 鍵即可查看效果。再按一次或移開滑鼠即可收起提示。想查看其他選項時，將滑鼠移過去再按 Ctrl。這項功能預設關閉，部分結果要等後續劇情才能確定。
 

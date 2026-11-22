@@ -4,7 +4,7 @@
 
 제가 《Suzerain》을 플레이할 때 쓰려고 만든 저장 파일 편집기입니다. 소르들란트와 리지아 캠페인에서 예산을 확인하거나 자원 수치를 조금씩 조정할 때 씁니다.
 
-[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.17.5/SuzerainSaveStudio-0.17.5-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.0/SuzerainSaveStudio-0.18.0-Live-Preview-win-x64.zip)
 
 **Ctrl+F8** 패널에서 선택지 미리보기를 켠 뒤 패널을 닫으세요. 선택지에 마우스를 올리고 왼쪽이나 오른쪽 **Ctrl** 키를 한 번 눌렀다 놓으면 효과가 표시됩니다. 다시 누르거나 마우스를 옮기면 설명이 사라집니다. 다른 선택지의 효과를 보려면 그 위에서 Ctrl 키를 다시 누르세요. 기본값은 꺼짐이며, 이후 전개에 따라 달라지는 결과는 미리 알 수 없을 수 있습니다.
 
