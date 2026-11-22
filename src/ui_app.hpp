@@ -271,10 +271,13 @@ std::map<std::string,std::string> preparedChanges(){
     changes.insert(caps.begin(),caps.end());
     g.doc->validateChanges(changes);return changes;
 }
+std::wstring formatLocalStamp(const std::wstring& stamp){
+    if(stamp.empty())return {};
+    return stamp.substr(0,4)+L"-"+stamp.substr(4,2)+L"-"+stamp.substr(6,2)+L"  "+stamp.substr(9,2)+L":"+stamp.substr(11,2)+L":"+stamp.substr(13,2);
+}
 std::wstring fileTimeText(const fs::path&p,std::wstring stamp={}){
     if(stamp.empty())stamp=save_backup::lastWriteStamp(p);
-    if(stamp.empty())return L"未知时间";
-    return stamp.substr(0,4)+L"-"+stamp.substr(4,2)+L"-"+stamp.substr(6,2)+L"  "+stamp.substr(9,2)+L":"+stamp.substr(11,2)+L":"+stamp.substr(13,2);
+    return stamp.empty()?L"未知时间":formatLocalStamp(stamp);
 }
 void selectBackup(int index){
     g.restoreArmed=false;g.backupIndex=index;g.backupDoc.reset();
@@ -527,14 +530,21 @@ void saveDocument(bool as){
         fs::path dest=(as||g.demoResource)?pickFile(true):g.file;if(dest.empty())return;
         if(g.demoResource){
             auto bytes=g.doc->render(changes);
-            atomicSave(dest,bytes,nullptr,true);
+            atomicSave(dest,bytes,nullptr);
             loadDocumentBytes(bytes,{},g.demoResource);
             toast(L"示例副本已保存。");
             return;
         }
-        bool original=samePath(dest,g.file);
-        if(!original&&fs::exists(dest)){auto d=rizia::Document::parse(readFile(dest));if(d.story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");}
-        auto bytes=g.doc->render(changes);auto bak=atomicSave(dest,bytes,original?&g.doc->original:nullptr);
+        std::string destinationBytes;
+        const std::string* expected=nullptr;
+        if(samePath(dest,g.file)){
+            expected=&g.doc->original;
+        }else if(fs::exists(dest)){
+            destinationBytes=readFile(dest);
+            expected=&destinationBytes;
+        }
+        auto bytes=g.doc->render(changes);
+        atomicSave(dest,bytes,expected);
         loadDocument(dest,false);toast(as?L"已另存。游戏未显示自定义文件名时，请使用原存档名称和位置。":L"已保存并校验备份。请回到游戏主菜单，手动读取这份存档。");
     }catch(const std::exception&e){message(L"保存没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }
@@ -564,7 +574,17 @@ void patchFile(bool exportIt){
         if(exportIt){auto changes=preparedChanges();if(changes.empty()){toast(L"没有可导出的修改，请先编辑项目。");return;}
             if(lower(p.extension().wstring())!=L".txt"||lower(p.parent_path().filename().wstring())==L".rizia-backups"||samePath(p,g.file))throw WinFailure(L"请用 .txt 文件导出方案，不能覆盖游戏存档或备份目录。");
             writePatch(p,rizia::serializePatch(changes,g.doc->story));toast(L"修改方案已导出，只包含字段和值。");
-        }else{auto changes=rizia::parsePatch(readFile(p),g.doc->story);for(const auto&[key,value]:changes){auto*d=definition(key);if(d&&d->nonnegative&&(value.empty()||!std::all_of(value.begin(),value.end(),[](char c){return c>='0'&&c<='9';})))throw WinFailure(label(key)+L"必须是非负十进制整数。");}g.session->applyBatch(changes);navigate(5);toast(L"方案已导入，待保存");}
+        }else{
+            const auto changes=rizia::parsePatch(readFile(p),g.doc->story);
+            for(const auto& [key,value]:changes){
+                const auto* field=definition(key);
+                if(field&&field->nonnegative&&(value.empty()||!std::all_of(value.begin(),value.end(),[](char c){return c>='0'&&c<='9';})))
+                    throw WinFailure(L"请输入非负整数。\r\n"+wide(key));
+            }
+            g.session->applyBatch(changes);
+            navigate(5);
+            toast(L"方案已导入，待保存");
+        }
     }catch(const std::exception&e){message(L"修改方案没有处理完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONWARNING);}
 }
 void copyKey(){
@@ -595,16 +615,35 @@ void changeLanguage(){
     rawText(ctl(SUPPORT_AUTHOR),sponsor_text::get(sponsor_text::Key::Title));
     if(g.tab==7)setHelp();refresh();
 }
+std::string renderFieldCsv(const rizia::Document& doc,const rizia::ChangeMap& changes){
+    auto cell=[](const std::string& value,bool numeric=false){
+        std::string out="\"";
+        const auto first=value.find_first_not_of(' ');
+        if(first!=value.npos && std::string_view("=+-@\t\r\n").find(value[first])!=std::string_view::npos &&
+           !(numeric && rizia::detail::validNumberSyntax(value)))out+="'";
+        for(char c:value){
+            if(c=='"')out+='"';
+            out+=c;
+        }
+        return out+'"';
+    };
+    std::string data="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n";
+    for(const auto& field:doc.fields){
+        const auto edit=changes.find(field.key);
+        const auto& current=edit==changes.end()?field.value:edit->second;
+        const bool numeric=!field.is_bool;
+        data+=cell(doc.story)+","+cell(field.key)+","+cell(utf8(label(field.key)))+","+
+              cell(field.value,numeric)+","+cell(current,numeric)+","+cell(numeric?"number":"boolean")+"\r\n";
+    }
+    return data;
+}
 void exportCSV(){
     if(!g.doc||!applyInput(false))return;
     std::vector<wchar_t> buffer(32768);std::wstring name=L"Suzerain-fields.csv";std::copy(name.begin(),name.end(),buffer.begin());
     OPENFILENAMEW o{};o.lStructSize=sizeof(o);o.hwndOwner=g.win;o.lpstrFile=buffer.data();o.nMaxFile=(DWORD)buffer.size();o.lpstrFilter=L"CSV (*.csv)\0*.csv\0\0";o.lpstrDefExt=L"csv";o.Flags=OFN_OVERWRITEPROMPT|OFN_PATHMUSTEXIST|OFN_NOCHANGEDIR;
     if(!GetSaveFileNameW(&o))return;fs::path path(buffer.data());
     if(lower(path.extension().wstring())!=L".csv"||samePath(path,g.file)||lower(path.parent_path().filename().wstring())==L".rizia-backups")throw WinFailure(L"Choose a .csv file outside the backup folder.");
-    auto cell=[](std::string value){std::string out="\"";if(!value.empty()&&std::string("=+-@\t\r").find(value[0])!=std::string::npos)out+="'";for(char c:value){if(c=='\"')out+='\"';out+=c;}return out+"\"";};
-    std::string data="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n";
-    for(const auto& f:g.doc->fields)data+=cell(g.doc->story)+","+cell(f.key)+","+cell(utf8(label(f.key)))+","+cell(f.value)+","+cell(effective(f.key))+","+cell(f.is_bool?"boolean":"number")+"\r\n";
-    writePatch(path,data);toast(L"CSV exported.");
+    writePatch(path,renderFieldCsv(*g.doc,pending()));toast(L"CSV exported.");
 }
 #include "workspace_view.hpp"
 LRESULT CALLBACK editProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){

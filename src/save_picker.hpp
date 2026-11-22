@@ -184,7 +184,8 @@ inline void fill(State& s){
         if(!matchesSave(save,query,slot))continue;
         int row=(int)s.rows.size();s.rows.push_back(n);
         LVITEMW item{};item.mask=LVIF_TEXT;item.iItem=row;item.pszText=name.data();ListView_InsertItem(s.list,&item);
-        std::wstring cells[]={campaignLabel(save.story),saveSubtitle(slot,wide(save.campaignName)),wide(save.turn),fileTimeText(save.path)};
+        std::wstring cells[]={campaignLabel(save.story),saveSubtitle(slot,wide(save.campaignName)),wide(save.turn),
+                              save.modifiedText.empty()?tr(L"未知时间"):save.modifiedText};
         for(int c=0;c<4;++c)ListView_SetItemText(s.list,row,c+1,cells[c].data());
         if(save.path==keep)at=row;
     }
@@ -215,7 +216,16 @@ inline void start(State& s){
     // Captured roots cannot change until the worker finishes; all UI updates stay on the UI thread.
     auto roots=s.roots;
     s.worker=std::thread([&s,roots]{
-        try{rizia::discovery::Limits limits;limits.cancel=&s.cancel;s.result=rizia::discovery::scan(roots,limits);}
+        try{
+            rizia::discovery::Limits limits;limits.cancel=&s.cancel;
+            auto result=rizia::discovery::scan(roots,limits);
+            // Cache the exact displayed timestamps once per scan, away from the UI thread.
+            for(auto& save:result.saves){
+                if(s.cancel.load())break;
+                save.modifiedText=formatLocalStamp(save_backup::lastWriteStamp(save.path));
+            }
+            if(!s.cancel.load())s.result=std::move(result);
+        }
         catch(const std::exception&){s.error=L"搜索失败，请刷新或添加文件夹";}
         catch(...){s.error=L"搜索失败，请刷新或添加文件夹";}
         s.done.store(true,std::memory_order_release);
@@ -265,7 +275,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             for(const auto* name:{L"All campaigns",L"Sordland",L"Rizia"}){auto text=tr(name);SendMessageW(s.campaign,CB_ADDSTRING,0,(LPARAM)text.c_str());}SendMessageW(s.campaign,CB_SETCURSEL,0,0);
             s.add=child(s,L"BUTTON",L"添加文件夹",WS_TABSTOP|BS_OWNERDRAW,ADD_FOLDER);s.refresh=child(s,L"BUTTON",L"刷新",WS_TABSTOP|BS_OWNERDRAW,RESCAN);
             s.list=child(s,WC_LISTVIEWW,L"存档列表",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,LIST);
-            configureSearchField(s.filter,s.list,L"搜索文件名、战役或回合");
+            configureSearchField(s.filter,s.list,L"文件名、战役、回合或时间");
             ListView_SetExtendedListViewStyle(s.list,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
             const wchar_t* cols[]={L"文件名",L"战役",L"存档详情",L"回合",L"修改时间"};for(int i=0;i<5;++i){LVCOLUMNW c{};c.mask=LVCF_TEXT|LVCF_WIDTH;auto title=tr(cols[i]);c.pszText=title.data();c.cx=s.scale(120);ListView_InsertColumn(s.list,i,&c);}
             SetWindowSubclass(ListView_GetHeader(s.list),header,1,(DWORD_PTR)&s);

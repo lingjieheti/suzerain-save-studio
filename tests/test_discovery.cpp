@@ -84,6 +84,22 @@ int main() {
         bool sawMain = false, sawRizia = false;
         for (const auto& save : mixed.saves) { sawMain |= save.story == "StoryPack_Main"; sawRizia |= save.story == "StoryPack_Rizia"; }
         check(sawMain && sawRizia, "Discovery results include exact story identifier");
+        const auto library = root / "library";
+        write(library / "latest.json", valid);
+        write(library / "larger.json", valid + " ");
+        write(library / "older.json", valid);
+        fs::last_write_time(library / "latest.json", now);
+        fs::last_write_time(library / "larger.json", now - std::chrono::hours(1));
+        fs::last_write_time(library / "older.json", now - std::chrono::hours(2));
+        limits = {}; limits.maxTotalBytes = 2 * valid.size();
+        const auto exactFit = rizia::discovery::scan({library}, limits);
+        check(exactFit.truncated && exactFit.saves.size() == 2 &&
+              exactFit.saves[0].path.filename() == "latest.json" && exactFit.saves[1].path.filename() == "older.json",
+              "Read budget skips a larger middle save and retains a smaller exact fit in newest-first order");
+        --limits.maxTotalBytes;
+        const auto oneByteShort = rizia::discovery::scan({library}, limits);
+        check(oneByteShort.truncated && oneByteShort.saves.size() == 1 && oneByteShort.saves[0].path.filename() == "latest.json",
+              "An older save one byte over the remaining budget is excluded");
         std::error_code ec;
         fs::create_directory_symlink(root / "nested", root / "link", ec);
         if (!ec) check(rizia::discovery::scan({root / "link"}).saves.empty(), "Symlink roots excluded");

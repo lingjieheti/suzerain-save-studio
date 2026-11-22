@@ -37,10 +37,10 @@ int main(int argc,char** argv){
                   "Concurrent save was not blocked before backup/write");
         }
         const auto practiceCopy=root/"practice.json";
-        check(atomicSave(practiceCopy,mainNew,nullptr,true).empty()&&readFile(practiceCopy)==mainNew,"Practice copy was not created");
-        rejects([&]{atomicSave(mainPath,mainNew,nullptr,true);},"Practice save overwrote an existing file");
+        check(atomicSave(practiceCopy,mainNew,nullptr).empty()&&readFile(practiceCopy)==mainNew,"Practice copy was not created");
+        rejects([&]{atomicSave(mainPath,mainNew,nullptr);},"Practice save overwrote an existing file");
         check(readFile(mainPath)==mainOld&&!fs::exists(root/".rizia-backups"),"Rejected practice save changed the destination");
-        rejects([&]{atomicSave(mainPath,riziaNew,nullptr);},"Cross-story overwrite accepted");
+        rejects([&]{atomicSave(mainPath,riziaNew,&mainOld);},"Cross-story overwrite accepted");
         check(readFile(mainPath)==mainOld&&!fs::exists(root/".rizia-backups"),"Rejected cross-story overwrite changed files");
         rejects([&]{atomicSave(riziaPath,mainNew,&riziaOld);},"Cross-story overwrite with expected bytes accepted");
         check(readFile(riziaPath)==riziaOld,"Rizia changed on mismatch");
@@ -50,6 +50,24 @@ int main(int argc,char** argv){
         std::string stale=mainOld+" ";
         rejects([&]{atomicSave(mainPath,mainNew,&stale);},"Stale opened bytes accepted");
         check(readFile(mainPath)==mainOld,"Stale rejection changed save");
+        const auto copyTarget=root/"alternate-slot.json";
+        const auto otherProgress=save("StoryPack_Main","BaseGame.",9);
+        // Another writer creates, changes or removes the chosen slot while
+        // Studio is rendering the edits from mainPath.
+        write(copyTarget,mainOld);
+        rejects([&]{atomicSave(copyTarget,mainNew,nullptr);},"Save As overwrote a newly created slot");
+        check(readFile(copyTarget)==mainOld,"Newly created slot changed");
+        const auto chosenBytes=readFile(copyTarget);
+        write(copyTarget,otherProgress);
+        rejects([&]{atomicSave(copyTarget,mainNew,&chosenBytes);},"Save As overwrote newer progress");
+        check(readFile(copyTarget)==otherProgress,"External progress was lost");
+        fs::remove(copyTarget);
+        rejects([&]{atomicSave(copyTarget,mainNew,&chosenBytes);},"Save As recreated a removed slot");
+        check(!fs::exists(copyTarget)&&!fs::exists(root/".rizia-backups"),"Conflicts wrote a slot or a backup");
+        write(copyTarget,chosenBytes);
+        const auto copyBackup=atomicSave(copyTarget,mainNew,&chosenBytes);
+        check(readFile(copyTarget)==mainNew&&readFile(copyBackup)==chosenBytes&&readFile(mainPath)==mainOld,
+              "An unchanged Save As destination must keep its own exact backup and leave the source alone");
         const auto mainBackup=atomicSave(mainPath,mainNew,&mainOld);
         check(readFile(mainPath)==mainNew&&readFile(mainBackup)==mainOld,"Main save/backup not byte-exact");
         const auto branchPath=root/"main.json.branch.json";
@@ -83,10 +101,10 @@ int main(int argc,char** argv){
               "Writing a recovery point changed its bytes or created nested backups");
         fs::create_directories(archive/"subfolder");
         const auto protectedCopy=archive/"subfolder"/"export.json";
-        rejects([&]{atomicSave(protectedCopy,mainOld,nullptr,true);},"New save created inside a backup subfolder");
+        rejects([&]{atomicSave(protectedCopy,mainOld,nullptr);},"New save created inside a backup subfolder");
         check(!fs::exists(protectedCopy),"Rejected nested destination was created");
         const auto recovered=root/"recovered.json";
-        check(atomicSave(recovered,readFile(mainBackup),nullptr,true).empty()&&readFile(recovered)==mainOld,
+        check(atomicSave(recovered,readFile(mainBackup),nullptr).empty()&&readFile(recovered)==mainOld,
               "Saving a separate copy from a protected backup failed");
         const auto riziaBackup=atomicSave(riziaPath,riziaNew,&riziaOld);
         check(readFile(riziaPath)==riziaNew&&readFile(riziaBackup)==riziaOld,"Rizia save/backup not byte-exact");
@@ -106,9 +124,19 @@ int main(int argc,char** argv){
         const auto mainPatch=rizia::serializePatch({{"BaseGame.Budget","9"}},"StoryPack_Main");
         writePatch(root/"main.patch.txt",mainPatch);
         check(rizia::parsePatch(readFile(root/"main.patch.txt"),"StoryPack_Main").at("BaseGame.Budget")=="9","Patch writer roundtrip failed");
-        const std::string csv="\xEF\xBB\xBF" "Campaign,Field,Original,Current\r\nStoryPack_Main,BaseGame.Budget,7,8\r\n";
-        writePatch(root/"fields.csv",csv);
-        check(readFile(root/"fields.csv")==csv,"CSV bytes changed by writer");
+        const auto csvDoc=rizia::Document::parse(R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.GovernmentBudget']=-3,['BaseGame.-3']=-0,['BaseGame. =1+2']=2e+1,['BaseGame.Note,\"Q\"']=false}"})");
+        rizia::EditSession csvSession(csvDoc);
+        csvSession.applyBatch({{"BaseGame.GovernmentBudget","-2.50e-1"},{"BaseGame.Note,\"Q\"","true"}});
+        activeStory=csvDoc.story;
+        i18n::setLanguage(2);
+        writePatch(root/"fields.csv",renderFieldCsv(csvDoc,csvSession.pending()));
+        const auto csv=readFile(root/"fields.csv");
+        const std::string expectedCsv="\xEF\xBB\xBF" "Campaign,Field,Label,Original,Current,Type\r\n"
+            "\"StoryPack_Main\",\"BaseGame.GovernmentBudget\",\"Government budget\",\"-3\",\"-2.50e-1\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame.-3\",\"'-3\",\"-0\",\"-0\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame. =1+2\",\"' =1+2\",\"2e+1\",\"2e+1\",\"number\"\r\n"
+            "\"StoryPack_Main\",\"BaseGame.Note,\"\"Q\"\"\",\"Note,\"\"Q\"\"\",\"false\",\"true\",\"boolean\"\r\n";
+        check(csv==expectedCsv,"Field CSV must preserve signed numbers and booleans and escape risky text labels");
         const auto gameFolder=root/"sample-game";
         const auto gameExe=gameFolder/"Suzerain.exe";
         const auto host=gameFolder/"BepInEx";

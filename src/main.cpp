@@ -139,8 +139,9 @@ public:
 };
 
 // Write in the same directory, flush, validate the complete bytes, then atomically replace.
-// The pre-write backup is retained even if Windows refuses the replacement.
-fs::path atomicSave(const fs::path& target,const std::string& output,const std::string* expected,bool newFileOnly=false) {
+// A null baseline means the destination must be new. The pre-write backup is
+// retained even if Windows refuses the replacement.
+fs::path atomicSave(const fs::path& target,const std::string& output,const std::string* expected) {
     if(gameRunning())throw WinFailure(L"请先退出 Suzerain，再保存或恢复存档。");
     const auto absoluteTarget=fs::absolute(target).lexically_normal();
     if(rizia::discovery::inBackupFolder(absoluteTarget)||rizia::discovery::inBackupFolder(fs::weakly_canonical(absoluteTarget)))
@@ -150,9 +151,10 @@ fs::path atomicSave(const fs::path& target,const std::string& output,const std::
     SaveLock lock(target);
     const auto id = writeId();
     const bool exists=fs::exists(target);std::string old;
-    if(newFileOnly && exists)throw WinFailure(tr(L"示例只能另存为新文件。"));
-    if(exists){old=readFile(target);if(rizia::Document::parse(old).story!=parsed.story)throw WinFailure(L"Campaign mismatch.");}
+    if(exists && !expected)throw WinFailure(tr(L"目标文件已存在。请选择其他文件名。"));
+    if(exists)old=readFile(target);
     if(expected && (!exists || old!=*expected))throw WinFailure(L"原存档在打开后发生了变化。为避免覆盖游戏的新进度，请重新打开该存档再修改。");
+    if(exists && rizia::Document::parse(old).story!=parsed.story)throw WinFailure(L"Campaign mismatch.");
     fs::path backup;
     if(exists){
         fs::path folder=target.parent_path()/L".rizia-backups";fs::create_directories(folder);

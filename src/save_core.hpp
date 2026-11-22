@@ -60,6 +60,9 @@ constexpr std::size_t kMaxDepth = 128;
 [[noreturn]] inline void fail(const char* message) {
     throw std::runtime_error(message);
 }
+[[noreturn]] inline void failField(const std::string& key, const char* reason) {
+    throw std::runtime_error(std::string(reason) + "\r\n" + key);
+}
 inline bool digit(char c) { return c >= '0' && c <= '9'; }
 inline bool jsonSpace(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
 inline bool luaSpace(char c) { return jsonSpace(c) || c == '\v' || c == '\f'; }
@@ -604,9 +607,9 @@ inline bool validNumberSyntax(const std::string& value) {
     }
     return p == value.size();
 }
-inline void validateNumber(const std::string& value) {
-    if (value.size() > kMaxFileSize) fail("Replacement number is too long");
-    if (!validNumberSyntax(value)) fail("Enter a finite decimal number, not text or an expression");
+inline void validateNumber(const std::string& key, const std::string& value) {
+    if (value.size() > kMaxFileSize) failField(key, "Replacement number is too long");
+    if (!validNumberSyntax(value)) failField(key, "Enter a finite decimal number, not text or an expression");
     // Compare decimal magnitude exactly. Floating conversion alone could round
     // 2147483647.0000000000000000001 down to the allowed maximum.
     std::string digits;
@@ -633,14 +636,14 @@ inline void validateNumber(const std::string& value) {
     if (nonzero != std::string::npos) {
         digits.erase(0, nonzero);
         const auto integerDigits = static_cast<long long>(digits.size()) + exponent - fraction;
-        if (integerDigits > 10) fail("Number exceeds the allowed magnitude 2147483647");
+        if (integerDigits > 10) failField(key, "Number exceeds the allowed magnitude 2147483647");
         if (integerDigits == 10) {
             auto leading = digits.substr(0, 10);
             leading.append(10 - leading.size(), '0');
             const int compared = leading.compare("2147483647");
             if (compared > 0 || (compared == 0 && digits.size() > 10 &&
                 digits.find_first_not_of('0', 10) != std::string::npos))
-                fail("Number exceeds the allowed magnitude 2147483647");
+                failField(key, "Number exceeds the allowed magnitude 2147483647");
         }
     }
     std::istringstream input(value);
@@ -648,7 +651,7 @@ inline void validateNumber(const std::string& value) {
     long double n = 0;
     input >> std::noskipws >> n;
     if (input.fail() || !input.eof() || !std::isfinite(n) || std::fabs(n) > 2147483647.0L)
-        fail("Number must be finite and within -2147483647 to 2147483647");
+        failField(key, "Number must be finite and within -2147483647 to 2147483647");
 }
 } // namespace detail
 
@@ -677,11 +680,11 @@ inline std::size_t Document::planEdits(const std::map<std::string, std::string>&
     for (const auto& change : changes) {
         const Field* field = find(change.first);
         if (!field || field->key.compare(0, prefix.size(), prefix) != 0)
-            detail::fail("Unknown, foreign-story or non-editable field");
+            detail::failField(change.first, "Unknown, foreign-story or non-editable field");
         if (field->is_bool) {
             if (change.second != "true" && change.second != "false")
-                detail::fail("Boolean fields accept only true or false");
-        } else detail::validateNumber(change.second);
+                detail::failField(change.first, "Boolean fields accept only true or false");
+        } else detail::validateNumber(change.first, change.second);
         if (field->start > field->end || field->end > original.size())
             detail::fail("Invalid original-file field span");
         if (change.second == field->value) continue;

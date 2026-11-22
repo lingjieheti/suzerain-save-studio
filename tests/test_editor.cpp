@@ -164,6 +164,23 @@ void testSaveQueries() {
     };
     check(matches(L"pALAcE　Rizia north") && matches(L"13-10-2025"),"Combine save metadata words and preserve a dated filename");
     check(matches(L"里奇亚 自动 回合 3") && matches(L"Rizia turn3") && matches(L"3"),"Find an autosave at the requested turn");
+    auto matchesAt=[&](const wchar_t* input,const wchar_t* modified=L"2031-08-24  16:09:32"){
+        snapshot.modifiedText=modified;
+        return matches(input);
+    };
+    check(matchesAt(L"2031-08") && matchesAt(L"2031-08-24") && matchesAt(L"16:09") && matchesAt(L"16:09:32"),
+          "Search for the displayed modification month, date, minute, or second");
+    check(matchesAt(L"2031-08-24  16:09:32") && matchesAt(L"Rizia north turn 3 16:09"),
+          "Combine modification time with campaign, file details and turn");
+    check(!matchesAt(L"2031-09") && !matchesAt(L"2031-08-25") && !matchesAt(L"09:32") && !matchesAt(L"16:09:33") &&
+          !matchesAt(L"Sordland 16:09") && !matchesAt(L"turn 24 16:09"),
+          "Reject a different date, clock time, campaign, or turn");
+    check(!matchesAt(L"24") && !matchesAt(L"16") && matchesAt(L"2031"),
+          "A year finds the timestamp while short numeric queries retain their old meaning");
+    check(!matchesAt(L"16:09",L"") && !matchesAt(L"2031-08-24",L"未知时间") &&
+          matchesAt(L"13-10-2025",L"") && matchesAt(L"turn 3",L""),
+          "Missing timestamps preserve filename and turn searches");
+    snapshot.modifiedText.clear();
     check(matches(L"第3回合") && matches(L"里奇亚 第 3 回合") && !matches(L"第13回合"),"Recognize Chinese ordinal turn phrases");
     check(!matches(L"Sordland turn 3") && matches(L"13") && !matches(L"turn 13"),"Only explicit turn queries ignore filename digits");
     snapshot.turn="13";snapshot.path=L"ManualSave_03-10-2025.json";
@@ -540,8 +557,10 @@ void testFavorites(const fs::path& mainPath,const fs::path& riziaPath){
     loadDocumentBytes(readFile(mainPath),mainPath,0);
     command(FILTER_FAVORITES,0);
     check(g.rows==std::vector<std::string>{budget}&&g.favorites.count(event),"Older save hides missing fields without forgetting them");
-    SetWindowTextW(g.search,L"no match");
-    check(g.rows.empty(),"Favorite filter intersects with field search");
+    SetWindowTextW(g.search,L"GB");
+    check(g.rows==std::vector<std::string>{budget},"A favorited balance can be found by its guide abbreviation");
+    SetWindowTextW(g.search,L"PW");
+    check(g.rows.empty(),"An abbreviation cannot bypass the favorites filter");
     SetWindowTextW(g.search,L"");
     command(FIELD_FAVORITE,0);
     check(g.rows.empty()&&!IsWindowEnabled(ctl(FIELD_FAVORITE)),"Removing the last visible favorite updates selection and edit controls");
@@ -558,6 +577,11 @@ void testFavorites(const fs::path& mainPath,const fs::path& riziaPath){
 void testSearch(const fs::path& path){
     loadDocumentBytes(readFile(path),path,0);
     const std::string budget="BaseGame.GovernmentBudget";
+    SetWindowTextW(g.search,L"pW");
+    check(g.rows==std::vector<std::string>{"BaseGame.PersonalWealth"},"PW finds only the wealth balance on the demo economy page");
+    SetWindowTextW(g.search,L"gb");
+    check(g.rows==std::vector<std::string>{budget},"GB finds only the budget balance on the demo economy page");
+    SetWindowTextW(g.search,L"");
     selectRow(budget);
     SetWindowTextW(g.edit,L"43");
     SetWindowTextW(g.search,L"government 预算");
@@ -594,6 +618,11 @@ void testSearch(const fs::path& path){
     check(!g.changedOnly&&!g.rows.empty(),"Pending-only filtering is scoped to its page");
     navigate(4);
     check(g.changedOnly&&g.rows.empty(),"Returning restores the pending-only filter");
+    SetWindowTextW(g.search,L"预算 gB");
+    check(g.rows==std::vector<std::string>{budget},"A mixed-language GB query finds the pending budget on the advanced page");
+    SetWindowTextW(g.search,L"PW");
+    check(g.rows.empty(),"An abbreviation cannot bypass the pending-only filter");
+    SetWindowTextW(g.search,L"budget 预算 MAX");
     command(FILTER_CHANGED,0);
     i18n::setLanguage(2);g.captions.clear();refresh();
     check(g.rows.size()==1&&g.selected==economySelection,"Chinese search works in English UI");
@@ -608,6 +637,12 @@ void testSearch(const fs::path& path){
     check(g.rows.empty(),"A wrapped incomplete key does not select a similarly named field");
     SetWindowTextW(g.search,L"GovernmentBud");
     check(g.rows.size()>1,"An ordinary keyword keeps matching several fields");
+    const std::string collision=R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.RumburgBorder']=1,['BaseGame.GovernmentBudget']=3}"})";
+    loadDocumentBytes(collision,{},0);
+    navigate(4);
+    SetWindowTextW(g.search,L"GB");
+    check(g.rows==std::vector<std::string>{budget,"BaseGame.RumburgBorder"},
+          "Advanced search lists the balance first and keeps raw keys containing GB");
     i18n::setLanguage(0);
 }
 
@@ -621,6 +656,8 @@ void testResourceSearch(const fs::path& path){
             " (matches=" + std::to_string(g.rows.size()) + ", selection=" + g.selected + ")";
         check(g.rows.size()==1 && g.selected==key, description.c_str());
     };
+    SetWindowTextW(g.search,L"GB");
+    check(g.rows.empty(),"Sordland's budget abbreviation does not select the Rizia budget");
     findOne(L"现有权威",riziaResources[1].stock);
     findOne(L"最大预算",riziaResources[0].cap);
     findOne(L"每回合能源收入",riziaResources[2].turnTotal);

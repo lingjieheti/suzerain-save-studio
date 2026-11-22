@@ -155,13 +155,33 @@ void patchBasics() {
     check(rizia::parsePatch("# RiziaPatch 1\rRiziaDLC.Flag=true\r").at(kFlag) == "true", "CR-only line endings accepted");
     check(rizia::parsePatch("# RiziaPatch 1\nRiziaDLC.NewVersionField=9\n").size() == 1,
           "Parsing is independent of target document membership");
-    rejects([&] { target.applyBatch(rizia::parsePatch("# RiziaPatch 1\nRiziaDLC.NewVersionField=9\n")); },
-            "Unknown imported field rejected atomically");
-    check(target.pending().empty() && target.canRedo(), "Failed import preserves redo");
-    auto tooLarge = rizia::parsePatch("# RiziaPatch 1\nRiziaDLC.Resources_Budget=1e9999\n");
-    rejects([&] { target.applyBatch(tooLarge); }, "Numeric range validated at application");
-    auto wrongType = rizia::parsePatch("# RiziaPatch 1\nRiziaDLC.Flag=42\n");
-    rejects([&] { target.applyBatch(wrongType); }, "Field type validated at application");
+    target.applyBatch({{kAuthority, "16"}});
+    const auto staged = target.pending();
+    target.applyBatch({{kEnergy, "20"}});
+    const auto redoState = target.pending();
+    target.undo();
+
+    const struct { const char* key; const char* value; const char* reason; } invalidFields[] = {
+        {"RiziaDLC.NewVersionField", "9", "Unknown, foreign-story or non-editable field"},
+        {kFlag, "42", "Boolean fields accept only true or false"},
+        {kBudget, "true", "Enter a finite decimal number"},
+        {kBudget, "2147483648", "exceeds the allowed magnitude"},
+        {kBudget, "1e9999", "exceeds the allowed magnitude"}
+    };
+    for (const auto& field : invalidFields) {
+        const auto patch = rizia::parsePatch(std::string("# RiziaPatch 1\nRiziaDLC.Decimal=150\n") +
+                                             field.key + "=" + field.value + "\n");
+        std::string error;
+        try { target.applyBatch(patch); }
+        catch (const std::runtime_error& ex) { error = ex.what(); }
+        check(error.find(field.key) != std::string::npos, "Failed import names the rejected field");
+        check(error.find(field.reason) != std::string::npos, "Failed import explains the field error");
+        check(target.pending() == staged && target.canUndo() && target.canRedo(),
+              "Failed import preserves staged changes and both history directions");
+    }
+    check(target.redo() && target.pending() == redoState, "Redo after failed import restores the original edit");
+    check(target.undo() && target.pending() == staged, "Undo after failed import restores the staged values");
+    check(target.undo() && target.pending().empty() && !target.canUndo(), "Failed import adds no undo step");
 }
 
 void maliciousPatches() {
