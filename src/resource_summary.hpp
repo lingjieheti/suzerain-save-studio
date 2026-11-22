@@ -24,6 +24,8 @@ inline constexpr RiziaResource riziaResources[] = {
 };
 
 inline std::wstring resourceSearchAliases(std::string_view key) {
+    if (key == "BaseGame.GovernmentBudget") return L"GB";
+    if (key == "BaseGame.PersonalWealth") return L"PW";
     if (key.compare(0, 9, "RiziaDLC.") != 0) return {};
     for (const auto& resource : riziaResources) {
         const std::wstring name = resource.name;
