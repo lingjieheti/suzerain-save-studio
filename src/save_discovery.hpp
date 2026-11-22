@@ -145,12 +145,13 @@ inline Result scan(const std::vector<fs::path>& roots, const Limits& limits = {}
     if (cancelled()) return result;
     // Parse newest files first so result limits retain the newest valid saves.
     std::sort(candidates.begin(), candidates.end(), detail::newer);
-    std::uintmax_t totalBytes = 0;
+    auto remainingBytes = limits.maxTotalBytes;
     for (auto& candidate : candidates) {
         if (cancelled()) return result;
-        if (result.saves.size() >= limits.maxResults) { result.truncated = true; break; }
-        if (candidate.size > limits.maxTotalBytes - totalBytes) { result.truncated = true; break; }
-        totalBytes += candidate.size;
+        if (result.saves.size() >= limits.maxResults || remainingBytes == 0) { result.truncated = true; break; }
+        // An older, smaller save may still fit the remaining read budget.
+        if (candidate.size > remainingBytes) { result.truncated = true; continue; }
+        remainingBytes -= candidate.size;
         try {
             std::ifstream input(candidate.path, std::ios::binary);
             if (!input) { ++result.errors; continue; }
