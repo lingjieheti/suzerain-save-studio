@@ -271,10 +271,13 @@ std::map<std::string,std::string> preparedChanges(){
     changes.insert(caps.begin(),caps.end());
     g.doc->validateChanges(changes);return changes;
 }
+std::wstring formatLocalStamp(const std::wstring& stamp){
+    if(stamp.empty())return {};
+    return stamp.substr(0,4)+L"-"+stamp.substr(4,2)+L"-"+stamp.substr(6,2)+L"  "+stamp.substr(9,2)+L":"+stamp.substr(11,2)+L":"+stamp.substr(13,2);
+}
 std::wstring fileTimeText(const fs::path&p,std::wstring stamp={}){
     if(stamp.empty())stamp=save_backup::lastWriteStamp(p);
-    if(stamp.empty())return L"未知时间";
-    return stamp.substr(0,4)+L"-"+stamp.substr(4,2)+L"-"+stamp.substr(6,2)+L"  "+stamp.substr(9,2)+L":"+stamp.substr(11,2)+L":"+stamp.substr(13,2);
+    return stamp.empty()?L"未知时间":formatLocalStamp(stamp);
 }
 void selectBackup(int index){
     g.restoreArmed=false;g.backupIndex=index;g.backupDoc.reset();

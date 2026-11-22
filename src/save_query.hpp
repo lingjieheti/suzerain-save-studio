@@ -1,7 +1,8 @@
 #pragma once
 
 struct SaveQuery {
-    std::vector<std::wstring> words;
+    struct Word { std::wstring raw, folded; };
+    std::vector<Word> words;
     std::vector<std::wstring> turns;
     std::vector<std::wstring> numbers;
 };
@@ -41,7 +42,7 @@ inline SaveQuery parseSaveQuery(const std::wstring& input) {
         while(at<input.size()&&!field_search::space(input[at]))++at;
         const auto raw=input.substr(start,at-start);
         if(turnDigits(raw)) {
-            if(!query.words.empty()&&isTurnLabel(query.words.back())){
+            if(!query.words.empty()&&isTurnLabel(query.words.back().folded)){
                 query.words.pop_back();query.turns.push_back(raw);
             }else query.numbers.push_back(raw);
         } else {
@@ -49,7 +50,7 @@ inline SaveQuery parseSaveQuery(const std::wstring& input) {
             const auto number=word.find_first_of(L"0123456789");
             if(number!=std::wstring::npos&&isTurnLabel(word.substr(0,number))&&turnDigits(word.substr(number)))
                 query.turns.push_back(word.substr(number));
-            else if(!word.empty())query.words.push_back(word);
+            else if(!word.empty())query.words.push_back({raw,word});
         }
     }
     return query;
@@ -86,6 +87,17 @@ inline std::wstring saveSubtitle(const SaveSlot* slot,const std::wstring& campai
     return campaign.empty()?type:type+L" · "+campaign;
 }
 
+inline bool matchesModified(const std::wstring& modified,const std::wstring& term) {
+    // Compare against the displayed local date or clock, on component boundaries.
+    if((term.size()==7 || term.size()==10) && term[4]==L'-')
+        return modified.compare(0,term.size(),term)==0;
+    if((term.size()==5 || term.size()==8) && term[2]==L':'){
+        const auto clock=modified.find_first_not_of(L' ',modified.find(L' '));
+        return clock!=std::wstring::npos && modified.compare(clock,term.size(),term)==0;
+    }
+    return false;
+}
+
 inline bool matchesSave(const rizia::discovery::Save& save,const SaveQuery& query,const SaveSlot* slot) {
     if(query.words.empty()&&query.turns.empty()&&query.numbers.empty())return true;
     const auto turn=wide(save.turn);
@@ -93,7 +105,8 @@ inline bool matchesSave(const rizia::discovery::Save& save,const SaveQuery& quer
     const auto filename=save.path.filename().wstring();
     const auto campaign=wide(save.campaignName);
     for(const auto& number:query.numbers){
-        if(number!=turn && !fileNumberMatches(filename,number) && !fileNumberMatches(campaign,number))return false;
+        const bool year=number.size()==4 && save.modifiedText.compare(0,4,number)==0;
+        if(!year && number!=turn && !fileNumberMatches(filename,number) && !fileNumberMatches(campaign,number))return false;
     }
     if(query.words.empty())return true;
     std::wstring alias;
@@ -101,5 +114,7 @@ inline bool matchesSave(const rizia::discovery::Save& save,const SaveQuery& quer
     const bool sordland=save.story=="StoryPack_Main";
     const auto index=field_search::fold(filename+L"|"+campaign+L"|"+campaignLabel(save.story)+
         (sordland?L"|Sordland|索德兰|索德蘭|":L"|Rizia|里奇亚|里奇亞|")+alias);
-    return field_search::matches(index,query.words);
+    return std::all_of(query.words.begin(),query.words.end(),[&](const SaveQuery::Word& word){
+        return index.find(word.folded)!=std::wstring::npos || matchesModified(save.modifiedText,word.raw);
+    });
 }

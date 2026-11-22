@@ -21,6 +21,7 @@ struct Save {
     std::string campaignName, turn, version, story;
     fs::file_time_type mtime{};
     std::uintmax_t size = 0;
+    std::wstring modifiedText; // Local timestamp cached by the Windows picker.
 };
 struct Limits {
     unsigned maxDepth = 4; // Root directory is depth zero.

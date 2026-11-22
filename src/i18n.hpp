@@ -67,7 +67,7 @@ L"修改时间|Modified|更新日時|수정 시간|Geändert|Modifié le|Modific
 L"存档列表|Saves|セーブ一覧|저장 목록|Spielstände|Sauvegardes|Partidas|Jogos salvos|Сохранения|Kayıtlar",
 L"存档搜索|Save search|セーブ検索|저장 검색|Spielstandsuche|Recherche de sauvegardes|Buscar partidas|Buscar jogos salvos|Поиск сохранений|Kayıt arama",
 L"清除搜索|Clear search|検索を消去|검색 지우기|Suche leeren|Effacer la recherche|Borrar búsqueda|Limpar pesquisa|Очистить поиск|Aramayı temizle",
-L"搜索文件名、战役或回合|Search file, campaign or turn|ファイル名・戦役・ターンで検索|파일·캠페인·턴 검색|Datei, Kampagne oder Runde suchen|Rechercher un fichier, une campagne ou un tour|Buscar archivo, campaña o turno|Buscar arquivo, campanha ou turno|Поиск по файлу, кампании или ходу|Dosya, senaryo veya tur ara",
+L"文件名、战役、回合或时间|File, campaign, turn or time|ファイル名・戦役・ターン・日時|파일명·캠페인·턴·시간|Datei, Kampagne, Runde oder Zeit|Fichier, campagne, tour ou heure|Archivo, campaña, turno u hora|Arquivo, campanha, turno ou hora|Файл, кампания, ход или время|Dosya, senaryo, tur veya saat",
 L"自动存档|Autosave|オートセーブ|자동 저장|Automatischer Spielstand|Sauvegarde automatique|Guardado automático|Salvamento automático|Автосохранение|Otomatik kayıt",
 L"手动存档|Manual save|手動セーブ|수동 저장|Manueller Spielstand|Sauvegarde manuelle|Guardado manual|Salvamento manual|Ручное сохранение|Manuel kayıt",
 L"当前存档|Active save|現在のセーブ|현재 저장|Aktiver Spielstand|Sauvegarde active|Partida activa|Jogo salvo ativo|Активное сохранение|Etkin kayıt",

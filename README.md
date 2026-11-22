@@ -20,7 +20,7 @@
 
 完整包内含桌面编辑器和可选的 **Ctrl+F8 游戏内实时面板**。解压后运行 EXE 即可编辑存档。若要使用实时面板，在启动窗口选择“实时模式”。安装要求、可编辑的五项资源与验证范围见[实时面板使用说明](live/README.zh-CN.md)。
 
-1. 在游戏中保存并退出。启动修改器，输入“里奇亚 自动 第3回合”可找到指定回合的自动存档。选中后核对文件名，也可以点“手动打开”。首次使用可以先选“索德兰示例”或“里奇亚示例”。
+1. 在游戏中保存并退出。启动修改器，输入“里奇亚 自动 第3回合”可找到指定回合的自动存档。同一回合有多个存档时，可再输入“修改时间”列显示的日期或时分，例如 `18:45`。选中后核对文件名，也可以点“手动打开”。首次使用可以先选“索德兰示例”或“里奇亚示例”。
 2. 选择左侧分类，按中文名称或原始字段名查找项目。也可以在“高级字段”粘贴攻略中的整段代码，例如 `["BaseGame.GovernmentBudget"]=20`，直接定位政府预算。选中后输入自己想要的数值，再点“应用修改”。
 3. 打开“修改预览”，核对原值与新值。可以单独撤回某项，也可以撤销或重做。选择“另存为”输出副本，或保存到原档。回到游戏主菜单，手动读取刚修改的存档。
 
@@ -64,7 +64,7 @@
 
 ## English quick start
 
-Use `Rizia auto turn 3` in the save picker to narrow the list to that campaign, slot type and turn. Paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` into **Advanced** to find that exact field. Enter your preferred amount in the inspector to make the edit.
+Use `Rizia auto turn 3` in the save picker to narrow the list to that campaign, slot type and turn. Add a local date or time from the **Modified** column, such as `18:45`, to distinguish saves from the same turn. Paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` into **Advanced** to find that exact field. Enter your preferred amount in the inspector to make the edit.
 
 Bookmark any available field in its inspector and find it again under **Advanced** with the favorites filter. Sordland and Rizia keep separate lists. In the live panel, use **−5, −1, +1, +5** to prepare a change, then preview and confirm it.
 

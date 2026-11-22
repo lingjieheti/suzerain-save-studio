@@ -164,6 +164,23 @@ void testSaveQueries() {
     };
     check(matches(L"pALAcE　Rizia north") && matches(L"13-10-2025"),"Combine save metadata words and preserve a dated filename");
     check(matches(L"里奇亚 自动 回合 3") && matches(L"Rizia turn3") && matches(L"3"),"Find an autosave at the requested turn");
+    auto matchesAt=[&](const wchar_t* input,const wchar_t* modified=L"2031-08-24  16:09:32"){
+        snapshot.modifiedText=modified;
+        return matches(input);
+    };
+    check(matchesAt(L"2031-08") && matchesAt(L"2031-08-24") && matchesAt(L"16:09") && matchesAt(L"16:09:32"),
+          "Search for the displayed modification month, date, minute, or second");
+    check(matchesAt(L"2031-08-24  16:09:32") && matchesAt(L"Rizia north turn 3 16:09"),
+          "Combine modification time with campaign, file details and turn");
+    check(!matchesAt(L"2031-09") && !matchesAt(L"2031-08-25") && !matchesAt(L"09:32") && !matchesAt(L"16:09:33") &&
+          !matchesAt(L"Sordland 16:09") && !matchesAt(L"turn 24 16:09"),
+          "Reject a different date, clock time, campaign, or turn");
+    check(!matchesAt(L"24") && !matchesAt(L"16") && matchesAt(L"2031"),
+          "A year finds the timestamp while short numeric queries retain their old meaning");
+    check(!matchesAt(L"16:09",L"") && !matchesAt(L"2031-08-24",L"未知时间") &&
+          matchesAt(L"13-10-2025",L"") && matchesAt(L"turn 3",L""),
+          "Missing timestamps preserve filename and turn searches");
+    snapshot.modifiedText.clear();
     check(matches(L"第3回合") && matches(L"里奇亚 第 3 回合") && !matches(L"第13回合"),"Recognize Chinese ordinal turn phrases");
     check(!matches(L"Sordland turn 3") && matches(L"13") && !matches(L"turn 13"),"Only explicit turn queries ignore filename digits");
     snapshot.turn="13";snapshot.path=L"ManualSave_03-10-2025.json";
