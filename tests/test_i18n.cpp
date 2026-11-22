@@ -7,6 +7,23 @@ for(const auto& row:i18n::dictionary())check(row.second.text.size()==10,"transla
 for(int lang=0;lang<11;++lang){i18n::setLanguage(lang);check(!tr(L"选择存档").empty(),"save picker");check(!tr(L"Economy").empty(),"economy");check(!tr(L"Unsupported campaign.").empty(),"error");check(tr(L"C:\\预算\\游戏.json")==L"C:\\预算\\游戏.json","path preservation");check(tr(L"BaseGame.GovernmentBudget")==L"BaseGame.GovernmentBudget","key preservation");check(tr(L"我的战役名称")==L"我的战役名称","campaign preservation");}
 for(int lang=0;lang<11;++lang){
  i18n::setLanguage(lang);
+ const wchar_t* patchReasons[] = {
+  L"Unknown, foreign-story or non-editable field",
+  L"Boolean fields accept only true or false",
+  L"Replacement number is too long",
+  L"Enter a finite decimal number, not text or an expression",
+  L"Number exceeds the allowed magnitude 2147483647",
+  L"Number must be finite and within -2147483647 to 2147483647",
+  L"Enter a nonnegative integer."
+ };
+ const std::wstring heading = L"修改方案没有处理完成。";
+ const std::wstring field = L"BaseGame.GovernmentBudget";
+ for (const auto* reason : patchReasons) {
+  const auto localized = tr(reason);
+  check(!localized.empty() && (lang == 2 || localized != reason), "localized patch error");
+  check(tr(heading + L"\r\n\r\n" + reason + L"\r\n" + field) ==
+        tr(heading) + L"\r\n\r\n" + localized + L"\r\n" + field, "raw patch key below translated reason");
+ }
  check(tr(L"修改预览  3")==tr(L"修改预览")+L"  3","numeric caption");
  check(tr(L"Campaign")==tr(L"战役")&&tr(L"Campaign")!=tr(L"类型"),"picker campaign header names its content");
  for(const auto* defs:{&baseDefs,&riziaDefs})for(const auto& def:*defs){

@@ -571,7 +571,17 @@ void patchFile(bool exportIt){
         if(exportIt){auto changes=preparedChanges();if(changes.empty()){toast(L"没有可导出的修改，请先编辑项目。");return;}
             if(lower(p.extension().wstring())!=L".txt"||lower(p.parent_path().filename().wstring())==L".rizia-backups"||samePath(p,g.file))throw WinFailure(L"请用 .txt 文件导出方案，不能覆盖游戏存档或备份目录。");
             writePatch(p,rizia::serializePatch(changes,g.doc->story));toast(L"修改方案已导出，只包含字段和值。");
-        }else{auto changes=rizia::parsePatch(readFile(p),g.doc->story);for(const auto&[key,value]:changes){auto*d=definition(key);if(d&&d->nonnegative&&(value.empty()||!std::all_of(value.begin(),value.end(),[](char c){return c>='0'&&c<='9';})))throw WinFailure(label(key)+L"必须是非负十进制整数。");}g.session->applyBatch(changes);navigate(5);toast(L"方案已导入，待保存");}
+        }else{
+            const auto changes=rizia::parsePatch(readFile(p),g.doc->story);
+            for(const auto& [key,value]:changes){
+                const auto* field=definition(key);
+                if(field&&field->nonnegative&&(value.empty()||!std::all_of(value.begin(),value.end(),[](char c){return c>='0'&&c<='9';})))
+                    throw WinFailure(L"请输入非负整数。\r\n"+wide(key));
+            }
+            g.session->applyBatch(changes);
+            navigate(5);
+            toast(L"方案已导入，待保存");
+        }
     }catch(const std::exception&e){message(L"修改方案没有处理完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONWARNING);}
 }
 void copyKey(){
