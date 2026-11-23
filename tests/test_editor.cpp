@@ -235,6 +235,47 @@ void testSearchControls(const fs::path& sample) {
     navigate(0);
 }
 
+void testHistoryShortcuts(const fs::path& sample) {
+    const auto bytes=readFile(sample);
+    loadDocumentBytes(bytes,sample,0);
+    navigate(0);
+    const std::string budget="BaseGame.GovernmentBudget";
+    const rizia::ChangeMap changed{{budget,"41"}};
+    SetWindowTextW(g.search,L"GB");
+    selectRow(budget);
+    SetWindowTextW(g.edit,L"41");
+    check(applyInput() && pending()==changed,"Stage a budget edit before testing history shortcuts");
+    check(handleEditorShortcut('Z',g.grid) && pending().empty() && g.session->canRedo(),
+          "Ctrl+Z in the grid undoes a save edit");
+
+    SendMessageW(g.search,EM_SETSEL,1,2);
+    for(auto key:{'Y','Z'})
+        check(!handleEditorShortcut(key,g.search),"The search box handles its own text history shortcuts");
+    check(pending().empty() && g.session->canRedo() && g.selected==budget &&
+          textOf(g.search)==L"GB" && SendMessageW(g.search,EM_GETSEL,0,0)==MAKELONG(1,2),
+          "Search shortcuts leave the query, selection, caret and save history intact");
+
+    SendMessageW(g.edit,EM_SETSEL,1,1);
+    check(!handleEditorShortcut('Y',g.edit) && pending().empty() && g.session->canRedo(),
+          "The value box cannot reapply an undone save edit");
+    SetWindowTextW(g.edit,L"-7");
+    SendMessageW(g.edit,EM_SETSEL,0,2);
+    for(auto key:{'Z','Y'})
+        check(!handleEditorShortcut(key,g.edit),"An uncommitted value keeps its text history shortcuts");
+    check(g.editingDirty && textOf(g.edit)==L"-7" && SendMessageW(g.edit,EM_GETSEL,0,0)==MAKELONG(0,2) &&
+          g.selected==budget && pending().empty() && g.session->canRedo(),
+          "Shortcut dispatch preserves the value draft, selection and available save redo");
+
+    command(UNDOONE,0);
+    for(int repeat=0;repeat<2;++repeat) {
+        check(handleEditorShortcut('Y',g.grid) && pending()==changed && !g.session->canRedo(),
+              "Ctrl+Y in the grid reapplies the staged budget");
+        check(handleEditorShortcut('Z',g.grid) && pending().empty() && g.session->canRedo(),
+              "The redone budget remains undoable in the grid");
+    }
+    check(g.doc->render({})==bytes && readFile(sample)==bytes,"History shortcuts preserve the synthetic source");
+}
+
 void testInspectorLayout(const fs::path& sample){
     loadDocument(sample,false);
     navigate(4);
@@ -836,6 +877,7 @@ int main(int argc,char** argv){
         testChoiceHintsPreference();
         testSaveQueries();
         testSearchControls(fs::u8path(argv[1]));
+        testHistoryShortcuts(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));

@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.18.2";
+constexpr wchar_t APP_VERSION[] = L"0.18.3";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -451,7 +451,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.18.2 Preview · Windows 10 / 11 x64\r\n"
+        L"0.18.3 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -820,6 +820,26 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     case WM_DESTROY:PostQuitMessage(0);return 0;
     }}catch(const std::exception&e){message(L"操作没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}catch(...){message(L"操作没有完成。请重新打开存档后重试。",MB_OK|MB_ICONERROR);}return DefWindowProcW(w,m,wp,lp);
 }
+bool handleEditorShortcut(WPARAM key, HWND focus){
+    switch(key){
+    case 'O': command(OPEN,0); return true;
+    case 'S': navigate(5); return true;
+    case 'L': command(LATEST,0); return true;
+    case 'R': command(RELOAD,0); return true;
+    case 'F':
+        if(g.tab>=5)return false;
+        SetFocus(g.search);
+        SendMessageW(g.search,EM_SETSEL,0,-1);
+        return true;
+    case 'Z':
+    case 'Y':
+        if(focus==g.edit || focus==g.search)return false;
+        command(key=='Z'?HISTORY_UNDO:HISTORY_REDO,0);
+        return true;
+    default: return false;
+    }
+}
+
 int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();Theme::load();
     typography::selected=typography::stored();
@@ -833,14 +853,8 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     ShowWindow(w,show);UpdateWindow(w);
     int argc=0;auto argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(argv&&argc>1){if(std::wstring(argv[1])==L"--licenses"){g.licenseMode=true;navigate(7);}else loadDocument(fs::path(argv[1]),false);}else PostMessageW(w,WM_APP+2,0,0);if(argv)LocalFree(argv);
     MSG msg{};while(GetMessageW(&msg,nullptr,0,0)>0){
-        if(msg.message==WM_KEYDOWN&&(GetKeyState(VK_CONTROL)&0x8000)){
-            if(msg.wParam=='O'){command(OPEN,0);continue;}if(msg.wParam=='S'){navigate(5);continue;}
-            if(msg.wParam=='L'){command(LATEST,0);continue;}
-            if(msg.wParam=='R'){command(RELOAD,0);continue;}
-            if(msg.wParam=='F'&&g.tab<5){SetFocus(g.search);SendMessageW(g.search,EM_SETSEL,0,-1);continue;}
-            if(msg.wParam=='Z'&&GetFocus()!=g.edit&&GetFocus()!=g.search){command(HISTORY_UNDO,0);continue;}
-            if(msg.wParam=='Y'){command(HISTORY_REDO,0);continue;}
-        }
+        if(msg.message==WM_KEYDOWN && (GetKeyState(VK_CONTROL)&0x8000) &&
+           handleEditorShortcut(msg.wParam,GetFocus()))continue;
         if(!IsDialogMessageW(w,&msg)){TranslateMessage(&msg);DispatchMessageW(&msg);}
     }
     if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;

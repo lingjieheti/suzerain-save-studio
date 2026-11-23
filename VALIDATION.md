@@ -1,6 +1,10 @@
-# v0.18.2 Preview — Windows validation
+# v0.18.3 Preview — Windows validation
 
-The Windows x64 archive includes the 0.18.2 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.18.3 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Keyboard redo in 0.18.3
+
+In a synthetic Sordland save, we changed the budget from 10 to 22 and undid the change. In the released 0.18.2 editor, pressing Ctrl+Y in either the search box or the value box staged 22 again. In 0.18.3 the budget stayed at 10 until we pressed Down from search and used Ctrl+Y in the results list. The native Windows checks covered all four themes at 800 and 1200 DIP, 200% scaling. The source save kept its original contents and modification time.
 
 ## Guide prefix search in 0.18.2
 
