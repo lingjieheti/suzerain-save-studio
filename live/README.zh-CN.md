@@ -7,13 +7,13 @@
 | 索德兰 | 政府预算、私人资产 |
 | 里奇亚 | 预算、权威、能源 |
 
-![Windows Steam 版《Suzerain》主菜单中的 Ctrl+F8 实时面板，正在等待载入战役](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.16.1/docs/images/live-panel-preview.png)
+![雾蓝主题的游戏内实时面板模拟预览，显示里奇亚的预算、权威与能源](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.19.0/docs/images/live-glass-preview.png)
 
-上图截自游戏主菜单。载入战役后，面板会列出当前可调的资源。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。
+上图根据 v0.19.0 面板在模拟里奇亚战役中的绘制指令生成。载入战役后，面板会列出当前可调的资源。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。[v0.16.1 游戏主菜单实拍](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.16.1/docs/images/live-panel-preview.png)
 
 0.16.1 使用游戏自带的界面字体显示中文和英文。标题与主按钮加粗，库存和确认前后的数值使用较大的常规字。窄屏下，较长的英文资源名和数值会按可用宽度缩小。
 
-首次打开默认使用清爽的 **雾蓝**。点面板的外观选项即可切换 **暖纸、林间、雾蓝、午夜**。桌面编辑器与游戏内面板共用主题偏好，重新打开面板时会读取最近的选择。正在输入或等待确认的数值会保留。
+首次打开默认使用 **雾蓝**。点面板的外观选项即可切换 **暖纸、林间、雾蓝、午夜**。玻璃材质用于面板、资源切换栏和 Ctrl 选项提示，输入与确认数值显示在实色区域。可在桌面编辑器的“外观”菜单关闭玻璃效果。关闭 Windows 透明效果或启用系统高对比度时，面板也会使用实色。重新打开面板时会读取最近的设置。
 
 ## 按 Ctrl 查看选项结果
 
@@ -32,6 +32,8 @@
 也可以将 `SuzerainSaveStudio.Live.dll` 手动放入游戏的 `BepInEx/plugins/SuzerainSaveStudio/`。游戏需已用 BepInEx 6 IL2CPP 成功运行过一次。已有基于该宿主的翻译插件时，可直接使用同一个宿主。卸载时先退出游戏，然后只移除上述目录中的 `SuzerainSaveStudio.Live.dll`。
 
 ## 验证范围
+
+0.19.0 在 Windows 上通过模拟战役和 Unity 界面检查，覆盖四种主题、中英文、320×240 至 1920×1080 的布局、键盘操作，以及浅色和深色场景背景下的文字对比度。新材质在真实游戏画面中的效果仍待实测。
 
 0.13.1 已在 Windows Steam 版索德兰战役副本中实测。政府预算从 16 改为 17，再恢复到 16。个人财富从 1 改为 2，再恢复到 1。四次操作后，游戏原生顶栏和实时面板均显示对应的新值。里奇亚的预算、权威和能源已通过模拟验证，仍待真实战役实测。
 

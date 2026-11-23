@@ -227,16 +227,20 @@ inline LRESULT paintButton(const State& s,const NMCUSTOMDRAW& item) {
     const int id=GetDlgCtrlID(button);
     const bool checked=id==FirstMethod+s.method;
     const bool over=(item.uItemState&(CDIS_HOT|CDIS_SELECTED))!=0;
-    const COLORREF bg=checked?Theme::accent:over?Theme::hover:Theme::panel;
-    const COLORREF ink=checked?Theme::onAccent:Theme::text;
+    const COLORREF bg=checked?Theme::select:over?Theme::hover:Theme::panel;
+    const COLORREF ink=checked?Theme::accentInk:Theme::text;
     HDC dc=item.hdc;RECT box=item.rc;
     const int saved=SaveDC(dc);
     SetDCBrushColor(dc,Theme::bg);FillRect(dc,&box,static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
     SelectObject(dc,GetStockObject(DC_PEN));SelectObject(dc,GetStockObject(DC_BRUSH));
     const bool focus=(item.uItemState&CDIS_FOCUS) && !(SendMessageW(button,WM_QUERYUISTATE,0,0)&UISF_HIDEFOCUS);
-    SetDCPenColor(dc,focus?Theme::focus:checked?Theme::accent:Theme::line);SetDCBrushColor(dc,bg);
-    const int corner=s.scale(Theme::radius(10));
-    RoundRect(dc,box.left,box.top,box.right,box.bottom,corner,corner);
+    glass::surface(dc,box,bg,s.scale(14),checked||over);
+    if(checked){
+        const int center=(box.left+box.right)/2;
+        RECT mark{center-s.scale(7),box.bottom-s.scale(5),center+s.scale(7),box.bottom-s.scale(3)};
+        SetDCBrushColor(dc,Theme::accent);
+        FillRect(dc,&mark,static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+    }
     if(focus){RECT ring=box;InflateRect(&ring,-s.scale(3),-s.scale(3));DrawFocusRect(dc,&ring);}
     SetTextColor(dc,ink);SetBkMode(dc,TRANSPARENT);SelectObject(dc,s.body);
     auto label=textOf(button);

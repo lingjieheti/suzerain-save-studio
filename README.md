@@ -10,11 +10,11 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.18.3 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.3/SuzerainSaveStudio-0.18.3-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.18.3) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.19.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.19.0/SuzerainSaveStudio-0.19.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.19.0) · [♡ 赞助作者](SPONSOR.md)
 
-![Windows 桌面编辑器中的里奇亚示例，雾蓝主题和微软雅黑 UI](docs/images/rizia-workspace.png)
+![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
-[四套主题对照（Noto Sans SC）](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [游戏主菜单中的实时面板](docs/images/live-panel-preview.png)
+[四套配色与宽窄窗口](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
 
 ## 快速上手
 
@@ -31,7 +31,7 @@
 - **选择前查看结果**。按 **Ctrl+F8**，开启「按 Ctrl 查看选项结果」，再关掉面板。将鼠标指向选项，轻按一下左或右 **Ctrl**，就能看到「私人资产 +2」这样的变化。再按一次或移开鼠标，小窗就会收起。换一个选项后可再次按 Ctrl 查看。此功能默认关闭，剧情结果尚不明确时会显示「暂无可确认的直接效果」。[查看游戏内提示实拍](docs/images/choice-preview.jpg)
 - **在游戏里微调**。按 **Ctrl+F8**，选中资源后可点 **−5、−1、+1、+5**，看清目标值再预览和确认。如果操作期间游戏已更新该资源，请按面板提示重新核对。
 
-[查看收藏界面](docs/images/field-favorites.png) · [玩家反馈与五款同类工具对照](docs/PLAYER-RESEARCH.zh-CN.md)
+[查看收藏界面](docs/images/field-favorites.png) · [粘贴攻略找字段](docs/images/guide-search.png) · [修改前后对照](docs/images/change-review.png) · [玩家反馈与五款同类工具对照](docs/PLAYER-RESEARCH.zh-CN.md)
 
 ## 选择外观
 
@@ -41,7 +41,7 @@
 
 存档列表第一行显示文件名，第二行显示自动、手动等档位类型和玩家的战役名称。编辑器并排显示库存、每回合变化和上限。游戏内的 Ctrl+F8 面板使用游戏自带字体显示中文和英文。标题和主按钮加粗，库存与确认前后的数值以较大字号显示。
 
-在存档选择器或编辑器点 **外观**，即可切换主题。首次打开默认使用 **雾蓝**：冷白底色、浅灰蓝侧栏、细分隔线和蓝色主按钮。三项资源放在同一行，数值与每回合变化并排可查。也可以选陶土色的 **暖纸**、薄荷绿的 **林间**，或深色的 **午夜**。升级时会沿用你已经选好的外观。切换主题会保留正在编辑的数值。桌面编辑器与游戏内实时面板共用这项偏好，下次打开会自动沿用。
+首次打开使用 **雾蓝**。侧栏和文件工具栏透出背景颜色，表格、输入框和修改预览使用实色底，方便核对数字。在选档器或编辑器的 **外观** 菜单里，还能选 **暖纸、林间、午夜**，或取消勾选 **液态玻璃**。桌面与 Ctrl+F8 面板共用这两项偏好。Windows 关闭透明效果或启用高对比度时会使用实色。
 
 ## 功能
 
@@ -70,9 +70,9 @@ Bookmark any available field in its inspector and find it again under **Advanced
 
 To see what a choice changes, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel, close it, then point to the choice and tap either Ctrl key. Tap again or move away to dismiss the preview.
 
-The desktop editor uses equal-width digits in numeric columns and inputs. The Ctrl+F8 panel uses the game's own font for English and Chinese, with bold headings and larger resource values. [View the panel in the game’s main menu](docs/images/live-panel-preview.png)
+The desktop editor uses equal-width digits in numeric columns and inputs. The Ctrl+F8 panel uses the game's own font for English and Chinese, with bold headings and larger resource values. [View the new panel with simulated campaign data](docs/images/live-glass-preview.png)
 
-New installations open in **Fjord**, with a cool white workspace and a single row for resources. Choose **Appearance** in the save picker or editor to switch between **Paper**, **Forest**, **Fjord** and **Midnight**. The desktop editor and optional in-game panel remember the same choice on this PC.
+New installations open in **Fjord**, with a translucent sidebar and toolbar and solid surfaces for editing values. Under **Appearance**, pick **Paper**, **Forest**, **Fjord** or **Midnight**, or turn off **Liquid Glass**. The desktop and Ctrl+F8 panel share both preferences. Windows high contrast and disabled transparency use solid surfaces.
 
 Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. In a live Sordland campaign, v0.13.1 changed the government budget from 16 to 17 and personal wealth from 1 to 2, and restored both original values. The game's top bar and the panel agreed after all four writes. Rizia’s three resources have been tested in simulation only. [HUD verification and test coverage](VALIDATION.md)
 

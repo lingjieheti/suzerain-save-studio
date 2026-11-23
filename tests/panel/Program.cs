@@ -77,6 +77,13 @@ internal static class Program
         Check(PanelPreferences.WriteChinese(false) && !PanelPreferences.ReadChinese(true),
             "Choosing English persists for future hover previews");
         using var key = root.CreateSubKey(path);
+        key.SetValue("GlassEffects", 0, RegistryValueKind.DWord);
+        Check(!PanelPreferences.ReadGlassEffects(), "The desktop glass toggle also applies to the game panel");
+        key.DeleteValue("GlassEffects");
+        using var personal = root.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+        personal.SetValue("EnableTransparency", 0, RegistryValueKind.DWord);
+        Check(!PanelPreferences.ReadGlassEffects(), "Reduced Windows transparency overrides the default glass material");
+        personal.DeleteValue("EnableTransparency");
         Check(key.GetValue(name) == null, "Choosing the initial palette does not create a user preference");
         foreach (int index in new[] { 0, 1, 2, 3 })
         {
@@ -101,7 +108,8 @@ internal static class Program
         Frame(EventType.KeyDown, KeyCode.F8, control: true);
         Frame(EventType.KeyUp, KeyCode.F8);
         Frame(EventType.Repaint);
-        Check(GUI.Fills[1] == PanelAppearance.Choices[PanelAppearance.Fjord].Background,
+        var fjord = PanelAppearance.Choices[PanelAppearance.Fjord];
+        Check(GUI.Fills[0] == (PanelPreferences.ReadGlassEffects() ? fjord.GlassFace : fjord.Background),
             "The panel opens using Fjord when there is no saved choice");
         foreach (var (button, expected) in new[] { ("+5", "27"), ("-1", "26"), ("-5", "21"), ("+1", "22") })
         {
@@ -209,6 +217,11 @@ internal static class Program
     {
         foreach (var theme in PanelAppearance.Choices)
         {
+            static Color Composite(Color face, Color under)
+            {
+                byte Channel(byte a, byte b) => (byte)Math.Round((a * face.A + b * (255 - face.A)) / 255.0);
+                return new Color(Channel(face.R, under.R), Channel(face.G, under.G), Channel(face.B, under.B), 255);
+            }
             void Contrast(Color foreground, Color background, double minimum, string element)
             {
                 double first = Luminance(foreground), second = Luminance(background);
@@ -221,6 +234,26 @@ internal static class Program
             Contrast(theme.Text, theme.Surface, 4.5, "selected resource value");
             Contrast(theme.Accent, theme.Surface, 3, "selected item indicator");
             Contrast(theme.OnAccent, theme.Accent, 4.5, "primary action");
+            foreach (var scene in new[] { new Color(0, 0, 0, 255), Color.white })
+            {
+                var face = Composite(theme.GlassFace, scene);
+                theme.DrawGlass(new Rect(0, 0, 320, 240), 16, 1, true);
+                var reflection = GUI.Sheets.Last().Pixels.Select(p => (Color)p).ToArray();
+                var brightest = reflection.OrderByDescending(p => Luminance(Composite(p, face))).First();
+                var darkest = reflection.OrderBy(p => Luminance(Composite(p, face))).First();
+                Contrast(theme.Muted, face, 4.5, "panel metadata over a light or dark game scene");
+                Contrast(theme.Text, face, 4.5, "choice summary over the scene");
+                Contrast(theme.Accent, face, 4.5, "choice heading over the scene");
+                Contrast(theme.Muted, Composite(theme.RailFace, face), 4.5, "resource labels on the glass rail");
+                foreach (var reflectionPixel in new[] {brightest, darkest})
+                {
+                    var litFace = Composite(reflectionPixel, face);
+                    Contrast(theme.Muted, litFace, 4.5, "metadata at the light and dark ends of the reflection");
+                    Contrast(theme.Accent, litFace, 4.5, "choice heading over the reflection");
+                    var litRail = Composite(reflectionPixel, Composite(theme.RailFace, litFace));
+                    Contrast(theme.Muted, litRail, 4.5, "resource label over layered reflections");
+                }
+            }
             if (theme == PanelAppearance.Choices[PanelAppearance.Fjord])
             {
                 Contrast(theme.Muted, theme.Background, 4.5, "resource labels directly on the panel");
@@ -239,7 +272,16 @@ internal static class Program
             foreach (var theme in PanelAppearance.Choices)
             {
                 Click(chinese ? theme.Chinese : theme.English);
-                Check(GUI.Fills[1] == theme.Background, "Selected palette is used by the live panel");
+                Check(GUI.Fills[0] == (PanelPreferences.ReadGlassEffects() ? theme.GlassFace : theme.Background),
+                    "Selected palette is used by the live panel");
+                if (PanelPreferences.ReadGlassEffects())
+                {
+                    var sheen = GUI.Sheets.Distinct().Single();
+                    Check(sheen.Pixels.Length == sheen.Width * sheen.Height &&
+                        sheen.Pixels[0].A < sheen.Pixels[(sheen.Height - 1) * sheen.Width].A,
+                        "The glass surfaces share a single textured reflection with a brighter top edge");
+                }
+                else Check(GUI.Sheets.Count == 0, "Opaque mode does not submit a reflection texture");
                 var heading = GUI.LabelTypes[chinese ? "实时编辑" : "Live editor"];
                 var name = GUI.LabelTypes[chinese ? "王国预算" : "Royal budget"];
                 var value = GUI.LabelTypes["10"];

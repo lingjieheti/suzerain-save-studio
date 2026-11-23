@@ -4,7 +4,7 @@ inline void surface(const State& s,HDC dc,RECT box,COLORREF color,COLORREF edge,
     HBRUSH brush=CreateSolidBrush(color);
     HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(weight)),edge);
     auto oldBrush=SelectObject(dc,brush),oldPen=SelectObject(dc,pen);
-    const int diameter=s.scale(Theme::radius(radius));
+    const int diameter=s.scale(glass::enabled()?radius:Theme::radius(radius));
     RoundRect(dc,box.left,box.top,box.right,box.bottom,diameter,diameter);
     SelectObject(dc,oldPen);SelectObject(dc,oldBrush);DeleteObject(pen);DeleteObject(brush);
 }
@@ -51,22 +51,74 @@ inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
     }
     SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);
 }
-inline void paintFrame(State& s,HDC dc){
+// Child windows sample this same canvas so their corners reveal the material beneath them.
+inline void drawBackdrop(const State& s,HDC dc,const RECT& client){
+    const bool material=glass::enabled();
+    if(material)glass::wash(dc,client,Theme::bg);
+    else ::fill(dc,client,Theme::bg);
     surface(s,dc,s.library,Theme::panel,Theme::line,14);
-    if(s.stacked)surface(s,dc,s.practice,Theme::panel,Theme::line,14);
+    if(material){
+        glass::surface(dc,s.headerTools,Theme::sidebar,s.scale(20));
+        glass::surface(dc,s.practice,Theme::sidebar,s.scale(18));
+        if(!s.stacked){
+            RECT live{};GetWindowRect(s.live,&live);
+            MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&live),2);
+            glass::surface(dc,live,Theme::select,s.scale(17));
+        }
+    }else if(s.stacked)surface(s,dc,s.practice,Theme::panel,Theme::line,14);
     else {
         RECT rule{s.practice.left+s.scale(11),s.practice.bottom-1,s.practice.right-s.scale(11),s.practice.bottom};
         ::fill(dc,rule,Theme::line);
     }
-    surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,10);
-    symbol(s,dc,FILTER,s.searchFrame.left+s.scale(8),s.searchFrame.top+s.scale(6),Theme::muted);
     if(!IsRectEmpty(&s.headingIcon)){
-        surface(s,dc,s.headingIcon,Theme::select,Theme::select,12);
+        if(material)glass::surface(dc,s.headingIcon,Theme::select,s.scale(13));
+        else surface(s,dc,s.headingIcon,Theme::select,Theme::select,12);
         symbol(s,dc,0,s.headingIcon.left+s.scale(8),s.headingIcon.top+s.scale(9),Theme::accentInk);
     }
-    RECT client{};GetClientRect(s.win,&client);
-    RECT divider{0,s.scale(s.footerY),client.right,s.scale(s.footerY)+1};
+    const int inset=material?s.library.left:0;
+    RECT divider{inset,s.scale(s.footerY),client.right-inset,s.scale(s.footerY)+1};
     ::fill(dc,divider,Theme::line);
+}
+inline HDC backdrop(State& s,HDC reference){
+    if(!s.empty || s.positioning || s.backdrop)return s.backdrop;
+    RECT client{};GetClientRect(s.win,&client);
+    if(client.right<=0 || client.bottom<=0)return nullptr;
+    auto dc=CreateCompatibleDC(reference);
+    if(!dc)return nullptr;
+    auto bmp=CreateCompatibleBitmap(reference,client.right,client.bottom);
+    if(!bmp){DeleteDC(dc);return nullptr;}
+    s.previousBitmap=SelectObject(dc,bmp);
+    drawBackdrop(s,dc,client);
+    s.backdropBitmap=bmp;
+    s.backdrop=dc;
+    return dc;
+}
+inline void paintFrame(State& s,HDC dc,const RECT& dirty){
+    if(auto cached=backdrop(s,dc))
+        BitBlt(dc,dirty.left,dirty.top,dirty.right-dirty.left,dirty.bottom-dirty.top,cached,dirty.left,dirty.top,SRCCOPY);
+    else ::fill(dc,dirty,Theme::bg);
+    surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,glass::enabled()?24:10);
+    symbol(s,dc,FILTER,s.searchFrame.left+s.scale(8),s.searchFrame.top+s.scale(6),Theme::muted);
+}
+inline void childBackdrop(State& s,const DRAWITEMSTRUCT& d){
+    RECT r=d.rcItem;
+    POINT position{r.left,r.top};
+    MapWindowPoints(d.hwndItem,s.win,&position,1);
+    if(auto cached=backdrop(s,d.hDC))
+        BitBlt(d.hDC,r.left,r.top,r.right-r.left,r.bottom-r.top,cached,position.x,position.y,SRCCOPY);
+    else ::fill(d.hDC,r,Theme::bg);
+}
+inline void drawCaption(State& s,const DRAWITEMSTRUCT& d){
+    childBackdrop(s,d);
+    const bool hint=d.hwndItem==s.practiceHint, path=d.hwndItem==s.path;
+    const auto old=SelectObject(d.hDC,reinterpret_cast<HFONT>(SendMessageW(d.hwndItem,WM_GETFONT,0,0)));
+    SetTextColor(d.hDC,hint||path?Theme::muted:Theme::text);
+    SetBkMode(d.hDC,TRANSPARENT);
+    RECT bounds=d.rcItem;
+    const auto text=textOf(d.hwndItem);
+    DrawTextW(d.hDC,text.c_str(),static_cast<int>(text.size()),&bounds,DT_NOPREFIX|
+        (hint?DT_WORDBREAK:DT_SINGLELINE|DT_VCENTER|(path?DT_PATH_ELLIPSIS:DT_END_ELLIPSIS)));
+    SelectObject(d.hDC,old);
 }
 inline void chevron(const State& s,HDC dc,int x,int y,COLORREF color){
     HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),color);
@@ -80,7 +132,6 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     const int id=d.CtlID;
     const bool primary=id==IDOK,live=id==LIVE_MODE;
     const bool demo=id==DEMO_MAIN||id==DEMO_RIZIA;
-    const bool inCard=id==ADD_FOLDER||id==RESCAN||(demo&&s.stacked);
     const bool disabled=(d.itemState&ODS_DISABLED)!=0,pressed=(d.itemState&ODS_SELECTED)!=0;
     const bool hover=GetPropW(d.hwndItem,L"RiziaHover")!=nullptr;
     const bool focus=(d.itemState&ODS_FOCUS)!=0;
@@ -90,12 +141,19 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     if(disabled){bg=Theme::head;edge=Theme::line;fg=Theme::dim;}
     else if(pressed||hover){bg=primary?Theme::accentHover:Theme::head;edge=primary?bg:Theme::accent;}
     RECT box=d.rcItem;
-    ::fill(d.hDC,box,inCard?Theme::panel:Theme::bg);
+    childBackdrop(s,d);
     --box.right;--box.bottom;
     const bool railItem=(demo||live)&&!s.stacked;
-    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||railItem)&&!hover&&!focus&&!pressed;
+    const bool material=glass::enabled();
+    const bool inToolbar=material && (id==APPEARANCE||id==BROWSE);
+    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||railItem||inToolbar)&&!hover&&!focus&&!pressed;
     if(id==SUPPORT&&plain)fg=Theme::muted;
-    if(!plain)surface(s,d.hDC,box,bg,focus?Theme::focus:edge,11,focus?2:1);
+    if(!plain){
+        if(material && !primary && !disabled){
+            glass::surface(d.hDC,box,(hover||pressed||focus)?Theme::select:Theme::sidebar,
+                           s.scale(live&&s.stacked?16:14),pressed||hover);
+        }else surface(s,d.hDC,box,bg,focus?Theme::focus:edge,material?28:11,focus?2:1);
+    }
     const int width=box.right-box.left;
     int hmid=(box.top+box.bottom)/2;
     auto label=textOf(d.hwndItem);

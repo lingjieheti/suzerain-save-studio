@@ -68,7 +68,6 @@ namespace UnityEngine
     }
     public static class Screen { public static int width = 1920, height = 1080; }
     public static class Time { public static float realtimeSinceStartup; }
-    public static class Texture2D { public static readonly object whiteTexture = new(); }
     public class GUIStyleState { public Color textColor; }
     public class GUIStyle
     {
@@ -112,10 +111,15 @@ namespace UnityEngine
         public static readonly Dictionary<string, (Font Font, FontStyle Weight, int Size, Rect Bounds)> LabelTypes = new();
         public static readonly Dictionary<string, (Font Font, FontStyle Weight)> ButtonTypes = new();
         public static readonly List<Color> Fills = new();
+        public static readonly List<Texture2D> Sheets = new();
         public static string TypedText, DisplayedDraft;
 
         public static void DrawTexture(Rect rect, object texture, ScaleMode mode, bool blend, float aspect,
-            Color fill, float border, float radius) => Fills.Add(fill);
+            Color fill, float border, float radius)
+        {
+            Fills.Add(fill);
+            if (texture is Texture2D sheet && sheet != Texture2D.whiteTexture) Sheets.Add(sheet);
+        }
         public static void FocusControl(string name) { }
         public static void SetNextControlName(string name) { }
         public static void BeginGroup(Rect area)
@@ -127,6 +131,7 @@ namespace UnityEngine
             LabelTypes.Clear();
             ButtonTypes.Clear();
             Fills.Clear();
+            Sheets.Clear();
             DisplayedDraft = null;
         }
         public static void EndGroup() { }
@@ -171,6 +176,6 @@ namespace SuzerainSaveStudio.Live
     {
         internal static bool LastEnabled;
         internal void Reset() => LastEnabled = false;
-        internal void OnGUI(bool enabled, bool chinese, PanelAppearance palette) => LastEnabled = enabled;
+        internal void OnGUI(bool enabled, bool chinese, PanelAppearance palette, bool glass) => LastEnabled = enabled;
     }
 }

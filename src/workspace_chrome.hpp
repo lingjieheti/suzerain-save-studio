@@ -44,6 +44,64 @@ void fill(HDC dc, RECT bounds, COLORREF color) {
     DeleteObject(brush);
 }
 
+int fileToolbarWidth(const WorkspaceGeometry& a) { return std::min(465,a.content*62/100); }
+int footerHistoryWidth(const WorkspaceGeometry& a) { return a.width<820?58:80; }
+int footerSaveWidth(const WorkspaceGeometry& a) { return a.width<820?107:155; }
+
+void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& a) {
+    glass::wash(dc,client,Theme::bg);
+    const int inset=a.compactRail?4:7;
+    glass::surface(dc,rect(inset,6,a.rail-2*inset,a.height-12),Theme::sidebar,px(a.compactRail?21:24));
+    const int end=a.left+a.content;
+    const int toolbarWidth=fileToolbarWidth(a);
+    const int toolbarY=a.shortScreen?7:14;
+    glass::surface(dc,rect(end-toolbarWidth-4,toolbarY-4,toolbarWidth+8,40),Theme::panel,px(20));
+    const int fileGroupEnd=end-toolbarWidth+4*((toolbarWidth-18)/10)+9;
+    fill(dc,rect(fileGroupEnd,toolbarY+8,1,16),Theme::line);
+    if(g.tab!=7) {
+        const int width=2*footerHistoryWidth(a)+5+(g.tab==5?0:footerSaveWidth(a)+7);
+        glass::surface(dc,rect(end-width-4,a.footer+3,width+8,40),Theme::panel,px(20));
+    }
+}
+
+// The parent and its child HWNDs sample the same background at their native
+// coordinates. This keeps a floating toolbar continuous through button repaints.
+void paintWorkspaceChildBackdrop(HDC dc, HWND child) {
+    struct Backdrop {
+        HDC dc{};
+        HBITMAP bitmap{};
+        SIZE size{};
+        UINT dpi{};
+        int theme=-1,page=-1;
+        bool glassEnabled{};
+        ~Backdrop() { if(dc)DeleteDC(dc); if(bitmap)DeleteObject(bitmap); }
+    };
+    static Backdrop cache;
+    RECT area{},part{};
+    GetClientRect(g.win,&area);
+    if(area.right<=0 || area.bottom<=0)return;
+    const bool enabled=glass::enabled();
+    const int page=g.tab==7?7:g.tab==5?5:0;
+    if(cache.size.cx!=area.right || cache.size.cy!=area.bottom || !cache.bitmap) {
+        if(!cache.dc)cache.dc=CreateCompatibleDC(dc);
+        auto bitmap=cache.dc?CreateCompatibleBitmap(dc,area.right,area.bottom):nullptr;
+        if(!bitmap){
+            GetClientRect(child,&part); fill(dc,part,Theme::bg); return;
+        }
+        SelectObject(cache.dc,bitmap);
+        if(cache.bitmap)DeleteObject(cache.bitmap);
+        cache.bitmap=bitmap; cache.size={area.right,area.bottom}; cache.theme=-1;
+    }
+    if(cache.theme!=Theme::index() || cache.page!=page || cache.dpi!=g.dpi || cache.glassEnabled!=enabled) {
+        drawWorkspaceBackdrop(cache.dc,area,workspaceGeometry());
+        cache.theme=Theme::index();cache.page=page;cache.dpi=g.dpi;cache.glassEnabled=enabled;
+    }
+    POINT origin{};
+    MapWindowPoints(child,g.win,&origin,1);
+    GetClientRect(child,&part);
+    BitBlt(dc,0,0,part.right,part.bottom,cache.dc,origin.x,origin.y,SRCCOPY);
+}
+
 // Monochrome navigation symbols also identify pages when the sidebar collapses.
 void navSymbol(HDC dc, int id, int x, int y, COLORREF color) {
     HPEN pen = CreatePen(PS_SOLID, std::max(1, px(2)), color);
@@ -80,6 +138,30 @@ void navSymbol(HDC dc, int id, int x, int y, COLORREF color) {
             PolyBezier(dc,curve,static_cast<DWORD>(std::size(curve)));
             break;
         }
+        case RELOAD:
+            Arc(dc,x+px(2),y+px(2),x+px(16),y+px(16),x+px(15),y+px(6),x+px(16),y+px(11));
+            stroke({{11,6},{16,6},{16,1}}); break;
+        case FOLDER:
+            stroke({{1,15},{1,4},{7,4},{9,6},{16,6},{16,15},{1,15}}); break;
+        case OPEN:
+            stroke({{4,15},{2,15},{2,2},{10,2},{14,6},{14,8}});
+            stroke({{10,2},{10,6},{14,6}}); stroke({{7,13},{17,13},{13,9}});
+            stroke({{17,13},{13,17}}); break;
+        case LATEST:
+            stroke({{2,3},{16,3},{16,15},{2,15},{2,3}}); stroke({{6,7},{13,7}});
+            stroke({{6,11},{11,11}}); break;
+        case HISTORY_UNDO:
+        case HISTORY_REDO: {
+            POINT points[]={{16,14},{16,8},{12,6},{4,6}};
+            const bool redo=id==HISTORY_REDO;
+            for(auto& point:points){
+                point.x=x+px(redo?18-point.x:point.x);point.y=y+px(point.y);
+            }
+            PolyBezier(dc,points,4);
+            if(redo)stroke({{10,2},{15,6},{10,10}});
+            else stroke({{8,2},{3,6},{8,10}});
+            break;
+        }
         default:
             stroke({{1,3},{5,3},{9,5},{13,3},{17,3},{17,15},{13,15},{9,17},{5,15},{1,15},{1,3}}); stroke({{9,5},{9,17}}); break;
     }
@@ -98,12 +180,13 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     bool toggle = (id == BOOL_FALSE && !g.boolValue) || (id == BOOL_TRUE && g.boolValue) ||
                   (id == FILTER_FAVORITES && g.favoritesOnly) ||
                   (id == FIELD_FAVORITE && g.favorites.count(g.selected));
-    const bool emphasizeApply=g.editingDirty || (Theme::index()!=Theme::fjordIndex && pending().empty());
+    const bool emphasizeApply=g.editingDirty;
     bool primary = (id == LATEST && !g.doc) || (id == APPLY && emphasizeApply) || (id == CONFIRM_SAVE && !g.demoResource) ||
                    (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
                    (id == SAVE && !g.editingDirty && !pending().empty());
-    bool quiet = id==FOLDER || id==RELOAD || id==OPEN || id==UNDOONE || id==FIELD_FAVORITE ||
-                 id==HISTORY_UNDO || id==HISTORY_REDO;
+    const bool fileAction=id==FOLDER || id==RELOAD || id==OPEN || id==LATEST;
+    const bool history=id==HISTORY_UNDO || id==HISTORY_REDO;
+    bool quiet = fileAction || id==UNDOONE || id==FIELD_FAVORITE || history;
     bool inspector = id==APPLY || id==UNDOONE || id==BOOL_FALSE || id==BOOL_TRUE ||
                      id==SAVEAS || id==CONFIRM_SAVE || id==PATCH_EXPORT || id==REVIEW_REVERT ||
                      id==UNDOALL || id==BACKUP_RESTORE || id==BACKUP_CANCEL || id==COPY_KEY || id==EXPORT_CSV || id==FIELD_FAVORITE;
@@ -121,8 +204,20 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     }
     if (disabled) { bg = quiet ? surface : Theme::stripe; fg = Theme::dim; border = quiet ? surface : Theme::line; }
     RECT r = d->rcItem;
-    fill(d->hDC, r, surface);
-    rounded(d->hDC, r, bg, border, nav ? 14 : 11);
+    if(inspector)fill(d->hDC,r,Theme::panel);
+    else paintWorkspaceChildBackdrop(d->hDC,d->hwndItem);
+    const bool grouped=nav || fileAction || history || id==SAVE;
+    if(nav && (activeNav || hover || down)) {
+        glass::surface(d->hDC,r,activeNav?Theme::select:Theme::sideHover,px(13),activeNav);
+    } else if(grouped) {
+        if(primary || (!disabled && (hover || down)))
+            rounded(d->hDC,r,bg,border,30);
+    } else if(id==APPEARANCE) {
+        glass::surface(d->hDC,r,hover?Theme::select:Theme::input,px(14));
+    } else if(!check && (!quiet || toggle || hover || down || primary)) {
+        rounded(d->hDC,r,bg,border,15);
+    }
+    if(fileAction && id==LATEST && !primary && !disabled)fg=Theme::accentInk;
     RECT tx = r;
     if (nav) {
         bool compact = r.right - r.left < px(64);
@@ -131,11 +226,6 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
         navSymbol(d->hDC, id==SUPPORT_AUTHOR?8:id-NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
                   activeNav ? Theme::accentInk : Theme::sideMuted);
-        if (activeNav) {
-            const int cy=r.bottom/2;
-            rounded(d->hDC,{r.left+px(2),cy-px(7),r.left+px(5),cy+px(7)},
-                    Theme::accent,Theme::accent,3);
-        }
         if (!compact) {
             tx.left += px(longSupport?27:42); tx.right -= px(5);
             auto title=textOf(d->hwndItem);
@@ -177,14 +267,26 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             }
             tx.left += px(25);
         }
-        drawText(d->hDC, textOf(d->hwndItem), tx, primary?g.emphasis:g.font, fg,
+        const auto caption=textOf(d->hwndItem);
+        const auto font=primary?g.emphasis:g.font;
+        if(fileAction || history) {
+            const int textWidth=typography::width(d->hDC,font,caption);
+            const int groupWidth=px(22)+textWidth;
+            if(groupWidth+px(10)<=r.right-r.left) {
+                const int iconX=(r.right-r.left-groupWidth)/2;
+                navSymbol(d->hDC,id,iconX,(r.bottom-px(18))/2,fg);
+                tx.left=iconX+px(22);
+                tx.right=tx.left+textWidth+px(2);
+            }
+        }
+        drawText(d->hDC, caption, tx, font, fg,
                  (check ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE);
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
         RECT focus = r; InflateRect(&focus, -px(4), -px(4));
-        auto pen=CreatePen(PS_SOLID,std::max(1,px(1)),primary?Theme::onAccent:Theme::focus);
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary?Theme::onAccent:Theme::focus);
         auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
-        RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,px(5),px(5));
+        RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,px(12),px(12));
         SelectObject(d->hDC,oldBrush);SelectObject(d->hDC,oldPen);DeleteObject(pen);
     }
 }
@@ -285,9 +387,14 @@ void paintWorkspaceHeader(HWND h,HDC dc) {
 
 void paintLanguageFace(HWND h,HDC dc) {
     RECT r{};GetClientRect(h,&r);
-    auto a=workspaceGeometry();
-    fill(dc,r,a.compactRail?Theme::bg:Theme::sidebar);
-    rounded(dc,r,Theme::input,GetFocus()==h?Theme::focus:Theme::line,9);
+    paintWorkspaceChildBackdrop(dc,h);
+    glass::surface(dc,r,Theme::input,px(12));
+    if(GetFocus()==h){
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),Theme::focus);
+        auto oldPen=SelectObject(dc,pen),oldBrush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+        RoundRect(dc,r.left+1,r.top+1,r.right-1,r.bottom-1,px(21),px(21));
+        SelectObject(dc,oldPen);SelectObject(dc,oldBrush);DeleteObject(pen);
+    }
     RECT tx=r;tx.left+=px(9);tx.right-=px(22);
     literalText(dc,textOf(h).c_str(),tx,g.font,Theme::text);
     int x=r.right-px(14),y=r.bottom/2;

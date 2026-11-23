@@ -50,7 +50,7 @@ internal sealed class ChoiceHover
     private bool warned;
     private float retryAt;
 
-    internal void OnGUI(bool enabled, bool chinese, PanelAppearance appearance)
+    internal void OnGUI(bool enabled, bool chinese, PanelAppearance appearance, bool glass)
     {
         if (!enabled || !Application.isFocused)
         {
@@ -99,7 +99,7 @@ internal sealed class ChoiceHover
                 return;
             }
             if (body == null || chinese != chineseText) Read(shown, chinese);
-            Draw(lastMouse, appearance);
+            Draw(lastMouse, appearance, glass);
         }
         catch (Exception error)
         {
@@ -346,7 +346,7 @@ internal sealed class ChoiceHover
         chineseText = chinese;
     }
 
-    private void Draw(Vector2 mouse, PanelAppearance theme)
+    private void Draw(Vector2 mouse, PanelAppearance theme, bool glass)
     {
         float scale = Math.Clamp(Screen.height / 900f, 0.9f, 2f);
         float margin = 8 * scale, pad = 13 * scale, gap = 4 * scale, offset = 17 * scale;
@@ -379,9 +379,10 @@ internal sealed class ChoiceHover
             GUI.depth = -849;
             GUI.color = GUI.contentColor = Color.white;
             // Draw-only primitives have no control IDs, raycast targets or pointer handlers.
-            Fill(new Rect(x, y + 2 * scale, width, height), new Color(0, 0, 0, 0.15f), 9 * scale);
-            Fill(box, theme.Border, 9 * scale);
-            Fill(new Rect(x + 1, y + 1, width - 2, height - 2), theme.Surface, 8 * scale);
+            if (glass)
+                GUI.DrawTexture(new Rect(x, y + 2 * scale, width, height), Texture2D.whiteTexture,
+                    ScaleMode.StretchToFill, true, 0, new Color(0, 0, 0, .13f), 0, 13 * scale);
+            theme.DrawGlass(box, 13 * scale, scale, glass);
             headingStyle.Draw(new Rect(x + pad, y + pad, textWidth, headingHeight), heading, false, false, false, false);
             float bodyY = y + pad + headingHeight + gap;
             bodyStyle.Draw(new Rect(x + pad, bodyY, textWidth, Math.Max(0, y + height - pad - bodyY)), body,
@@ -395,6 +396,4 @@ internal sealed class ChoiceHover
         }
     }
 
-    private static void Fill(Rect rect, Color color, float radius) =>
-        GUI.DrawTexture(rect, Texture2D.whiteTexture, ScaleMode.StretchToFill, true, 0, color, 0, radius);
 }
