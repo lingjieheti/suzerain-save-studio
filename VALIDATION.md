@@ -1,6 +1,10 @@
-# v0.18.0 Preview — Windows validation
+# v0.18.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.18.0 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.18.1 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Export checks in 0.18.1
+
+On synthetic Rizia saves, the CSV contained the same three resource caps as the review, patch and saved copy. In the native Windows editor, CSV and TXT exports to a backup subfolder were rejected in all four themes at both window widths. Exporting to an ordinary folder succeeded. [Tests and results in PR #2](https://github.com/lingjieheti/suzerain-save-studio/pull/2)
 
 ## Desktop save editing in 0.18.0
 
