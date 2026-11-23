@@ -138,13 +138,18 @@ public:
     SaveLock& operator=(const SaveLock&) = delete;
 };
 
+bool isBackupDestination(const fs::path& target) {
+    const auto absoluteTarget=fs::absolute(target).lexically_normal();
+    return rizia::discovery::inBackupFolder(absoluteTarget) ||
+           rizia::discovery::inBackupFolder(fs::weakly_canonical(absoluteTarget));
+}
+
 // Write in the same directory, flush, validate the complete bytes, then atomically replace.
 // A null baseline means the destination must be new. The pre-write backup is
 // retained even if Windows refuses the replacement.
 fs::path atomicSave(const fs::path& target,const std::string& output,const std::string* expected) {
     if(gameRunning())throw WinFailure(L"请先退出 Suzerain，再保存或恢复存档。");
-    const auto absoluteTarget=fs::absolute(target).lexically_normal();
-    if(rizia::discovery::inBackupFolder(absoluteTarget)||rizia::discovery::inBackupFolder(fs::weakly_canonical(absoluteTarget)))
+    if(isBackupDestination(target))
         throw WinFailure(tr(L"请在备份目录外另存一份存档。"));
     auto parsed=rizia::Document::parse(output);
     if(!rizia::isSupportedStory(parsed.story))throw WinFailure(L"Unsupported campaign.");

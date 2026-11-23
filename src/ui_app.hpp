@@ -565,6 +565,7 @@ void restoreSelected(){
     }catch(const std::exception&e){g.restoreArmed=false;setText(ctl(BACKUP_RESTORE),L"恢复这份备份");message(L"恢复没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }
 void writePatch(const fs::path&p,const std::string&data){
+    if(isBackupDestination(p))throw WinFailure(tr(L"请选择备份目录以外的位置导出文件。"));
     auto temp=p.parent_path()/(L".rizia-patch-"+writeId()+L".tmp");
     bool created=false;
     try{
@@ -580,7 +581,7 @@ void patchFile(bool exportIt){
     if(!g.doc||!applyInput(false))return;
     try{auto p=pickFile(exportIt,1);if(p.empty())return;
         if(exportIt){auto changes=preparedChanges();if(changes.empty()){toast(L"没有可导出的修改，请先编辑项目。");return;}
-            if(lower(p.extension().wstring())!=L".txt"||lower(p.parent_path().filename().wstring())==L".rizia-backups"||samePath(p,g.file))throw WinFailure(L"请用 .txt 文件导出方案，不能覆盖游戏存档或备份目录。");
+            if(lower(p.extension().wstring())!=L".txt"||samePath(p,g.file))throw WinFailure(L"请用 .txt 文件导出方案，不能覆盖游戏存档或备份目录。");
             writePatch(p,rizia::serializePatch(changes,g.doc->story));toast(L"修改方案已导出，只包含字段和值。");
         }else{
             const auto changes=rizia::parsePatch(readFile(p),g.doc->story);
@@ -646,7 +647,7 @@ std::string renderFieldCsv(const rizia::Document& doc,const rizia::ChangeMap& ch
     return data;
 }
 void writeFieldCsv(const fs::path& path){
-    if(lower(path.extension().wstring())!=L".csv"||samePath(path,g.file)||lower(path.parent_path().filename().wstring())==L".rizia-backups")throw WinFailure(L"Choose a .csv file outside the backup folder.");
+    if(lower(path.extension().wstring())!=L".csv"||samePath(path,g.file))throw WinFailure(L"Choose a .csv file outside the backup folder.");
     writePatch(path,renderFieldCsv(*g.doc,reviewChanges()));
 }
 void exportCSV(){
