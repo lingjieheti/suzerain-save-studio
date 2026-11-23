@@ -691,6 +691,55 @@ void testResourceSearch(const fs::path& path){
     check(g.doc->render({})==example && pending().empty(), "Resource inspection preserves save bytes and edits");
 }
 
+void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
+    const auto riziaBytes=readFile(riziaPath);
+    loadDocumentBytes(riziaBytes,riziaPath,0);
+    const auto path=fs::temp_directory_path()/(L"suzerain-review-"+writeId()+L".csv");
+    auto exportCsv=[&]{
+        const auto staged=pending();
+        const bool undo=g.session->canUndo(),redo=g.session->canRedo();
+        writeFieldCsv(path);
+        const auto bytes=readFile(path);
+        fs::remove(path);
+        check(pending()==staged&&g.session->canUndo()==undo&&g.session->canRedo()==redo,
+              "Export preserves staged fields and undo/redo availability");
+        return bytes;
+    };
+    auto expectCsv=[&](const rizia::ChangeMap& expected,const char* reason){
+        const auto csv=exportCsv();
+        check(csv==renderFieldCsv(*g.doc,expected),reason);
+    };
+
+    g.autoCap=true;
+    const auto unchanged=exportCsv();
+    preset(99);
+    auto linked=pending();
+    for(const auto& resource:riziaResources)linked[resource.cap]="99";
+    expectCsv(linked,"CSV includes all three original cap values and their linked current values");
+    check(g.session->undo()&&pending().empty(),"One undo removes the stock preset after export");
+    check(exportCsv()==unchanged,"Undo removes derived values from the exported CSV");
+    check(g.session->redo(),"Export keeps the original preset available for redo");
+
+    const auto budgetCap=riziaResources[0].cap;
+    g.session->applyBatch({{budgetCap,"120"}});
+    linked[budgetCap]="120";
+    expectCsv(linked,"A sufficient manual cap overrides automatic synchronization in the CSV");
+    g.session->applyBatch({{budgetCap,"60"}});
+    expectCsv(pending(),"A conflicting manual cap exports only explicit changes");
+    g.session->revertField(budgetCap);
+    g.autoCap=false;
+    expectCsv(pending(),"Disabled synchronization exports only explicit stock edits");
+    g.autoCap=true;
+    check(readFile(riziaPath)==riziaBytes,"Export keeps the Rizia save byte-for-byte intact");
+
+    const auto mainBytes=readFile(mainPath);
+    loadDocumentBytes(mainBytes,mainPath,0);
+    const auto mainCsv=exportCsv();
+    check(mainCsv==renderFieldCsv(*g.doc,{})&&mainCsv.find("RiziaDLC.")==std::string::npos,
+          "Rizia linked values do not leak into a new Sordland session");
+    check(readFile(mainPath)==mainBytes,"Export keeps the Sordland save byte-for-byte intact");
+}
+
 void testReview(const fs::path& path){
     loadDocumentBytes(readFile(path),path,0);
     const std::string stock="RiziaDLC.Resources_Budget";
@@ -749,6 +798,7 @@ int main(int argc,char** argv){
         testSearch(fs::u8path(argv[1]));
         testResourceSearch(fs::u8path(argv[2]));
         testReview(fs::u8path(argv[2]));
+        testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));
         testAppearance(fs::u8path(argv[1]));
         testFavorites(fs::u8path(argv[1]),fs::u8path(argv[2]));
         testInspectorLayout(fs::u8path(argv[2]));

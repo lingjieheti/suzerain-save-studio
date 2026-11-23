@@ -137,6 +137,25 @@ int main(int argc,char** argv){
             "\"StoryPack_Main\",\"BaseGame. =1+2\",\"' =1+2\",\"2e+1\",\"2e+1\",\"number\"\r\n"
             "\"StoryPack_Main\",\"BaseGame.Note,\"\"Q\"\"\",\"Note,\"\"Q\"\"\",\"false\",\"true\",\"boolean\"\r\n";
         check(csv==expectedCsv,"Field CSV must preserve signed numbers and booleans and escape risky text labels");
+        const auto protectedExports=root/"campaign"/".RiZiA-BaCkUpS"/"turn-3"/"copies";
+        const auto normalExports=root/"campaign"/".rizia-backups-notes"/"turn-3"/"copies";
+        fs::create_directories(protectedExports);
+        fs::create_directories(normalExports);
+        for(const auto& sample:{root/"main.patch.txt",root/"fields.csv"}){
+            const auto data=readFile(sample);
+            const auto blocked=protectedExports/sample.filename();
+            rejects([&]{writePatch(blocked,data);},"Export created a file inside a backup subfolder");
+            check(!fs::exists(blocked),"Rejected export left a new destination");
+            write(blocked,"previous export");
+            rejects([&]{writePatch(blocked,data);},"Export replaced a file inside a backup subfolder");
+            check(readFile(blocked)=="previous export","Rejected export changed the existing file");
+            const auto allowed=normalExports/sample.filename();
+            writePatch(allowed,data);
+            check(readFile(allowed)==data,"Similar folder name prevented a valid export");
+        }
+        for(const auto& entry:fs::directory_iterator(protectedExports)){
+            check(entry.path().extension()!=".tmp","Rejected export left a temporary file in the backup subfolder");
+        }
         const auto gameFolder=root/"sample-game";
         const auto gameExe=gameFolder/"Suzerain.exe";
         const auto host=gameFolder/"BepInEx";
