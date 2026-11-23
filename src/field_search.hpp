@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <algorithm>
+#include <cstring>
 #include <cwctype>
 #include <string>
 #include <string_view>
@@ -40,8 +41,18 @@ inline std::vector<std::wstring> terms(const std::wstring& query) {
     return result;
 }
 
-// Guides show either Lua table keys or the JSON-escaped spelling seen in a save.
-inline std::string pastedKey(std::wstring_view query) {
+struct PastedKey {
+    std::string text;
+    bool prefix = false;
+
+    bool matches(const std::string& field) const {
+        return prefix ? _strnicmp(field.c_str(), text.c_str(), text.size()) == 0
+                      : _stricmp(field.c_str(), text.c_str()) == 0;
+    }
+};
+
+// Guides use both complete assignments and open quoted prefixes for families of keys.
+inline PastedKey pastedKey(std::wstring_view query) {
     auto trim = [](std::wstring_view value) {
         while (!value.empty() && space(value.front())) value.remove_prefix(1);
         while (!value.empty() && space(value.back())) value.remove_suffix(1);
@@ -52,20 +63,27 @@ inline std::string pastedKey(std::wstring_view query) {
     if (equals != query.npos && query.find_first_of(L"=[]\r\n", equals + 1) != query.npos)
         return {};
     auto key = trim(query.substr(0, equals));
-    if (key.size() >= 4 && key.front() == L'[' && key.back() == L']') {
-        key = trim(key.substr(1, key.size() - 2));
-        if (key.size() >= 4 && key.substr(0, 2) == L"\\\"" && key.substr(key.size()-2) == L"\\\"")
-            key = key.substr(2, key.size() - 4);
-        else if (key.size() >= 2 && (key.front() == L'"' || key.front() == L'\'') && key.back() == key.front())
-            key = key.substr(1, key.size() - 2);
+    bool prefix = false;
+    if (!key.empty() && key.front() == L'[') {
+        prefix = key.back() != L']';
+        if (prefix && equals != query.npos) return {};
+        key = trim(key.substr(1, key.size() - (prefix ? 1 : 2)));
+        std::wstring_view quote;
+        if (key.substr(0, 2) == L"\\\"") quote = key.substr(0, 2);
+        else if (!key.empty() && (key.front() == L'"' || key.front() == L'\'')) quote = key.substr(0, 1);
         else return {};
+        key.remove_prefix(quote.size());
+        if (!prefix) {
+            if (key.size() < quote.size() || key.substr(key.size() - quote.size()) != quote) return {};
+            key.remove_suffix(quote.size());
+        }
     } else if (equals == query.npos) return {};
 
     if (key.find(L'.') == key.npos || !std::all_of(key.begin(), key.end(), [](wchar_t c) {
         return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z') ||
                (c >= L'0' && c <= L'9') || c == L'_' || c == L'.';
     })) return {};
-    return std::string(key.begin(), key.end());
+    return {std::string(key.begin(), key.end()), prefix};
 }
 
 inline bool matches(const std::wstring& index, const std::vector<std::wstring>& terms) {

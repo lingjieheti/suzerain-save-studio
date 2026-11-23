@@ -4,7 +4,7 @@
 
 Früher habe ich in *Suzerain* fast alles über die Spielstände geändert. Nach jeder Änderung musste ich den Spielstand zweimal laden. Das war mir auf Dauer zu umständlich, also habe ich diesen Editor gebaut. Damit kannst du Spielstände bearbeiten oder Ressourcen direkt im Spiel anpassen. Wenn du die Auswahlvorschau einschaltest, kannst du mit der Maus auf eine Antwort zeigen und kurz die Strg-Taste (Ctrl) drücken. Dann siehst du die bekannten unmittelbaren Folgen dieser Wahl. Ein paar weitere kleine Funktionen sind auch dabei. [Ich freue mich über deine Vorschläge.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Vorschauversion 0.18.1 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.1/SuzerainSaveStudio-0.18.1-Live-Preview-win-x64.zip)**
+**[Vorschauversion 0.18.2 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.18.2/SuzerainSaveStudio-0.18.2-Live-Preview-win-x64.zip)**
 
 Aktiviere die Auswahlvorschau im **Ctrl+F8**-Panel und schließe das Panel. Zeige mit der Maus auf eine Option und drücke kurz die linke oder rechte **Strg**-Taste. Drücke sie erneut oder bewege den Mauszeiger von der Option weg, um die Vorschau zu schließen. Für eine andere Option drückst du dort erneut Strg. Die Funktion ist standardmäßig ausgeschaltet. Manche Folgen hängen vom späteren Spielverlauf ab.
 

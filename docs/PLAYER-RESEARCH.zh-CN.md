@@ -1,6 +1,6 @@
 # 玩家反馈与同类工具对照
 
-调研于 2026 年 11 月 21 日。以下记录可以回看原帖、产品说明和公开实现。样本来自公开讨论，能说明玩家遇到了哪些问题，无法估计问题在全体玩家中的发生率。
+首次调研于 2026 年 11 月 21 日，11 月 23 日补充字段前缀搜索案例。以下记录可以回看原帖、产品说明和公开实现。样本来自公开讨论，能说明玩家遇到了哪些问题，无法估计问题在全体玩家中的发生率。
 
 ## 玩家的操作遇到了什么问题
 
@@ -17,6 +17,12 @@
 
 - **从攻略找到那个字段。** 玩家示例包含方括号、引号和等号，有时连着建议设置的数值。0.15.1 把这些符号当成普通搜索词，复制整段找不到政府预算。0.16.0 接受 Lua 写法和存档 JSON 里的转义写法，按完整键定位，示例中的数值只用于搜索上下文。普通关键词仍可查找多个相关项。[Steam 玩家攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3373743028) · [玩家给出的完整赋值示例](https://www.reddit.com/r/suzerain/comments/17t03ed/)
 - **从多个存档中选对一个。** 玩家需要分辨进行中、自动和回合存档，再在游戏中加载对应文件。我们用同战役不同回合的文件检验选择器，并参考了 Apple 对即时筛选和搜索范围的说明。[Steam 存档指南](https://steamcommunity.com/sharedfiles/filedetails/?id=3341333208) · [Apple 搜索设计指南](https://developer.apple.com/design/human-interface-guidelines/searching)
+
+### 按攻略前缀找一组字段
+
+Steam 攻略在人物关系一节让玩家复制 `[\"RiziaDLC.Relations_`，从结果中挑选具体人物。Reddit 的玩家回复也沿用了这段写法。0.18.1 能找到完整的键，粘贴这段带左括号的前缀却没有结果。新版按键的开头筛选，在里奇亚示例中可以找到 `Relations_Hugo` 和 `Relations_Vina`。[Steam 攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3204074586) · [Reddit 玩家回复](https://www.reddit.com/r/suzerain/comments/1hbn4bx/)
+
+2026 年 10 月，另一位 Windows 玩家询问如何找到帕莱斯的外交关系，回复建议先搜 `negotiatingpower` 再找具体国家。这个例子说明玩家也会用部分键名查找外交字段。双方没有报告修改后的游戏结果。[玩家原帖](https://www.reddit.com/r/suzerain/comments/1wxmfpx/save_editing_in_rizia/)
 
 ## 五款工具的公开做法
 
