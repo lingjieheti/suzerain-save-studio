@@ -646,6 +646,47 @@ void testSearch(const fs::path& path){
     i18n::setLanguage(0);
 }
 
+void testGuidePrefixSearch(const fs::path& path){
+    const auto bytes=readFile(path);
+    loadDocumentBytes(bytes,path,0);
+    navigate(4);
+    const std::string hugo="RiziaDLC.Relations_Hugo";
+    selectRow(hugo);
+    SetWindowTextW(g.edit,L"17");
+    const rizia::ChangeMap expectedEdits{{hugo,"17"}};
+    const std::set<std::string> relatives{
+        "RiziaDLC.Relations_Estela",hugo,"RiziaDLC.Relations_Lucita_Romance",
+        "RiziaDLC.Relations_Pabel","RiziaDLC.Relations_Sal","RiziaDLC.Relations_Titus","RiziaDLC.Relations_Vina"};
+    for(const auto* query:{LR"([\"RiziaDLC.Relations_)",LR"(["rIzIaDlC.rELATIONS_)",LR"(['RiziaDLC.Relations_)"}) {
+        SetWindowTextW(g.search,query);
+        check(g.rows.size()==relatives.size() && std::set<std::string>(g.rows.begin(),g.rows.end())==relatives,
+              "An open quoted guide prefix finds every matching relation in the Rizia demo");
+        check(g.selected==hugo && pending()==expectedEdits,"Prefix search keeps the selected relation and its edit");
+    }
+    command(FILTER_CHANGED,0);
+    check(g.rows==std::vector<std::string>{hugo},"The pending-only filter also applies to pasted field prefixes");
+    command(FILTER_CHANGED,0);
+
+    const std::string budget="RiziaDLC.Resources_Budget";
+    SetWindowTextW(g.search,LR"(["RiziaDLC.Resources_Budget)");
+    check(g.rows==std::vector<std::string>{budget,budget+"ModifiersTotal"},
+          "An open prefix can match both an entire field name and its longer sibling");
+    SetWindowTextW(g.search,LR"(["RiziaDLC.Resources_Budget"])");
+    check(g.rows==std::vector<std::string>{budget},"Closing the quoted key excludes its longer sibling");
+    for(const auto* query:{LR"(["RiziaDLC.Relations_"])",LR"([\"RiziaDLC.Relations_\"]=90)",LR"(["BaseGame.Relations_)"}) {
+        SetWindowTextW(g.search,query);
+        check(g.rows.empty(),"A closed partial key or an open prefix from a different campaign shows no results");
+    }
+    SetWindowTextW(g.search,LR"([\"RiziaDLC.Relations_Hugo\"]=-99)");
+    check(g.rows==std::vector<std::string>{hugo} && pending()==expectedEdits,"A complete guide assignment finds Hugo without applying its value");
+    navigate(0);
+    SetWindowTextW(g.search,LR"(["RiziaDLC.Relations_)");
+    check(g.rows.empty(),"A quoted relation prefix respects the economy page's field list");
+    navigate(4);
+    check(g.session->undo() && pending().empty() && !g.session->canUndo() && g.doc->render({})==bytes,
+          "Searching and toggling filters add no undo steps and preserve the original demo");
+}
+
 void testResourceSearch(const fs::path& path){
     i18n::setLanguage(0);
     loadDocumentBytes(readFile(path),path,0);
@@ -796,6 +837,7 @@ int main(int argc,char** argv){
         testSaveQueries();
         testSearchControls(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));
+        testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
         testReview(fs::u8path(argv[2]));
         testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));

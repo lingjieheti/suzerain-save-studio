@@ -1,6 +1,10 @@
-# v0.18.1 Preview — Windows validation
+# v0.18.2 Preview — Windows validation
 
-The Windows x64 archive includes the 0.18.1 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.18.2 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Guide prefix search in 0.18.2
+
+In the bundled Rizia sample, pasting the opening of a quoted relationship key into Advanced search returned zero rows in 0.18.1 and all seven matching rows in 0.18.2. A complete Vina assignment returned just her field. We checked both search forms in the native Windows editor at 200% scaling, in all four themes at window widths of 800 and 1200 DIP. Down moved focus to the results and Escape cleared the focused search. The sample file kept its original bytes.
 
 ## Export checks in 0.18.1
 

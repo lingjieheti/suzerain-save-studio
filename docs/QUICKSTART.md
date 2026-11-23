@@ -6,6 +6,8 @@
 2. 使用自己的存档时，先在游戏里保存并退出。可在选档窗口输入“里奇亚 自动 第3回合”，也可输入“修改时间”列的日期或时分，例如 `18:45`。选中后核对文件名。在索德兰的“经济”或“高级字段”中，搜 `GB` 找政府预算，搜 `PW` 找私人资产。也可以粘贴攻略里的字段赋值来查找，例如 `["BaseGame.GovernmentBudget"]=20`。搜索只定位字段。
 3. 选中字段，输入目标数值并点“应用修改”。按 **Ctrl+S** 核对原值和新值。第一次可以用“另存为”制作副本。回到游戏主菜单，手动读取刚才保存的文件。
 
+想找人物关系时，打开里奇亚示例的“高级字段”，按 **Ctrl+F**，粘贴 `[\"RiziaDLC.Relations_`。结果会列出维娜、雨果等人的关系字段。
+
 点“外观”可以切换雾蓝、暖纸、林间和午夜。覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
 
 在简体或繁体中文界面，选档器和编辑器的“外观”菜单也能切换字体。自动模式优先使用本机的相应苹方字体，常见 Windows 环境会使用微软雅黑 UI 或微软正黑体 UI。
@@ -23,6 +25,8 @@ Open **Support the author** in the save picker or editor sidebar. Scan the appre
 1. Extract the ZIP and open `SuzerainSaveStudio.exe`. Pick a Sordland or Rizia sample to try the editor.
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker. To find a save by its local modification time, enter a date or a time such as `18:45` from the **Modified** column. Check the file name before opening. In Sordland’s **Economy** or **Advanced** tab, search for `GB` to find government budget or `PW` to find personal wealth. You can also paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate the field.
 3. Select the field, enter a new value and choose **Apply**. Press **Ctrl+S** to review the changes. **Save as** creates a separate copy. Return to the game's main menu and load the file you just saved.
+
+To find character relationships, open the Rizia sample’s **Advanced** tab, press **Ctrl+F**, and paste `[\"RiziaDLC.Relations_`. The results include the relationship fields for Vina and Hugo.
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel. Close the panel, point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. Point to another choice and tap Ctrl to see its effects. The setting is off by default and is also available in the editor’s **Live mode** dialog.
 
