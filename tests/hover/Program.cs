@@ -27,7 +27,8 @@ internal static class Program
 
     private static void Frame(GameObject hit, bool enabled = true, bool chinese = false,
         EventType type = EventType.Repaint, PanelAppearance theme = null, float x = 413, float y = 227,
-        KeyCode key = KeyCode.None, EventModifiers modifiers = EventModifiers.None, bool consumed = false, bool sameFrame = false)
+        KeyCode key = KeyCode.None, EventModifiers modifiers = EventModifiers.None, bool consumed = false, bool sameFrame = false,
+        bool glass = true)
     {
         Input.Hit = hit;
         if (!sameFrame) Time.frameCount++;
@@ -37,7 +38,7 @@ internal static class Program
         GUI.Labels.Clear();
         GUI.Fills.Clear();
         Time.realtimeSinceStartup += .016f;
-        Hover.OnGUI(enabled, chinese, theme ?? Theme);
+        Hover.OnGUI(enabled, chinese, theme ?? Theme, glass);
     }
 
     private static void Tap(GameObject hit, bool chinese = false, float x = 413, float y = 227,
@@ -102,7 +103,11 @@ internal static class Program
             var originalColor = GUI.color = new Color(.1f, .7f, .2f, 1);
             var originalInk = GUI.contentColor = new Color(.2f, .1f, .8f, 1);
             Frame(label, theme: theme);
-            Check(GUI.Fills.Last().fill == theme.Surface && GUI.Labels[1].ink == theme.Text, theme.English);
+            Check(GUI.Fills.Any(f => f.fill == theme.GlassFace) && GUI.Fills.Any(f => f.fill == theme.Rim) &&
+                GUI.Labels[1].ink == theme.Text, theme.English);
+            Frame(label, theme: theme, glass: false);
+            Check(GUI.Fills[0].fill == theme.Background && GUI.Fills.All(f => f.fill.A == 1f),
+                "The reduced-transparency tooltip uses opaque surfaces");
             Check(GUI.depth == originalDepth && GUI.color == originalColor && GUI.contentColor == originalInk,
                 "Restore shared GUI state");
         }
@@ -461,7 +466,7 @@ internal static class Program
         Screen.height = 300;
         Tap(row, x: 498, y: 298);
         Check(GUI.Labels.Count == 2 && GUI.Labels[1].text.Split('\n').Length == 4, "Preserve all four summary lines");
-        var box = GUI.Fills.Last().area;
+        var box = GUI.Fills.Single(f => f.fill == Theme.GlassFace).area;
         Check(box.x >= 0 && box.y >= 0 && box.x + box.width < 498 && box.y + box.height < 298,
             "Place popup to the left and above at the bottom-right corner");
         Check(GUI.Labels.All(l => l.area.x >= box.x && l.area.y >= box.y &&

@@ -5,12 +5,13 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.18.3";
+constexpr wchar_t APP_VERSION[] = L"0.19.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
        FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH, SUPPORT_AUTHOR };
 #include "appearance.hpp"
+#include "glass.hpp"
 #include "typography.hpp"
 #include "sponsor_text.hpp"
 struct FieldPageState {
@@ -155,7 +156,9 @@ void useChineseFont(typography::ChineseFont font) {
     RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
 }
 void applyAppearanceCommand(int command) {
-    if(command>=Theme::menuBase && command<fontHeadingCommand) {
+    if(command==glass::menuCommand) {
+        if(glass::toggle())RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    }else if(command>=Theme::menuBase && command<fontHeadingCommand) {
         applyAppearance(command-Theme::menuBase);
     }else if(command>=firstFontCommand && command<firstFontCommand+typography::fontCount) {
         const auto font=static_cast<typography::ChineseFont>(command-firstFontCommand);
@@ -165,7 +168,12 @@ void applyAppearanceCommand(int command) {
         else message(i18n::language==0?L"无法保存字体设置。":L"無法儲存字體設定。",MB_ICONWARNING);
     }
 }
-void syncAppearance() { recolorWorkspace(Theme::stored());useChineseFont(typography::stored()); }
+void syncAppearance() {
+    const bool oldGlass=glass::enabled();
+    glass::refreshSettings();
+    recolorWorkspace(Theme::stored());useChineseFont(typography::stored());
+    if(oldGlass!=glass::enabled())RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+}
 void updateStatus(){
     bool loaded=bool(g.doc),any=!pending().empty()||g.editingDirty;
     for(int id:std::initializer_list<int>{PRESET99,PRESET999,SAVE,PATCH_IMPORT,AUTOCAP,RELOAD})EnableWindow(ctl(id),loaded);
@@ -451,7 +459,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.18.3 Preview · Windows 10 / 11 x64\r\n"
+        L"0.19.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -769,6 +777,7 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     case WM_CREATE:g.win=w;g.dpi=GetDpiForWindow(w);if(!g.dpi)g.dpi=96;createControls();DragAcceptFiles(w,TRUE);return 0;
     case WM_SIZE:layout();return 0;
     case WM_ACTIVATE:if(LOWORD(wp)!=WA_INACTIVE&&g.grid)syncAppearance();break;
+    case WM_SETTINGCHANGE:case WM_SYSCOLORCHANGE:if(g.grid)syncAppearance();break;
     case WM_GETMINMAXINFO:{auto*i=(MINMAXINFO*)lp;RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);i->ptMinTrackSize={std::min<LONG>(px(680),area.right-area.left),std::min<LONG>(px(485),area.bottom-area.top)};return 0;}
     case WM_DPICHANGED:g.dpi=HIWORD(wp);{auto*r=(RECT*)lp;SetWindowPos(w,nullptr,r->left,r->top,r->right-r->left,r->bottom-r->top,SWP_NOZORDER|SWP_NOACTIVATE);}fonts();layout();return 0;
     case WM_PAINT:paint();return 0;case WM_ERASEBKGND:return 1;
@@ -778,6 +787,10 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         return TRUE;}break;
     case WM_CTLCOLORLISTBOX:SetTextColor((HDC)wp,Theme::text);SetBkColor((HDC)wp,Theme::input);return (LRESULT)g.input;
     case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;SetTextColor(dc,h==g.path||h==g.meta||h==g.notice||h==g.desc||h==g.valueLabel?Theme::muted:Theme::text);
+        if(h==g.path || h==g.meta || h==g.notice){
+            paintWorkspaceChildBackdrop(dc,h); SetBkMode(dc,TRANSPARENT);
+            return reinterpret_cast<LRESULT>(GetStockObject(NULL_BRUSH));
+        }
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
         if(((HWND)lp==g.edit || (HWND)lp==g.search) &&
@@ -842,6 +855,7 @@ bool handleEditorShortcut(WPARAM key, HWND focus){
 
 int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();Theme::load();
+    glass::refreshSettings();
     typography::selected=typography::stored();
     INITCOMMONCONTROLSEX ic{sizeof(ic),ICC_WIN95_CLASSES};InitCommonControlsEx(&ic);
     g.bg=CreateSolidBrush(Theme::bg);g.panel=CreateSolidBrush(Theme::panel);g.input=CreateSolidBrush(Theme::input);fonts();

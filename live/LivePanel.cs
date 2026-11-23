@@ -16,7 +16,7 @@ namespace SuzerainSaveStudio.Live
         private PanelAppearance palette = PanelAppearance.Choices[PanelAppearance.Fjord];
         private enum Feedback { Info, Success, Warning }
 
-        private bool visible, hotkeyHeld, chinese, hintsEnabled;
+        private bool visible, hotkeyHeld, chinese, hintsEnabled, glass;
         private readonly ChoiceHover choiceHover = new ChoiceHover();
         private Snapshot snapshot;
         private string key = "", draft = "", noticeZh = "", noticeEn = "";
@@ -53,6 +53,7 @@ namespace SuzerainSaveStudio.Live
         private void LoadPreferences()
         {
             hintsEnabled = PanelPreferences.ReadChoiceHints();
+            glass = PanelPreferences.ReadGlassEffects();
             appearance = PanelPreferences.ReadAppearance();
             palette = PanelAppearance.Choices[appearance];
         }
@@ -60,6 +61,7 @@ namespace SuzerainSaveStudio.Live
         public void OnDestroy()
         {
             if (pointerCanvas != null) UnityEngine.Object.Destroy(pointerCanvas);
+            PanelAppearance.ReleaseTextures();
         }
 
         public void OnDisable() { choiceHover.Reset(); ClosePanel(); }
@@ -135,7 +137,7 @@ namespace SuzerainSaveStudio.Live
                 }
                 ev.Use();
             }
-            choiceHover.OnGUI(hintsEnabled && !visible, chinese, palette);
+            choiceHover.OnGUI(hintsEnabled && !visible, chinese, palette, glass);
             if (!visible) return;
             if (ev.type == EventType.KeyDown && ev.keyCode == KeyCode.Escape)
             {
@@ -464,7 +466,7 @@ namespace SuzerainSaveStudio.Live
             bool focus = focused == id;
             Color face = primary ? (hovered ? palette.AccentHover : palette.Accent) : (hovered ? palette.Hover : palette.Surface);
             if (!quiet || focus || hovered)
-                PaperBox(r,face,focus ? palette.Text : (primary || quiet ? face : palette.Border),7,focus ? 2 : 1);
+                PaperBox(r,face,focus ? palette.Text : (primary || quiet ? face : palette.Border),r.height/2,focus ? 2 : 1);
             return Press(r,id,text,primary ? primaryAction : action);
         }
 
@@ -482,8 +484,9 @@ namespace SuzerainSaveStudio.Live
             float content = width-2*Inset;
             bool ready = snapshot?.CanEdit == true;
             bool known = snapshot?.Story=="StoryPack_Main" || snapshot?.Story=="StoryPack_Rizia";
-            PaperBox(new Rect(0,0,width,Height),palette.Background,palette.Border,13);
+            palette.DrawGlass(new Rect(0,0,width,Height),18,1,glass);
             GUI.Label(new Rect(Inset,10,content-129,37),T("实时编辑","Live editor"),title);
+            palette.DrawGlass(new Rect(width-Inset-135,13,135,33),16,1,glass,rail:true);
             if (Button(new Rect(width-Inset-133,15,70,29),"language",T("English","简体中文"),quiet:true))
             {
                 chinese = !chinese;
@@ -506,7 +509,7 @@ namespace SuzerainSaveStudio.Live
             if (!ready || !hasFields)
             {
                 float top = hasFields ? 171 : 96;
-                PaperBox(new Rect(Inset,top,content,280-top),palette.Surface,palette.Border,9);
+                PaperBox(new Rect(Inset,top,content,280-top),palette.Surface,palette.Border,13);
                 GUI.Label(new Rect(Inset+14,top+9,content-28,30),
                     hasFields ? T("只读","Read only") : T("当前没有可编辑的战役","No editable campaign"),body);
                 string detail = LocalStatus(snapshot?.Status);
@@ -523,8 +526,7 @@ namespace SuzerainSaveStudio.Live
             int count = snapshot.Fields.Count;
             const float margin = 3;
             float cell = (content-2*margin)/count;
-            bool fjord = appearance == PanelAppearance.Fjord;
-            if (!fjord) Fill(new Rect(Inset,88,content,74),palette.Hover,11);
+            palette.DrawGlass(new Rect(Inset,88,content,74),15,1,glass,rail:true);
             for (int i=0;i<count;i++)
             {
                 var field = snapshot.Fields[i];
@@ -532,14 +534,11 @@ namespace SuzerainSaveStudio.Live
                 bool selected = field.Key == key;
                 bool enabled = !confirming && ready;
                 bool focus = enabled && focused == field.Key;
-                if (fjord && i > 0)
-                    Fill(new Rect(r.x-1,r.y+12,1,r.height-24),palette.Border);
-                if (focus || (enabled && r.Contains(Event.current.mousePosition)) || (selected && !fjord))
-                    PaperBox(r,palette.Surface,focus ? palette.Text : palette.Border,9,focus ? 2 : 1);
+                if (selected || focus || (enabled && r.Contains(Event.current.mousePosition)))
+                    PaperBox(r,palette.Surface,focus ? palette.Text : palette.Border,12,focus ? 2 : 1);
                 if (selected)
                 {
-                    var marker = fjord ? new Rect(r.x+10,r.y+r.height-3,25,2) : new Rect(r.x+1,r.y+15,3,r.height-30);
-                    Fill(marker,palette.Accent,1);
+                    Fill(new Rect(r.x+11,r.y+r.height-5,23,2),palette.Accent,1);
                 }
                 if (enabled && Press(r,field.Key,"",action) && !selected)
                 {
@@ -572,7 +571,7 @@ namespace SuzerainSaveStudio.Live
         [HideFromIl2Cpp]
         private void DrawEditor(LiveField selected,float content)
         {
-            PaperBox(new Rect(Inset,170,content,110),palette.Surface,confirming ? palette.Accent : palette.Border,9);
+            PaperBox(new Rect(Inset,170,content,110),palette.Surface,confirming ? palette.Accent : palette.Border,13);
             float x = Inset+13, inside = content-26;
             if (confirming)
             {
@@ -619,15 +618,14 @@ namespace SuzerainSaveStudio.Live
             float buttonW = Math.Min(145,inside*.43f);
             float stepWidth = Math.Min(50,(inside-buttonW-10)/Steps.Length);
             var steps = new Rect(x,237,stepWidth*Steps.Length,32);
-            if (appearance == PanelAppearance.Fjord) PaperBox(steps,palette.Surface,palette.Border,8);
-            else Fill(steps,palette.Hover,8);
+            Fill(steps,palette.Hover,16);
             for (int i=0;i<Steps.Length;i++)
             {
                 var step = new Rect(x+i*stepWidth,237,stepWidth,32);
                 if (i>0) Fill(new Rect(step.x,245,1,16),palette.Border);
                 bool focusedStep = focused == StepLabels[i];
                 if (focusedStep || step.Contains(Event.current.mousePosition))
-                    PaperBox(step,palette.Surface,focusedStep ? palette.Text : palette.Border,7,focusedStep ? 2 : 1);
+                    PaperBox(step,palette.Surface,focusedStep ? palette.Text : palette.Border,15,focusedStep ? 2 : 1);
                 if (Press(step,StepLabels[i],StepLabels[i],action))
                     Adjust(selected,Steps[i]);
             }
@@ -653,16 +651,15 @@ namespace SuzerainSaveStudio.Live
             GUI.Label(new Rect(Inset,336,41,28),T("外观","Theme"),caption);
             float labelWidth = content >= 345 ? 57 : 43;
             float choiceWidth = (content-labelWidth-4)/ThemeControls.Length;
-            bool fjord = appearance == PanelAppearance.Fjord;
-            if (!fjord) Fill(new Rect(Inset+labelWidth,334,content-labelWidth,32),palette.Hover,8);
+            palette.DrawGlass(new Rect(Inset+labelWidth,334,content-labelWidth,32),16,1,glass,rail:true);
             for (int i = 0; i < ThemeControls.Length; i++)
             {
                 var choice = PanelAppearance.Choices[i];
                 var rect = new Rect(Inset+labelWidth+2+i*choiceWidth,336,choiceWidth,28);
                 bool selected = i == appearance, focus = focused == ThemeControls[i];
                 bool hovered = rect.Contains(Event.current.mousePosition);
-                if (focus || hovered || (selected && !fjord))
-                    PaperBox(rect,palette.Surface,focus ? palette.Text : palette.Border,7,focus ? 2 : 1);
+                if (selected || focus || hovered)
+                    PaperBox(rect,palette.Surface,focus ? palette.Text : palette.Border,14,focus ? 2 : 1);
                 if (selected)
                     Fill(new Rect(rect.x+rect.width/2-6,rect.y+rect.height-3,12,2),palette.Accent,1);
                 if (choiceWidth >= 89) Fill(new Rect(rect.x+10,rect.y+11.5f,7,7),choice.Accent,3.5f);

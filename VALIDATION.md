@@ -1,6 +1,14 @@
-# v0.18.3 Preview — Windows validation
+# v0.19.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.18.3 editor and the optional 0.17.1 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.19.0 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Liquid Glass on Windows in 0.19.0
+
+The editor draws light-catching edges and translucent navigation over a softened sample of its own background. Save values and the change review retain solid surfaces. The choice of material is independent of the four color themes. These decisions follow Apple's guidance on separating navigation from content and its 2026 refinements for readable edges. [Apple materials guide](https://developer.apple.com/design/human-interface-guidelines/materials) · [WWDC26 design update](https://developer.apple.com/videos/play/wwdc2026/102/?id=206)
+
+On a Windows desktop at 200% scaling, we checked all four themes in the native editor at 800 and 1200 DIP and the picker at 614 and 1010 DIP. The editor opened the built-in Rizia sample. The picker filtered six synthetic files, recovered from an empty result and moved focus from search into the list with Down. Switching the material retained the current theme and field draft. Disabling transparency in an isolated test profile suppressed the effect. [Editor screenshots](docs/images/appearances.png) · [Save picker](docs/images/save-picker.png)
+
+For the 0.19.0 Ctrl+F8 panel and choice tooltip, tests exercised the production drawing and input code using Unity test doubles. Panel previews used synthetic campaign values, four palettes, three screen sizes and two languages. The image is a simulated render. An in-game visual check of this version is still outstanding. [Panel preview](docs/images/live-glass-preview.png)
 
 ## Keyboard redo in 0.18.3
 

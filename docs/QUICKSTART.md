@@ -10,7 +10,7 @@
 
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
-点“外观”可以切换雾蓝、暖纸、林间和午夜。覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
+点“外观”可以切换雾蓝、暖纸、林间和午夜。取消勾选“液态玻璃”即可在当前配色下使用实色界面。覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
 
 在简体或繁体中文界面，选档器和编辑器的“外观”菜单也能切换字体。自动模式优先使用本机的相应苹方字体，常见 Windows 环境会使用微软雅黑 UI 或微软正黑体 UI。
 
@@ -21,6 +21,8 @@
 按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
+
+Open **Appearance** to choose a color theme. Uncheck **Liquid Glass** for solid navigation and controls in the same color theme.
 
 Open **Support the author** in the save picker or editor sidebar. Scan the appreciation code with WeChat to tip the author, or choose PayPal or USDT. For USDT, use the TRON (TRC20) network.
 

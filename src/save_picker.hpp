@@ -21,14 +21,25 @@ struct State {
     fs::path beforeScan;
     int chosenDemo=0, appearanceIndex=-1;
     typography::ChineseFont fontPreference=typography::Automatic;
-    bool stacked=false;
-    RECT library{}, practice{}, searchFrame{}, headingIcon{};
+    bool stacked=false, positioning=false, glassVisible=false;
+    RECT library{}, practice{}, searchFrame{}, headingIcon{}, headerTools{};
+    HDC backdrop{};
+    HBITMAP backdropBitmap{};
+    HGDIOBJ previousBitmap{};
+    void clearBackdrop(){
+        if(backdrop){
+            SelectObject(backdrop,previousBitmap);
+            DeleteObject(backdropBitmap);
+            DeleteDC(backdrop);
+            backdrop=nullptr;
+        }
+    }
     int footerY=0;
     std::thread worker;
     std::atomic_bool cancel{false}, done{false};
     bool busy=false, populating=false;
     std::wstring error;
-    ~State(){ stop(); if(rowHeight)ImageList_Destroy(rowHeight); for(auto f:{font,small,bold,subheading,emphasis,number})if(f)DeleteObject(f); }
+    ~State(){ stop(); clearBackdrop(); if(rowHeight)ImageList_Destroy(rowHeight); for(auto f:{font,small,bold,subheading,emphasis,number})if(f)DeleteObject(f); }
     void stop(){cancel.store(true);if(worker.joinable())worker.join();busy=false;}
     int scale(int n)const{return MulDiv(n,dpi,96);}
     void move(HWND h,int x,int y,int w,int he){MoveWindow(h,scale(x),scale(y),scale(std::max(1,w)),scale(std::max(1,he)),TRUE);}
@@ -70,6 +81,8 @@ inline void layoutSearch(State& s){
 }
 inline void layout(State& s){
     if(!s.empty)return;
+    s.clearBackdrop();
+    s.positioning=true;
     RECT r{};GetClientRect(s.win,&r);
     const int w=MulDiv(r.right,96,s.dpi), h=MulDiv(r.bottom,96,s.dpi);
     const bool compact=h<470;
@@ -98,6 +111,7 @@ inline void layout(State& s){
     const int browseX=w-margin-browseWidth;
     const int appearanceX=browseX-8-appearanceWidth;
     const int actionY=top+(compact?3:8);
+    s.headerTools=s.box(appearanceX-3,actionY-3,browseX+browseWidth-appearanceX+6,41);
     s.headingIcon=narrowHeader?RECT{}:s.box(margin,top+(compact?4:8),35,35);
     SendMessageW(s.heading,WM_SETFONT,(WPARAM)(narrowHeader?s.subheading:s.bold),FALSE);
     const int headingOffset=narrowHeader?8:0;
@@ -137,11 +151,11 @@ inline void layout(State& s){
         const int buttonY=bodyY+(compact?77:93);
         const int boxH=buttonY-bodyY+step*2+13;
         s.practice=s.box(x,bodyY,rail,boxH);
-        s.move(s.practiceTitle,x+11,bodyY+6,rail-22,29);
-        s.move(s.practiceHint,x+11,bodyY+39,rail-22,buttonY-bodyY-39);
-        s.move(s.mainDemo,x+3,buttonY,rail-6,step);
-        s.move(s.riziaDemo,x+3,buttonY+step,rail-6,step);
-        s.move(s.live,x+3,bodyY+boxH+7,rail-6,compact?45:54);
+        s.move(s.practiceTitle,x+16,bodyY+8,rail-32,29);
+        s.move(s.practiceHint,x+16,bodyY+40,rail-32,buttonY-bodyY-40);
+        s.move(s.mainDemo,x+7,buttonY,rail-14,step);
+        s.move(s.riziaDemo,x+7,buttonY+step,rail-14,step);
+        s.move(s.live,x+7,bodyY+boxH+7,rail-14,compact?45:54);
     }
     const int footerButtons=s.footerY+(compact?6:12);
     HDC dc=GetDC(s.win);
@@ -162,7 +176,8 @@ inline void layout(State& s){
     int widths[]={0,columns>=510?90:84,0,columns>=510?56:48,columns>=510?143:110};
     widths[0]=std::max(108,columns-widths[1]-widths[2]-widths[3]-widths[4]);
     for(int i=0;i<5;++i)ListView_SetColumnWidth(s.list,i,s.scale(widths[i]));
-    InvalidateRect(s.win,nullptr,FALSE);
+    s.positioning=false;
+    RedrawWindow(s.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 inline int selected(const State& s){return ListView_GetNextItem(s.list,-1,LVNI_SELECTED);}
 inline void selection(State& s){
@@ -251,6 +266,7 @@ inline void accept(State& s){
 inline void applyPickerAppearance(State& s) {
     s.appearanceIndex=Theme::index();
     s.fontPreference=typography::selected;
+    s.glassVisible=glass::enabled();
     Theme::caption(s.win);
     SetWindowTheme(s.list,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetBkColor(s.list,Theme::panel);
@@ -266,7 +282,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
     State* p=state(w);
     try{
         if(m==WM_INITDIALOG){p=reinterpret_cast<State*>(lp);SetWindowLongPtrW(w,DWLP_USER,(LONG_PTR)p);auto&s=*p;s.win=w;SetWindowTextW(w,APP_TITLE);s.dpi=GetDpiForWindow(w);if(!s.dpi)s.dpi=96;setFonts(s);
-            s.heading=child(s,L"STATIC",L"选择存档",SS_ENDELLIPSIS,0);
+            s.heading=child(s,L"STATIC",L"选择存档",SS_OWNERDRAW,0);
             s.filter=child(s,L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,FILTER);
             s.clearSearch=child(s,L"BUTTON",L"清除搜索",WS_TABSTOP|BS_OWNERDRAW,CLEAR_SEARCH);
             SetWindowSubclass(s.clearSearch,buttonProc,1,0);
@@ -279,10 +295,10 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             ListView_SetExtendedListViewStyle(s.list,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
             const wchar_t* cols[]={L"文件名",L"战役",L"存档详情",L"回合",L"修改时间"};for(int i=0;i<5;++i){LVCOLUMNW c{};c.mask=LVCF_TEXT|LVCF_WIDTH;auto title=tr(cols[i]);c.pszText=title.data();c.cx=s.scale(120);ListView_InsertColumn(s.list,i,&c);}
             SetWindowSubclass(ListView_GetHeader(s.list),header,1,(DWORD_PTR)&s);
-            s.path=child(s,L"STATIC",L"",SS_PATHELLIPSIS|SS_NOPREFIX,PATH);
+            s.path=child(s,L"STATIC",L"",SS_OWNERDRAW,PATH);
             s.status=child(s,L"STATIC",L"正在搜索…",SS_RIGHT|SS_ENDELLIPSIS,STATUS);
-            s.practiceTitle=child(s,L"STATIC",L"内置练习示例",SS_ENDELLIPSIS,0);
-            s.practiceHint=child(s,L"STATIC",L"可体验编辑功能，无法在游戏中载入。",0,0);
+            s.practiceTitle=child(s,L"STATIC",L"内置练习示例",SS_OWNERDRAW,0);
+            s.practiceHint=child(s,L"STATIC",L"可体验编辑功能，无法在游戏中载入。",SS_OWNERDRAW,0);
             s.mainDemo=child(s,L"BUTTON",L"索德兰示例",WS_TABSTOP|BS_OWNERDRAW,DEMO_MAIN);
             s.riziaDemo=child(s,L"BUTTON",L"里奇亚示例",WS_TABSTOP|BS_OWNERDRAW,DEMO_RIZIA);
             s.browse=child(s,L"BUTTON",L"手动打开",WS_TABSTOP|BS_OWNERDRAW,BROWSE);
@@ -302,9 +318,14 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         case WM_ACTIVATE:
             if(LOWORD(wp)!=WA_INACTIVE&&s.appearanceIndex>=0){
                 syncAppearance();
-                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected)applyPickerAppearance(s);
+                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected ||
+                   s.glassVisible!=glass::enabled())applyPickerAppearance(s);
             }
             break;
+        case WM_SYSCOLORCHANGE:case WM_SETTINGCHANGE:
+            glass::refreshSettings();
+            applyPickerAppearance(s);
+            return TRUE;
         case START_SCAN:start(s);return TRUE;
         case WM_TIMER:if(wp==1&&s.done.load(std::memory_order_acquire)){KillTimer(w,1);if(s.worker.joinable())s.worker.join();s.busy=false;for(auto h:{s.refresh,s.add,s.filter,s.campaign})EnableWindow(h,TRUE);fill(s);}return TRUE;
         case WM_COMMAND:{int id=LOWORD(wp);if(id==IDCANCEL){s.stop();EndDialog(w,IDCANCEL);return TRUE;}if(id==IDOK){accept(s);return TRUE;}
@@ -314,7 +335,8 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(id==SUPPORT && HIWORD(wp)==BN_CLICKED){sponsor::show(w);return TRUE;}
             if(id==APPEARANCE){
                 applyAppearanceCommand(pickAppearance(w,s.appearance));
-                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected)applyPickerAppearance(s);
+                if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected ||
+                   s.glassVisible!=glass::enabled())applyPickerAppearance(s);
                 return TRUE;
             }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}
@@ -343,12 +365,13 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         case WM_DRAWITEM:{
             const auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(lp);
             if(item.CtlType==ODT_STATIC&&item.hwndItem==s.empty){drawEmpty(s,item);return TRUE;}
+            if(item.CtlType==ODT_STATIC){drawCaption(s,item);return TRUE;}
             if(item.CtlType==ODT_COMBOBOX&&item.CtlID==CAMPAIGN_FILTER){drawCampaignItem(s,item);return TRUE;}
             if(item.CtlType==ODT_BUTTON&&item.CtlID==CLEAR_SEARCH){drawClearSearch(item,s.dpi);return TRUE;}
             if(item.CtlType==ODT_BUTTON){drawButton(s,item);return TRUE;}
             break;}
         case WM_CTLCOLORDLG:return (INT_PTR)g.bg;
-        case WM_PAINT:{PAINTSTRUCT paint{};auto dc=BeginPaint(w,&paint);FillRect(dc,&paint.rcPaint,g.bg);paintFrame(s,dc);EndPaint(w,&paint);return TRUE;}
+        case WM_PAINT:{PAINTSTRUCT paint{};auto dc=BeginPaint(w,&paint);paintFrame(s,dc,paint.rcPaint);EndPaint(w,&paint);return TRUE;}
         case WM_CTLCOLORLISTBOX:{auto dc=(HDC)wp;SetTextColor(dc,Theme::text);SetBkColor(dc,Theme::input);return (INT_PTR)g.input;}
         case WM_CTLCOLORSTATIC:case WM_CTLCOLOREDIT:{auto dc=(HDC)wp;auto h=(HWND)lp;
             SetTextColor(dc,h==s.path||h==s.status||h==s.practiceHint||h==s.empty?Theme::muted:Theme::text);

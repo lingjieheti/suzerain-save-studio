@@ -10,7 +10,7 @@ struct AppearanceMenuMetrics {
 };
 
 bool appearanceMenuItem(UINT id) {
-    return id>=Theme::menuBase && id<firstFontCommand+typography::fontCount;
+    return id==glass::menuCommand || (id>=Theme::menuBase && id<firstFontCommand+typography::fontCount);
 }
 
 bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
@@ -50,6 +50,8 @@ bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
         swatch.right=swatch.left+measure(8);fill(dc,swatch,sample.accent);
         caption.left+=measure(37);
         label=Theme::name(id);
+    }else if(item.itemID==glass::menuCommand){
+        label=glass::label();
     }else{
         label=metrics.fontNames[item.itemID-firstFontCommand].c_str();
     }
@@ -77,6 +79,7 @@ void populateAppearanceMenu(HMENU menu,AppearanceMenuMetrics& metrics) {
     };
     for(int i=0;i<Theme::count;++i)
         append(Theme::menuBase+i,Theme::name(i),i==Theme::index()?MFS_CHECKED:MFS_ENABLED);
+    append(glass::menuCommand,glass::label(),!glass::systemAllows?MFS_DISABLED:(glass::preferred?MFS_CHECKED:MFS_ENABLED));
     if(!typography::isChinese(i18n::language))return;
 
     const bool simplified=i18n::language==0;

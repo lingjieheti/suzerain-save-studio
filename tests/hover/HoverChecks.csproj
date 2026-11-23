@@ -7,5 +7,6 @@
     <Compile Include="../../live/ChoiceHover.cs" Link="ChoiceHover.cs" />
     <Compile Include="../../live/ChoiceEffects.cs" Link="ChoiceEffects.cs" />
     <Compile Include="../../live/PanelAppearance.cs" Link="PanelAppearance.cs" />
+    <Compile Include="../panel/MaterialDoubles.cs" Link="MaterialDoubles.cs" />
   </ItemGroup>
 </Project>

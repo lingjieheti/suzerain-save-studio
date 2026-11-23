@@ -418,9 +418,9 @@ void testChineseFonts(const fs::path& path) {
         AppearanceMenuMetrics metrics{96,g.font};
         populateAppearanceMenu(menu,metrics);
         if(!isChinese(language)){
-            check(GetMenuItemCount(menu)==Theme::count,"Other languages keep the theme-only menu");
+            check(GetMenuItemCount(menu)==Theme::count+1,"All languages include themes and the glass setting");
         }else{
-            check(GetMenuItemCount(menu)==Theme::count+1+fontCount,"Both Chinese languages expose a font section");
+            check(GetMenuItemCount(menu)==Theme::count+2+fontCount,"Both Chinese languages also expose a font section");
             check(metrics.fontNames[Automatic].find(L'（')!=std::wstring::npos,
                   "Automatic selection displays the current fallback");
             for(auto font:{PingFang,Noto,System}){
@@ -528,6 +528,8 @@ void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
     check(Theme::index()==2,"A new user starts with Fjord");
+    glass::refreshSettings();
+    check(glass::preferred,"New profiles use glass when Windows allows transparency");
     const int languageBefore=i18n::language;
     for(int lang=0;lang<static_cast<int>(std::size(i18n::names));++lang){
         i18n::setLanguage(lang);
@@ -545,6 +547,20 @@ void testAppearance(const fs::path& path){
     check(applyInput(),"Stage a budget edit before changing the appearance");
     SetWindowTextW(g.edit,L"unfinished");
     auto* session=g.session.get();
+    applyAppearanceCommand(glass::menuCommand);
+    glass::refreshSettings();
+    check(!glass::preferred && !glass::enabled() && Theme::index()==Theme::fjordIndex,
+          "Turning off the material persists independently of the color theme");
+    applyAppearanceCommand(glass::menuCommand);
+    check(glass::preferred && g.session.get()==session && pending().at(budget)=="43" &&
+          g.editingDirty && textOf(g.edit)==L"unfinished","Toggling glass preserves the active field draft");
+    const wchar_t* personalization=L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
+    DWORD opaque=0;
+    RegSetKeyValueW(HKEY_CURRENT_USER,personalization,L"EnableTransparency",REG_DWORD,&opaque,sizeof(opaque));
+    glass::refreshSettings();
+    check(!glass::enabled() && glass::preferred,"Windows can suppress glass without replacing the saved choice");
+    RegDeleteKeyValueW(HKEY_CURRENT_USER,personalization,L"EnableTransparency");
+    glass::refreshSettings();
     for(int index:{1,2,3,0}){
         applyAppearance(index);
         check(Theme::index()==index,"The selected appearance applies immediately");

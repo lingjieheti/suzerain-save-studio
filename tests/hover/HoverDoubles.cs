@@ -88,7 +88,7 @@ namespace UnityEngine
         public void Draw(Rect area, GUIContent content, bool hover, bool active, bool on, bool focused) =>
             GUI.Labels.Add((content.text, area, normal.textColor));
     }
-    public static class Texture2D { public static object whiteTexture = new(); }
+    public static class Object { public static void Destroy(object obj) { } }
     public static class GUI
     {
         public static int depth;
