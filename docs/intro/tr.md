@@ -4,7 +4,7 @@
 
 Eskiden *Suzerain* oynarken bir şeyi değiştirmek istediğimde çoğunlukla kayıt dosyasını düzenlerdim. Her değişiklikte kaydı iki kez yüklemem gerekiyordu. Bu işten sıkılınca bu aracı yaptım. Kayıt dosyalarınızı düzenleyebilir, oyun sırasında da kaynak miktarlarını doğrudan değiştirebilirsiniz. Seçim önizlemesini açtıktan sonra imleci bir seçeneğin üzerine getirip Ctrl tuşuna kısaca basarak o seçimin bilinen doğrudan etkilerini görebilirsiniz. Araçta birkaç küçük özellik daha var. [Önerilerinizi duymak isterim.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Windows 10/11 x64 için 0.20.1 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.1/SuzerainSaveStudio-0.20.1-Live-Preview-win-x64.zip)**
+**[Windows 10/11 x64 için 0.20.2 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.2/SuzerainSaveStudio-0.20.2-Live-Preview-win-x64.zip)**
 
 **Ctrl+F8** panelinde seçenek önizlemesini açıp paneli kapatın. İmleci bir seçeneğin üzerine getirin ve etkilerini görmek için sol veya sağ **Ctrl** tuşuna bir kez basıp bırakın. Tekrar bastığınızda veya imleci uzaklaştırdığınızda ipucu kapanır. Başka bir seçeneği incelemek için imleci üzerine getirip Ctrl tuşuna basın. Özellik varsayılan olarak kapalıdır. Bazı sonuçlar hikâyenin ilerleyişine bağlıdır.
 

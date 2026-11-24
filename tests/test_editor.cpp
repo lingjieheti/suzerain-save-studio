@@ -927,6 +927,37 @@ void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
     check(readFile(mainPath)==mainBytes,"Export keeps the Sordland save byte-for-byte intact");
 }
 
+void testReviewShortcut(const fs::path& sample) {
+    const auto source=readFile(sample);
+    loadDocumentBytes(source,sample,0);
+    navigate(0);
+    SetFocus(g.search);
+    check(handleEditorShortcut('S',GetFocus()) && g.tab==5 && g.rows.empty() &&
+          GetFocus()==ctl(NAV_BASE+5),"An empty review focuses its navigation button");
+
+    navigate(0);
+    const std::string budget="BaseGame.GovernmentBudget";
+    selectRow(budget);
+    SetFocus(g.edit);
+    SetWindowTextW(g.edit,L"invalid");
+    const auto timer=SetTimer(nullptr,0,50,dismissValidationWarning);
+    check(timer!=0,"Install warning handler for review validation");
+    handleEditorShortcut('S',GetFocus());
+    KillTimer(nullptr,timer);
+    check(g.tab==0 && GetFocus()==g.edit && textOf(g.edit)==L"invalid" && g.editingDirty &&
+          pending().empty(),"An invalid value stays in its editor when review is requested");
+
+    g.session->applyBatch({{"BaseGame.PersonalWealth","12"}});
+    SetWindowTextW(g.edit,L"31");
+    check(handleEditorShortcut('S',GetFocus()) && g.tab==5 && GetFocus()==g.grid &&
+          g.rows.size()==2 && g.review.at(budget)=="31","Ctrl+S stages the draft and focuses the review rows");
+    const auto selected=g.selected;
+    const auto edits=pending();
+    SendMessageW(GetFocus(),WM_KEYDOWN,selected==g.rows.front()?VK_DOWN:VK_UP,1);
+    check(g.selected!=selected && GetFocus()==g.grid && pending()==edits && readFile(sample)==source,
+          "An arrow immediately inspects the other change without altering the save or pending values");
+}
+
 void testReview(const fs::path& path){
     loadDocumentBytes(readFile(path),path,0);
     const std::string stock="RiziaDLC.Resources_Budget";
@@ -988,6 +1019,7 @@ int main(int argc,char** argv){
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
+        testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));
         testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));
         testAppearance(fs::u8path(argv[1]));
