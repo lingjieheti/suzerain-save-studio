@@ -100,6 +100,46 @@ int main() {
         const auto oneByteShort = rizia::discovery::scan({library}, limits);
         check(oneByteShort.truncated && oneByteShort.saves.size() == 1 && oneByteShort.saves[0].path.filename() == "latest.json",
               "An older save one byte over the remaining budget is excluded");
+        const auto firstRoot = root / "archive";
+        const auto secondRoot = root / "current";
+        const auto old = firstRoot / "old.json";
+        const auto recent = firstRoot / "recent.json";
+        const auto newest = secondRoot / "latest.json";
+        write(old, valid); write(recent, valid); write(newest, valid);
+        fs::last_write_time(old, now - std::chrono::hours(2));
+        fs::last_write_time(recent, now - std::chrono::hours(1));
+        fs::last_write_time(newest, now);
+        limits = {}; limits.maxCandidates = 2;
+        for (const auto& roots : {std::vector<fs::path>{firstRoot, secondRoot}, std::vector<fs::path>{secondRoot, firstRoot}}) {
+            const auto capped = rizia::discovery::scan(roots, limits);
+            check(capped.saves.size() == 2 && fs::equivalent(capped.saves[0].path, newest) && fs::equivalent(capped.saves[1].path, recent),
+                  "Candidate limit retains newest eligible files across roots in either order");
+            check(capped.candidates == 2 && capped.entriesVisited == 3 && capped.truncated,
+                  "Candidate limit caps the files selected for reading while scanning all available entries");
+        }
+        limits.maxEntries = 2;
+        const auto entryCap = rizia::discovery::scan({firstRoot, secondRoot}, limits);
+        check(entryCap.entriesVisited == 2 && entryCap.candidates == 2 && entryCap.truncated &&
+              entryCap.saves.size() == 2 && fs::equivalent(entryCap.saves[0].path, recent) && fs::equivalent(entryCap.saves[1].path, old),
+              "Entry limit constrains discovery to the roots actually visited");
+        limits.maxEntries = 100;
+        fs::last_write_time(newest, now - std::chrono::hours(1));
+        limits.maxCandidates = 1;
+        const auto tiedCap = rizia::discovery::scan({secondRoot, firstRoot}, limits);
+        check(tiedCap.truncated && tiedCap.candidates == 1 && tiedCap.saves.size() == 1 && fs::equivalent(tiedCap.saves[0].path, recent),
+              "Equal timestamps at the candidate cutoff retain the lexically earlier path even when encountered last");
+        const auto ineligible = root / "ineligible";
+        write(ineligible / "empty.json", "");
+        write(ineligible / "oversized.json", valid + " ");
+        limits.maxFileBytes = valid.size();
+        const auto eligible = rizia::discovery::scan({ineligible, secondRoot}, limits);
+        check(eligible.candidates == 1 && eligible.skipped == 2 && !eligible.truncated &&
+              eligible.saves.size() == 1 && fs::equivalent(eligible.saves[0].path, newest),
+              "Empty and oversized JSON files do not consume a candidate slot or truncate an exact fit");
+        limits.maxCandidates = 0;
+        const auto noCandidates = rizia::discovery::scan({secondRoot}, limits);
+        check(noCandidates.truncated && noCandidates.candidates == 0 && noCandidates.saves.empty(),
+              "Zero candidate budget never reads a save");
         std::error_code ec;
         fs::create_directory_symlink(root / "nested", root / "link", ec);
         if (!ec) check(rizia::discovery::scan({root / "link"}).saves.empty(), "Symlink roots excluded");

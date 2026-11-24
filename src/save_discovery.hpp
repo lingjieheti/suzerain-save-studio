@@ -132,20 +132,28 @@ inline Result scan(const std::vector<fs::path>& roots, const Limits& limits = {}
             }
             if (!fs::is_regular_file(status) || detail::folded(entry.path().extension().wstring()) != L".json") continue;
             if (!files.insert(detail::key(entry.path())).second) continue;
-            if (result.candidates >= limits.maxCandidates) { result.truncated = bounded = true; break; }
-            ++result.candidates;
             Save candidate; candidate.path = entry.path();
             candidate.size = entry.file_size(ec);
             if (ec) { ++result.errors; ec.clear(); continue; }
             if (candidate.size == 0 || candidate.size > limits.maxFileBytes || candidate.size > rizia::detail::kMaxFileSize) { ++result.skipped; continue; }
             candidate.mtime = entry.last_write_time(ec);
             if (ec) { ++result.errors; ec.clear(); continue; }
+            // The oldest retained file is at the front. A later directory can
+            // still contribute a newer save without increasing the parse budget.
+            if (candidates.size() == limits.maxCandidates) {
+                result.truncated = true;
+                if (candidates.empty() || !detail::newer(candidate, candidates.front())) continue;
+                std::pop_heap(candidates.begin(), candidates.end(), detail::newer);
+                candidates.pop_back();
+            }
             candidates.push_back(std::move(candidate));
+            std::push_heap(candidates.begin(), candidates.end(), detail::newer);
         }
     }
     if (cancelled()) return result;
     // Parse newest files first so result limits retain the newest valid saves.
-    std::sort(candidates.begin(), candidates.end(), detail::newer);
+    result.candidates = candidates.size();
+    std::sort_heap(candidates.begin(), candidates.end(), detail::newer);
     auto remainingBytes = limits.maxTotalBytes;
     for (auto& candidate : candidates) {
         if (cancelled()) return result;
