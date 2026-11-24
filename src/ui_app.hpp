@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.19.2";
+constexpr wchar_t APP_VERSION[] = L"0.20.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -68,9 +68,35 @@ bool applyInput(bool=true);void navigate(int);void refreshBackups();void selectB
 std::map<std::string,std::string> preparedChanges();
 void updatePreviewCount();
 
+static HWND pointerButton{};
+static POINT pointerPosition{};
+POINT glassPointer(HWND h){
+    if(pointerButton==h)return pointerPosition;
+    RECT r{}; GetClientRect(h,&r);
+    return {(r.left+r.right)/2,(r.top+r.bottom)/2};
+}
 LRESULT CALLBACK buttonProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
-    if(m==WM_MOUSEMOVE&&!GetPropW(h,L"RiziaHover")){SetPropW(h,L"RiziaHover",(HANDLE)1);TRACKMOUSEEVENT t{sizeof(t),TME_LEAVE,h,0};TrackMouseEvent(&t);InvalidateRect(h,nullptr,FALSE);}
-    if(m==WM_MOUSELEAVE){RemovePropW(h,L"RiziaHover");InvalidateRect(h,nullptr,FALSE);}
+    if(m==WM_MOUSEMOVE){
+        const bool entering=!GetPropW(h,L"RiziaHover");
+        if(entering){
+            SetPropW(h,L"RiziaHover",(HANDLE)1);
+            TRACKMOUSEEVENT tracking{sizeof(tracking),TME_LEAVE,h,0};
+            TrackMouseEvent(&tracking);
+        }
+        const POINT position{(short)LOWORD(lp),(short)HIWORD(lp)};
+        const int threshold=std::max(2,MulDiv(2,GetDpiForWindow(h),96));
+        if(entering || (glass::enabled() && (pointerButton!=h ||
+           std::abs(position.x-pointerPosition.x)>=threshold || std::abs(position.y-pointerPosition.y)>=threshold))){
+            pointerButton=h;
+            pointerPosition=position;
+            InvalidateRect(h,nullptr,FALSE);
+        }
+    }
+    if(m==WM_MOUSELEAVE || m==WM_NCDESTROY){
+        RemovePropW(h,L"RiziaHover");
+        if(pointerButton==h)pointerButton=nullptr;
+        if(m==WM_MOUSELEAVE)InvalidateRect(h,nullptr,FALSE);
+    }
     return DefSubclassProc(h,m,wp,lp);
 }
 HWND control(const wchar_t*cls,const wchar_t*txt,DWORD style,int id=0){
@@ -459,7 +485,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.19.2 Preview · Windows 10 / 11 x64\r\n"
+        L"0.20.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }

@@ -37,7 +37,12 @@ inline COLORREF mix(COLORREF a, COLORREF b, double fraction) {
     return RGB(channel(GetRValue(a),GetRValue(b)),channel(GetGValue(a),GetGValue(b)),channel(GetBValue(a),GetBValue(b)));
 }
 
-inline void wash(HDC dc, const RECT& box, COLORREF canvas) {
+inline double bump(double d) { return std::exp(-d*d); }
+inline DWORD rgbPixel(COLORREF c) {
+    return (DWORD(GetRValue(c))<<16) | (DWORD(GetGValue(c))<<8) | GetBValue(c);
+}
+
+inline void wash(HDC dc,const RECT& box,COLORREF canvas) {
     if (box.right<=box.left || box.bottom<=box.top) return;
     if (!enabled()) {
         const auto old=SetDCBrushColor(dc,canvas);
@@ -45,27 +50,37 @@ inline void wash(HDC dc, const RECT& box, COLORREF canvas) {
         SetDCBrushColor(dc,old);
         return;
     }
-    // Render the diffused background once per palette, independently of DPI and window size.
-    constexpr int width=128,height=96;
+    // The crest changes width along the arc, like a sheet curving toward the light.
+    // It is part of the backdrop, so adjacent panes catch different parts of it.
+    constexpr int width=256,height=176;
     static std::array<DWORD,width*height> pixels{};
     static COLORREF lastCanvas=CLR_INVALID;
     static int lastTheme=-1;
     if (lastCanvas!=canvas || lastTheme!=Theme::index()) {
         lastCanvas=canvas; lastTheme=Theme::index();
-        constexpr COLORREF lights[][2]={{RGB(222,184,148),RGB(234,212,180)},
-            {RGB(135,206,180),RGB(177,211,163)}, {RGB(136,192,238),RGB(177,174,225)},
-            {RGB(59,95,142),RGB(83,74,125)}};
+        constexpr COLORREF lights[][3]={{RGB(217,174,142),RGB(219,191,173),RGB(248,233,206)},
+            {RGB(128,191,169),RGB(146,173,164),RGB(229,241,203)},
+            {RGB(128,195,211),RGB(167,169,220),RGB(215,241,247)},
+            {RGB(49,104,122),RGB(83,80,135),RGB(112,160,178)}};
         const auto& light=lights[lastTheme];
-        for (int y=0;y<height;++y) for (int x=0;x<width;++x) {
-            const double u=double(x)/(width-1),v=double(y)/(height-1);
-            const auto glow=[](double dx,double dy) { const double w=std::max(0.0,1-dx*dx-dy*dy); return w*w; };
-            auto c=mix(canvas,light[0],0.58*glow((u-.04)/.72,(v-.08)/.78));
-            c=mix(c,light[1],0.45*glow((u-.9)/.72,(v+.05)/.6));
-            c=mix(c,light[0],0.20*glow((u-.74)/.82,(v-1.1)/.55));
-            const double distance=v-(.30-.44*u+.10*std::sin(5*u));
-            const double ribbon=std::exp(-distance*distance*115);
-            c=mix(c,Theme::dark()?Theme::blue:RGB(255,255,255),(Theme::dark()?.06:.30)*ribbon);
-            pixels[y*width+x]=RGB(GetBValue(c),GetGValue(c),GetRValue(c));
+        const bool dark=Theme::dark();
+        for (int x=0;x<width;++x) {
+            const double u=double(x)/(width-1);
+            const double crest=.10+.30*u-.54*u*u+.040*std::sin(5.2*u-.45);
+            const double second=.58-.61*u+.08*std::sin(4.8*u);
+            for (int y=0;y<height;++y) {
+                const double v=double(y)/(height-1);
+                const auto glow=[](double x,double y) { return std::exp(-x*x-y*y); };
+                auto c=mix(canvas,light[0],.67*glow((u+.06)/.51,(v-.12)/.66));
+                c=mix(c,light[1],.70*glow((u-.69)/.46,(v+.08)/.53));
+                c=mix(c,light[2],.34*glow((u-.08)/.7,(v-.85)/.52));
+                const double d=v-crest;
+                c=mix(c,light[1],.27*bump((d-.061)/.083));
+                c=mix(c,light[2],(dark?.36:.58)*bump((d+.009)/(.023+.039*u)));
+                c=mix(c,dark?light[2]:RGB(255,255,255),.28*bump(d/.012)*bump((u-.31)/.69));
+                c=mix(c,light[2],.23*bump((v-second)/(.043+.042*u))*bump((u-.82)/.46));
+                pixels[y*width+x]=rgbPixel(c);
+            }
         }
     }
     BITMAPINFO info{};
@@ -77,67 +92,231 @@ inline void wash(HDC dc, const RECT& box, COLORREF canvas) {
     RestoreDC(dc,saved);
 }
 
+struct Dib {
+    HDC dc=nullptr;
+    HBITMAP bitmap=nullptr;
+    HGDIOBJ original=nullptr;
+    DWORD* pixels=nullptr;
+    int width=0,height=0;
+    Dib()=default;
+    Dib(const Dib&)=delete;
+    Dib& operator=(const Dib&)=delete;
+    ~Dib() { clear(); }
+    void clear() {
+        if(original) SelectObject(dc,original);
+        if(bitmap) DeleteObject(bitmap);
+        if(dc) DeleteDC(dc);
+        dc=nullptr; bitmap=nullptr; original=nullptr; pixels=nullptr; width=height=0;
+    }
+    bool size(HDC source,int w,int h) {
+        if(dc && width==w && height==h) return true;
+        clear();
+        dc=CreateCompatibleDC(source);
+        BITMAPINFO info{};
+        info.bmiHeader={sizeof(BITMAPINFOHEADER),w,-h,1,32,BI_RGB};
+        void* data=nullptr;
+        if(dc) bitmap=CreateDIBSection(source,&info,DIB_RGB_COLORS,&data,nullptr,0);
+        if(!bitmap || !data) { clear(); return false; }
+        original=SelectObject(dc,bitmap);
+        if(!original || original==HGDI_ERROR) { original=nullptr; clear(); return false; }
+        pixels=static_cast<DWORD*>(data); width=w; height=h;
+        return true;
+    }
+};
+
+// A translucent, premultiplied pigment mixed over the existing rim layers.
+inline void pigment(double& a,double& red,double& green,double& blue,COLORREF c,double coverage) {
+    const double k=std::clamp(coverage,0.,1.);
+    red=red*(1-k)+GetRValue(c)*k; green=green*(1-k)+GetGValue(c)*k;
+    blue=blue*(1-k)+GetBValue(c)*k; a=a*(1-k)+255*k;
+}
+inline DWORD argb(double a,double r,double g,double b) {
+    return (DWORD(a+.5)<<24)|(DWORD(r+.5)<<16)|(DWORD(g+.5)<<8)|DWORD(b+.5);
+}
+
+// Signed distance and outward normal of a rounded rectangle, in surface pixels.
+inline double contour(double x,double y,double halfW,double halfH,double radius,double& nx,double& ny) {
+    const double qx=std::abs(x)-halfW+radius,qy=std::abs(y)-halfH+radius;
+    const double dx=std::max(qx,0.),dy=std::max(qy,0.);
+    const double distance=std::sqrt(dx*dx+dy*dy);
+    nx=distance>0?dx/distance:(qx>qy?1.:0.);
+    ny=distance>0?dy/distance:(qy>=qx?1.:0.);
+    if(x<0) nx=-nx;
+    if(y<0) ny=-ny;
+    return distance+std::min(std::max(qx,qy),0.)-radius;
+}
+
+struct Rim {
+    Dib image;
+    int radius=0,pad=0,palette=-1;
+    bool dark=false;
+};
+
+inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
+    constexpr int middle=35;
+    static std::array<Rim,12> cache{};
+    static size_t next=0;
+    Rim* found=nullptr;
+    for(auto& entry:cache) {
+        if(entry.radius==radius && entry.palette==Theme::index() && entry.dark==darkTint) { found=&entry; break; }
+    }
+    if(!found) {
+        Rim& entry=cache[next++%cache.size()];
+        const double scale=std::clamp(radius/17.,.8,2.6);
+        const int pad=int(std::ceil(5*scale)),half=pad+radius;
+        const int size=2*half+middle;
+        if(!entry.image.size(dc,size,size)) { entry.palette=-1; return; }
+        entry.radius=radius; entry.pad=pad; entry.palette=Theme::index(); entry.dark=darkTint;
+        const COLORREF shadow=mix(Theme::accentInk,RGB(9,18,29),.70);
+        const COLORREF cold=mix(Theme::blue,RGB(244,253,255),.78);
+        GdiFlush();
+        for(int y=0;y<size;++y) for(int x=0;x<size;++x) {
+            double nx,ny;
+            const double extent=radius+middle*.5;
+            const double d=contour(x-(size-1)*.5,y-(size-1)*.5,extent,extent,radius,nx,ny);
+            // Give long edges a broad pool of light instead of stretching a uniform line.
+            const double u=std::clamp(double(x-half)/(middle-1),0.,1.);
+            const double v=std::clamp(double(y-half)/(middle-1),0.,1.);
+            const double key=.31+.69*bump((u-.21)/.46)*bump((v-.19)/.65);
+            const double reflected=.32+.68*bump((u-.78)/.66)*bump((v-.84)/.68);
+            const double sun=std::max(0.,-.46*nx-.87*ny)*key;
+            const double bounce=std::max(0.,.75*nx+.65*ny)*reflected;
+            double a=0,r=0,g=0,b=0;
+            if(d>0) {
+                const double spread=d/(2.6*scale);
+                pigment(a,r,g,b,shadow,(.055+.15*std::max(0.,ny))*bump(spread));
+            }
+            pigment(a,r,g,b,shadow,(darkTint?.36:.185)*bump((d+.20)/(.83*scale)));
+            pigment(a,r,g,b,shadow,(darkTint?.10:.075)*bump((d+3.4*scale)/(1.9*scale)));
+            pigment(a,r,g,b,cold,(darkTint?.08+.32*bounce:.045+.245*bounce)*bump((d+1.55*scale)/(.94*scale)));
+            pigment(a,r,g,b,RGB(255,255,255),(darkTint?.19+.68*sun:.105+.63*sun)*bump((d+.86*scale)/(.76*scale)));
+            entry.image.pixels[y*size+x]=argb(a,r,g,b);
+        }
+        found=&entry;
+    }
+    const int half=radius+found->pad,edge=2*half+middle;
+    const int src[]={0,half,half+middle,edge};
+    const int xs[]={int(box.left)-found->pad,int(box.left)+radius,int(box.right)-radius,int(box.right)+found->pad};
+    const int ys[]={int(box.top)-found->pad,int(box.top)+radius,int(box.bottom)-radius,int(box.bottom)+found->pad};
+    for(int y=0;y<3;++y) for(int x=0;x<3;++x) {
+        if((x==1 && y==1) || xs[x]==xs[x+1] || ys[y]==ys[y+1]) continue;
+        GdiAlphaBlend(dc,xs[x],ys[y],xs[x+1]-xs[x],ys[y+1]-ys[y],found->image.dc,
+                      src[x],src[y],src[x+1]-src[x],src[y+1]-src[y],{AC_SRC_OVER,0,255,AC_SRC_ALPHA});
+    }
+}
+
+// Stretch the center once. Alpha-compose the four small corners separately,
+// preserving the real backdrop at subpixel coverage along their silhouettes.
+inline bool paintLens(HDC dc,const RECT& box,int radius,Dib& image) {
+    const int w=box.right-box.left,h=box.bottom-box.top;
+    static Dib corners;
+    if(!corners.size(dc,4*radius,radius)) return false;
+    const int cols=image.width,rows=image.height;
+    GdiFlush();
+    for(int y=0;y<radius;++y) for(int x=0;x<radius;++x) {
+        const double dx=radius-.5-x,dy=radius-.5-y;
+        const double coverage=std::clamp(radius+.5-std::sqrt(dx*dx+dy*dy),0.,1.);
+        for(int q=0;q<4;++q) {
+            const int xx=q&1?w-1-x:x,yy=q&2?h-1-y:y;
+            const int sx=std::min(cols-1,int((xx+.5)*cols/w)),sy=std::min(rows-1,int((yy+.5)*rows/h));
+            const DWORD color=image.pixels[sy*cols+sx];
+            const int u=q&1?radius-1-x:x,v=q&2?radius-1-y:y;
+            corners.pixels[v*corners.width+q*radius+u]=argb(255*coverage,((color>>16)&255)*coverage,
+                                                            ((color>>8)&255)*coverage,(color&255)*coverage);
+        }
+    }
+    const int saved=SaveDC(dc);
+    ExcludeClipRect(dc,box.left,box.top,box.left+radius,box.top+radius);
+    ExcludeClipRect(dc,box.right-radius,box.top,box.right,box.top+radius);
+    ExcludeClipRect(dc,box.left,box.bottom-radius,box.left+radius,box.bottom);
+    ExcludeClipRect(dc,box.right-radius,box.bottom-radius,box.right,box.bottom);
+    SetStretchBltMode(dc,HALFTONE); SetBrushOrgEx(dc,0,0,nullptr);
+    const bool painted=StretchBlt(dc,box.left,box.top,w,h,image.dc,0,0,cols,rows,SRCCOPY)!=0;
+    RestoreDC(dc,saved);
+    if(!painted) return false;
+    for(int q=0;q<4;++q) {
+        const int left=q&1?box.right-radius:box.left,top=q&2?box.bottom-radius:box.top;
+        GdiAlphaBlend(dc,left,top,radius,radius,corners.dc,q*radius,0,radius,radius,{AC_SRC_OVER,0,255,AC_SRC_ALPHA});
+    }
+    return true;
+}
+
 inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool active=false) {
     const int w=box.right-box.left,h=box.bottom-box.top;
-    if (w<2 || h<2) return;
-    const int diameter=std::clamp(2*radiusPixels,2,std::min(w,h));
+    if(w<2 || h<2) return;
+    const int radius=std::clamp(radiusPixels,1,std::min({w/2,h/2,72}));
     const int saved=SaveDC(dc);
-    SelectObject(dc,GetStockObject(DC_PEN));
-    SelectObject(dc,GetStockObject(DC_BRUSH));
+    SelectObject(dc,GetStockObject(DC_PEN)); SelectObject(dc,GetStockObject(DC_BRUSH));
     SetDCPenColor(dc,Theme::line); SetDCBrushColor(dc,tint);
-    if (!enabled()) {
-        RoundRect(dc,box.left,box.top,box.right,box.bottom,diameter,diameter);
-        RestoreDC(dc,saved);return;
+    constexpr int cols=80,rows=64;
+    static Dib image;
+    if(!enabled() || !image.size(dc,cols,rows)) {
+        RoundRect(dc,box.left,box.top,box.right,box.bottom,2*radius,2*radius);
+        RestoreDC(dc,saved); return;
     }
-    // A tiny optical gradient is stretched inside the rounded contour. Use constant
-    // alpha so the local backdrop contributes to the material even on hover/press.
-    HDC layer=CreateCompatibleDC(dc);
-    HBITMAP tile=CreateCompatibleBitmap(dc,48,48);
-    if (layer && tile) {
-        auto previous=SelectObject(layer,tile);
-        auto vertex=[](LONG x,LONG y,COLORREF color) -> TRIVERTEX {
-            return {x,y,static_cast<COLOR16>(GetRValue(color)*257),static_cast<COLOR16>(GetGValue(color)*257),
-                    static_cast<COLOR16>(GetBValue(color)*257),0};
-        };
-        const auto white=RGB(255,255,255);
-        const bool darkTint=(GetRValue(tint)*3+GetGValue(tint)*6+GetBValue(tint))<1400;
-        const auto gleam=mix(tint,white,darkTint?.16:.65);
-        const auto shade=mix(tint,Theme::accent,darkTint?.12:.19);
-        TRIVERTEX vertices[]={vertex(0,0,gleam),vertex(48,0,mix(gleam,tint,.55)),
-                              vertex(0,48,shade),vertex(48,48,mix(tint,gleam,.38))};
-        GRADIENT_TRIANGLE faces[]={{0,1,2},{1,2,3}};
-        auto region=CreateRoundRectRgn(box.left,box.top,box.right+1,box.bottom+1,diameter,diameter);
-        const int clipped=SaveDC(dc);
-        ExtSelectClipRgn(dc,region,RGN_AND);
-        // Diffuse a slightly enlarged sample of this pane's own backdrop.
-        // Bound the sampling cost even for a sidebar filling a 4K screen.
-        const int inset=std::min({radiusPixels/3,w/8,h/8});
-        if(inset>0){
-            SetStretchBltMode(layer,HALFTONE);SetBrushOrgEx(layer,0,0,nullptr);
-            if(StretchBlt(layer,0,0,48,48,dc,box.left+inset,box.top+inset,w-2*inset,h-2*inset,SRCCOPY))
-                GdiAlphaBlend(dc,box.left,box.top,w,h,layer,0,0,48,48,{AC_SRC_OVER,0,115,0});
+    const auto white=RGB(255,255,255);
+    const bool darkTint=(GetRValue(tint)*3+GetGValue(tint)*6+GetBValue(tint))<1400;
+    SetStretchBltMode(image.dc,HALFTONE); SetBrushOrgEx(image.dc,0,0,nullptr);
+    const bool sampled=StretchBlt(image.dc,0,0,cols,rows,dc,box.left,box.top,w,h,SRCCOPY)!=0;
+    GdiFlush();
+    std::array<DWORD,cols*rows> backdrop{};
+    if(sampled) std::copy_n(image.pixels,cols*rows,backdrop.begin());
+    else backdrop.fill(rgbPixel(tint));
+    // The bevel bends nearby colors inward. Limit sampling to the local material
+    // and taper displacement to zero across the flat optical center.
+    auto refract=[](int i,int count,int extent,int radius) {
+        const int edgeDistance=std::min(i,count-1-i);
+        const double thickness=std::max(1.,double(radius)*count/extent);
+        const double falloff=std::max(0.,1.-edgeDistance/(1.7*thickness));
+        const int shift=int(std::min(count*.15,thickness*.61)*falloff*falloff+.5);
+        return std::clamp(i+(i<count/2?shift:-shift),0,count-1);
+    };
+    std::array<int,cols> sx{};
+    for(int x=0;x<cols;++x) sx[x]=refract(x,cols,w,radius);
+    const auto crest=mix(tint,white,darkTint?(active?.07:.16):.72);
+    const auto base=mix(tint,Theme::accent,darkTint?.075:.09);
+    const unsigned density=active?(darkTint?244:202):(darkTint?174:132);
+    for(int y=0;y<rows;++y) {
+        const int sy=refract(y,rows,h,radius);
+        const double v=double(y)/(rows-1);
+        const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
+        const auto right=mix(base,crest,.12+.27*v);
+        for(int x=0;x<cols;++x) {
+            const DWORD sample=backdrop[sy*cols+sx[x]];
+            const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);
+            const auto color=mix(left,right,double(x)/(cols-1));
+            image.pixels[y*cols+x]=rgbPixel(mix(local,color,density/255.));
         }
-        GdiGradientFill(layer,vertices,4,faces,2,GRADIENT_FILL_TRIANGLE);
-        BLENDFUNCTION blend{AC_SRC_OVER,0,static_cast<BYTE>(active?219:158),0};
-        if(!GdiAlphaBlend(dc,box.left,box.top,w,h,layer,0,0,48,48,blend))
-            FillRect(dc,&box,static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-        RestoreDC(dc,clipped);
-        DeleteObject(region);
-        SelectObject(layer,previous);
-        SelectObject(dc,GetStockObject(NULL_BRUSH));
-        SetDCPenColor(dc,mix(tint,Theme::dark()?white:Theme::accentInk,Theme::dark()?.34:.35));
-        RoundRect(dc,box.left,box.top,box.right,box.bottom,diameter,diameter);
-        // The upper inner lip catches light, leaving the lower edge in shade.
-        if(w>6 && h>6) {
-            const int lip=SaveDC(dc);
-            IntersectClipRect(dc,box.left,box.top,box.right,box.top+h/2);
-            SetDCPenColor(dc,mix(tint,white,darkTint?.32:.90));
-            RoundRect(dc,box.left+1,box.top+1,box.right-1,box.bottom-1,std::max(2,diameter-2),std::max(2,diameter-2));
-            RestoreDC(dc,lip);
-        }
-    } else RoundRect(dc,box.left,box.top,box.right,box.bottom,diameter,diameter);
-    if(tile)DeleteObject(tile);
-    if(layer)DeleteDC(layer);
+    }
+    if(!paintLens(dc,box,radius,image)) RoundRect(dc,box.left,box.top,box.right,box.bottom,2*radius,2*radius);
     RestoreDC(dc,saved);
+    rim(dc,box,radius,darkTint);
+}
+
+// A pointer lights only the bevel close to it. The stationary material remains
+// unchanged and the patch has a fixed cost independent of the pane's area.
+inline void glint(HDC dc,const RECT& box,int radiusPixels,POINT light,bool pressed=false) {
+    if(!enabled() || !PtInRect(&box,light)) return;
+    const int w=box.right-box.left,h=box.bottom-box.top;
+    if(w<2 || h<2) return;
+    const int radius=std::clamp(radiusPixels,1,std::min({w/2,h/2,72}));
+    const double scale=std::clamp(radius/16.,.8,2.);
+    const int reach=int(30*scale);
+    const int left=std::max(int(box.left),int(light.x)-reach),top=std::max(int(box.top),int(light.y)-reach);
+    const int right=std::min(int(box.right),int(light.x)+reach+1),bottom=std::min(int(box.bottom),int(light.y)+reach+1);
+    static Dib patch;
+    if(!patch.size(dc,2*reach+1,2*reach+1)) return;
+    GdiFlush();
+    for(int y=top;y<bottom;++y) for(int x=left;x<right;++x) {
+        const double dx=x-light.x,dy=y-light.y;
+        const double radial=std::max(0.,1.-(dx*dx+dy*dy)/(reach*reach));
+        double nx,ny;
+        const double d=contour(x-box.left+.5-w/2.,y-box.top+.5-h/2.,w/2.,h/2.,radius,nx,ny);
+        const double bevel=std::max(0.,1.-std::abs(d+1.35*scale)/(2.65*scale));
+        const BYTE alpha=BYTE((pressed?166:205)*radial*radial*bevel);
+        patch.pixels[(y-top)*patch.width+x-left]=(DWORD(alpha)*0x01010101u);
+    }
+    GdiAlphaBlend(dc,left,top,right-left,bottom-top,patch.dc,0,0,right-left,bottom-top,
+                  {AC_SRC_OVER,0,255,AC_SRC_ALPHA});
 }
 } // namespace glass

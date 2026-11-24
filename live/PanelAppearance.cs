@@ -49,12 +49,12 @@ internal sealed class PanelAppearance
         tint = accent;
     }
 
-    // A single filtered texture per palette supplies the broad upper reflection and
-    // a small amount of its tint on the opposite edge. No frame capture or blur pass.
+    // Bake the curved rim and its inward reflection once, with a clear center for text.
+    // Unity texture coordinates start at the lower left.
     private Texture2D Sheen()
     {
         if (sheen != null) return sheen;
-        const int width = 48, height = 32;
+        const int width = 96, height = 64;
         var pixels = new Color32[width * height];
         for (int y = 0; y < height; y++)
         {
@@ -62,10 +62,14 @@ internal sealed class PanelAppearance
             for (int x = 0; x < width; x++)
             {
                 double u = (double)x / (width - 1);
-                double top = Math.Exp(-4 * (u - .20) * (u - .20) - 9 * (1 - v));
-                double bottom = Math.Exp(-7 * (u - .82) * (u - .82) - 12 * v);
-                double light = glintStrength * top, shade = 6 * bottom;
-                double mix = light / (light + shade);
+                double topDistance = 1 - v;
+                double upperArc = .025 + .085 * (u - .22) * (u - .22);
+                double crest = Math.Exp(-Math.Pow((topDistance - upperArc) / .044, 2));
+                double top = Math.Exp(-5 * (u - .20) * (u - .20));
+                double lower = Math.Exp(-6 * (u - .77) * (u - .77));
+                double light = glintStrength * top * (.62 * crest + .38 * Math.Exp(-8 * topDistance));
+                double shade = 6 * lower * Math.Exp(-16 * v);
+                double mix = light / Math.Max(1e-9, light + shade);
                 byte Channel(int shift) => (byte)(255 * mix + ((tint >> shift) & 255) * (1 - mix));
                 pixels[y * width + x] = new Color32(Channel(16), Channel(8), Channel(0), (byte)(light + shade));
             }

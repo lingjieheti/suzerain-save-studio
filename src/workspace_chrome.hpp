@@ -26,9 +26,9 @@ WorkspaceGeometry workspaceGeometry() {
     a.inspector = std::clamp(a.content / 3, 180, 286);
     a.right = a.width - margin - a.inspector;
     a.list = a.right - a.left - a.gap;
-    a.headerBottom = a.shortScreen ? 78 : 106;
+    a.headerBottom = a.shortScreen ? 78 : 110;
     if (g.tab == 0 && a.height >= 540)
-        a.metricHeight = a.height < 710 ? 58 : 90;
+        a.metricHeight = a.height < 710 ? 60 : 96;
     a.presetsY = a.headerBottom + (a.metricHeight ? a.metricHeight + 11 : 0);
     a.toolsY = g.tab == 0 ? a.presetsY + 39 : a.headerBottom;
     a.listY = a.toolsY + (spacious ? 46 : 40);
@@ -48,6 +48,20 @@ int fileToolbarWidth(const WorkspaceGeometry& a) { return std::min(465,a.content
 int footerHistoryWidth(const WorkspaceGeometry& a) { return a.width<820?58:80; }
 int footerSaveWidth(const WorkspaceGeometry& a) { return a.width<820?107:155; }
 
+// Content surfaces use a solid fill. Only controls that float over this
+// workspace use the optical material, so numerals retain a constant backdrop.
+void workspaceCard(HDC dc,RECT box,COLORREF face,COLORREF edge,int radius) {
+    int saved=SaveDC(dc);
+    SelectObject(dc,GetStockObject(DC_PEN));SetDCPenColor(dc,edge);
+    SelectObject(dc,GetStockObject(DC_BRUSH));SetDCBrushColor(dc,face);
+    RoundRect(dc,box.left,box.top,box.right,box.bottom,px(2*radius),px(2*radius));
+    RestoreDC(dc,saved);
+}
+
+// The two file groups share their geometry with the actual child controls.
+int fileActionSlot(int width) { return (width-18)/10; }
+int fileActionGap(int id) { return id==FOLDER?14:2; }
+
 void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& a) {
     glass::wash(dc,client,Theme::bg);
     const int inset=a.compactRail?4:7;
@@ -55,13 +69,17 @@ void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& 
     const int end=a.left+a.content;
     const int toolbarWidth=fileToolbarWidth(a);
     const int toolbarY=a.shortScreen?7:14;
-    glass::surface(dc,rect(end-toolbarWidth-4,toolbarY-4,toolbarWidth+8,40),Theme::panel,px(20));
-    const int fileGroupEnd=end-toolbarWidth+4*((toolbarWidth-18)/10)+9;
-    fill(dc,rect(fileGroupEnd,toolbarY+8,1,16),Theme::line);
+    const int first=end-toolbarWidth;
+    const int localWidth=4*fileActionSlot(toolbarWidth)+2;
+    glass::surface(dc,rect(first-3,toolbarY-3,localWidth+6,38),Theme::panel,px(19));
+    const int openGroup=first+localWidth+fileActionGap(FOLDER);
+    glass::surface(dc,rect(openGroup-3,toolbarY-3,end-openGroup+6,38),Theme::panel,px(19));
     if(g.tab!=7) {
         const int width=2*footerHistoryWidth(a)+5+(g.tab==5?0:footerSaveWidth(a)+7);
         glass::surface(dc,rect(end-width-4,a.footer+3,width+8,40),Theme::panel,px(20));
     }
+    const int endRule=g.tab==7?end:end-2*footerHistoryWidth(a)-footerSaveWidth(a)-24;
+    if(endRule>a.left)fill(dc,rect(a.left,a.footer+1,endRule-a.left,1),glass::mix(Theme::bg,Theme::line,.70));
 }
 
 // The parent and its child HWNDs sample the same background at their native
@@ -208,14 +226,20 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     else paintWorkspaceChildBackdrop(d->hDC,d->hwndItem);
     const bool grouped=nav || fileAction || history || id==SAVE;
     if(nav && (activeNav || hover || down)) {
-        glass::surface(d->hDC,r,activeNav?Theme::select:Theme::sideHover,px(13),activeNav);
+        glass::surface(d->hDC,r,activeNav?Theme::select:Theme::sideHover,px(15),activeNav);
     } else if(grouped) {
-        if(primary || (!disabled && (hover || down)))
-            rounded(d->hDC,r,bg,border,30);
+        if(primary || (!disabled && (hover || down))) {
+            workspaceCard(d->hDC,r,bg,border,16);
+        } else if(id==LATEST && !disabled) {
+            workspaceCard(d->hDC,r,Theme::select,glass::mix(Theme::select,Theme::accent,.17),16);
+        }
     } else if(id==APPEARANCE) {
         glass::surface(d->hDC,r,hover?Theme::select:Theme::input,px(14));
     } else if(!check && (!quiet || toggle || hover || down || primary)) {
-        rounded(d->hDC,r,bg,border,15);
+        workspaceCard(d->hDC,r,bg,border,9);
+    }
+    if(hover && !disabled && glass::enabled() && (nav || grouped || id==APPEARANCE)) {
+        glass::glint(d->hDC,r,px(15),glassPointer(d->hwndItem),down);
     }
     if(fileAction && id==LATEST && !primary && !disabled)fg=Theme::accentInk;
     RECT tx = r;
@@ -224,8 +248,13 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         const bool longSupport=id==SUPPORT_AUTHOR && !compact &&
             typography::width(d->hDC,g.font,textOf(d->hwndItem))>r.right-r.left-px(47);
         int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
-        navSymbol(d->hDC, id==SUPPORT_AUTHOR?8:id-NAV_BASE, glyphX, (r.bottom - px(18)) / 2,
-                  activeNav ? Theme::accentInk : Theme::sideMuted);
+        const int glyphY=(r.bottom-px(18))/2;
+        if(activeNav) {
+            RECT tile{glyphX-px(4),glyphY-px(4),glyphX+px(22),glyphY+px(22)};
+            workspaceCard(d->hDC,tile,Theme::accent,Theme::accent,8);
+        }
+        navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,
+                  activeNav?Theme::onAccent:Theme::sideMuted);
         if (!compact) {
             tx.left += px(longSupport?27:42); tx.right -= px(5);
             auto title=textOf(d->hwndItem);
@@ -243,9 +272,11 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     } else if(id==APPEARANCE) {
         const bool compact=workspaceGeometry().compactRail;
         const int cy=(r.top+r.bottom)/2;
-        RECT mark{px(9),cy-px(5),px(19),cy+px(5)};
-        rounded(d->hDC,mark,Theme::accent,Theme::accent,5);
-        tx.left=px(26);tx.right-=px(17);
+        RECT mark{px(9),cy-px(6),px(21),cy+px(6)};
+        workspaceCard(d->hDC,mark,Theme::accent,Theme::accent,6);
+        RECT shine{px(11),cy-px(4),px(15),cy};
+        workspaceCard(d->hDC,shine,glass::mix(Theme::accent,Theme::onAccent,.65),Theme::accent,2);
+        tx.left=px(27);tx.right-=px(17);
         auto caption=textOf(d->hwndItem);
         if(compact || typography::width(d->hDC,g.small,caption)>tx.right-tx.left)
             caption=Theme::name(Theme::index());
@@ -277,6 +308,9 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                 navSymbol(d->hDC,id,iconX,(r.bottom-px(18))/2,fg);
                 tx.left=iconX+px(22);
                 tx.right=tx.left+textWidth+px(2);
+            } else if(textWidth+px(6)>r.right-r.left) {
+                navSymbol(d->hDC,id,(r.right-px(18))/2,(r.bottom-px(18))/2,fg);
+                tx.right=tx.left;
             }
         }
         drawText(d->hDC, caption, tx, font, fg,
@@ -318,7 +352,7 @@ void drawWorkspaceRow(NMLVCUSTOMDRAW& item) {
     if(selected) {
         RECT band=r;
         InflateRect(&band,-px(3),-px(2));
-        rounded(dc,band,Theme::select,Theme::select,11);
+        workspaceCard(dc,band,Theme::select,glass::mix(Theme::select,Theme::accent,.20),7);
     }
     if(selected || changed) {
         RECT mark{r.left+px(4),r.top+px(8),r.left+px(selected?7:6),r.bottom-px(8)};
@@ -364,7 +398,8 @@ void fillGridRemainder(HDC dc) {
 }
 
 void paintWorkspaceHeader(HWND h,HDC dc) {
-    RECT all{};GetClientRect(h,&all);fill(dc,all,Theme::head);
+    RECT all{};GetClientRect(h,&all);fill(dc,all,Theme::panel);
+    workspaceCard(dc,all,Theme::head,Theme::head,7);
     for(int col=0;col<Header_GetItemCount(h);++col) {
         RECT cell{};Header_GetItemRect(h,col,&cell);
         if(cell.right<=cell.left)continue;
@@ -377,12 +412,16 @@ void paintWorkspaceHeader(HWND h,HDC dc) {
             auto old=SelectObject(dc,g.small);
             SIZE extent{};GetTextExtentPoint32W(dc,title,lstrlenW(title),&extent);SelectObject(dc,old);
             auto count=std::to_wstring(g.tab==6?g.backups.size():g.rows.size());
-            cell.left+=extent.cx+px(8);
-            if(cell.right-cell.left>=px((int)count.size()*8+12))
-                literalText(dc,count.c_str(),cell,g.small,Theme::accentInk);
+            cell.left+=extent.cx+px(7);
+            const int width=typography::width(dc,g.small,count)+px(11);
+            if(cell.right-cell.left>=width) {
+                const int mid=(cell.top+cell.bottom)/2;
+                RECT badge{cell.left,mid-px(9),cell.left+width,mid+px(9)};
+                workspaceCard(dc,badge,Theme::select,Theme::select,8);
+                literalText(dc,count.c_str(),badge,g.small,Theme::accentInk,DT_CENTER);
+            }
         }
     }
-    all.top=all.bottom-1;fill(dc,all,Theme::line);
 }
 
 void paintLanguageFace(HWND h,HDC dc) {

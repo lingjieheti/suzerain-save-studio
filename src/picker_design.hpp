@@ -51,30 +51,51 @@ inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
     }
     SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);
 }
+inline void focusRing(const State& s,HDC dc,RECT box,COLORREF ink,int diameter){
+    const int saved=SaveDC(dc);
+    HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(2)),ink);
+    SelectObject(dc,pen);SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+    RoundRect(dc,box.left,box.top,box.right,box.bottom,s.scale(diameter),s.scale(diameter));
+    RestoreDC(dc,saved);DeleteObject(pen);
+}
+inline void archiveMark(const State& s,HDC dc){
+    const RECT mark=s.headingIcon;
+    const auto base=Theme::accentInk;
+    auto rect=[&](int x,int y,int w,int h){return RECT{mark.left+s.scale(x),mark.top+s.scale(y),mark.left+s.scale(x+w),mark.top+s.scale(y+h)};};
+    const auto mid=glass::mix(Theme::panel,base,.36);
+    const auto front=Theme::dark()?Theme::select:Theme::panel;
+    // Three overlapping folios identify the library at title size.
+    surface(s,dc,rect(8,5,22,26),mid,mid,7);
+    surface(s,dc,rect(11,9,23,26),glass::mix(mid,front,.4),mid,7);
+    surface(s,dc,rect(14,13,22,25),front,base,7);
+    ::fill(dc,rect(18,21,12,2),base);
+    ::fill(dc,rect(18,26,8,1),mid);
+}
 // Child windows sample this same canvas so their corners reveal the material beneath them.
 inline void drawBackdrop(const State& s,HDC dc,const RECT& client){
     const bool material=glass::enabled();
     if(material)glass::wash(dc,client,Theme::bg);
     else ::fill(dc,client,Theme::bg);
-    surface(s,dc,s.library,Theme::panel,Theme::line,14);
+    surface(s,dc,s.library,Theme::panel,Theme::line,22);
+    surface(s,dc,s.practice,Theme::panel,Theme::line,22);
     if(material){
         glass::surface(dc,s.headerTools,Theme::sidebar,s.scale(20));
-        glass::surface(dc,s.practice,Theme::sidebar,s.scale(18));
-        if(!s.stacked){
-            RECT live{};GetWindowRect(s.live,&live);
-            MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&live),2);
-            glass::surface(dc,live,Theme::select,s.scale(17));
-        }
-    }else if(s.stacked)surface(s,dc,s.practice,Theme::panel,Theme::line,14);
-    else {
-        RECT rule{s.practice.left+s.scale(11),s.practice.bottom-1,s.practice.right-s.scale(11),s.practice.bottom};
-        ::fill(dc,rule,Theme::line);
+        RECT live{};GetWindowRect(s.live,&live);
+        MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&live),2);
+        glass::surface(dc,live,Theme::select,s.scale(s.stacked?19:27));
+        RECT appearance{};GetWindowRect(s.appearance,&appearance);
+        MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&appearance),2);
+        const int mid=(s.headerTools.top+s.headerTools.bottom)/2;
+        RECT split{appearance.right+s.scale(3),mid-s.scale(7),appearance.right+s.scale(3)+1,mid+s.scale(7)};
+        ::fill(dc,split,glass::mix(Theme::line,Theme::muted,.2));
     }
-    if(!IsRectEmpty(&s.headingIcon)){
-        if(material)glass::surface(dc,s.headingIcon,Theme::select,s.scale(13));
-        else surface(s,dc,s.headingIcon,Theme::select,Theme::select,12);
-        symbol(s,dc,0,s.headingIcon.left+s.scale(8),s.headingIcon.top+s.scale(9),Theme::accentInk);
+    if(!s.stacked){
+        RECT demo{};GetWindowRect(s.riziaDemo,&demo);
+        MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&demo),2);
+        RECT divider{demo.left+s.scale(52),demo.top,demo.right-s.scale(9),demo.top+1};
+        ::fill(dc,divider,Theme::line);
     }
+    if(!IsRectEmpty(&s.headingIcon))archiveMark(s,dc);
     const int inset=material?s.library.left:0;
     RECT divider{inset,s.scale(s.footerY),client.right-inset,s.scale(s.footerY)+1};
     ::fill(dc,divider,Theme::line);
@@ -97,7 +118,7 @@ inline void paintFrame(State& s,HDC dc,const RECT& dirty){
     if(auto cached=backdrop(s,dc))
         BitBlt(dc,dirty.left,dirty.top,dirty.right-dirty.left,dirty.bottom-dirty.top,cached,dirty.left,dirty.top,SRCCOPY);
     else ::fill(dc,dirty,Theme::bg);
-    surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,glass::enabled()?24:10);
+    surface(s,dc,s.searchFrame,Theme::input,GetFocus()==s.filter?Theme::focus:Theme::line,glass::enabled()?24:10,GetFocus()==s.filter?2:1);
     symbol(s,dc,FILTER,s.searchFrame.left+s.scale(8),s.searchFrame.top+s.scale(6),Theme::muted);
 }
 inline void childBackdrop(State& s,const DRAWITEMSTRUCT& d){
@@ -146,14 +167,19 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     const bool railItem=(demo||live)&&!s.stacked;
     const bool material=glass::enabled();
     const bool inToolbar=material && (id==APPEARANCE||id==BROWSE);
-    bool plain=(id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||railItem||inToolbar)&&!hover&&!focus&&!pressed;
+    const bool quiet=id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||(railItem&&!live)||inToolbar;
+    const bool plain=(live&&material&&!disabled)||(quiet&&!hover&&!focus&&!pressed);
     if(id==SUPPORT&&plain)fg=Theme::muted;
     if(!plain){
-        if(material && !primary && !disabled){
+        if(material && primary && !disabled){
+            glass::surface(d.hDC,box,bg,s.scale(17),true);
+        }else if(material && !disabled){
             glass::surface(d.hDC,box,(hover||pressed||focus)?Theme::select:Theme::sidebar,
                            s.scale(live&&s.stacked?16:14),pressed||hover);
         }else surface(s,d.hDC,box,bg,focus?Theme::focus:edge,material?28:11,focus?2:1);
     }
+    if(material && hover && !disabled)
+        glass::glint(d.hDC,box,s.scale(primary?17:live?20:14),glassPointer(d.hwndItem),pressed);
     const int width=box.right-box.left;
     int hmid=(box.top+box.bottom)/2;
     auto label=textOf(d.hwndItem);
@@ -182,15 +208,18 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         lettering(d.hDC,label,title,font,fg,DT_CENTER);
         lettering(d.hDC,live_setup::inGameShortcut(),hint,s.small,Theme::muted,DT_CENTER);
     }else if(railItem){
-        const int tileX=box.left+s.scale(8), tileSize=s.scale(31);
+        const int tileX=box.left+s.scale(live?12:9), tileSize=s.scale(live?36:32);
         RECT tile{tileX,hmid-tileSize/2,tileX+tileSize,hmid+(tileSize+1)/2};
-        const auto tint=live?Theme::select:Theme::head;
-        surface(s,d.hDC,tile,tint,tint,12);
-        symbol(s,d.hDC,id,tile.left+s.scale(7),hmid-s.scale(8),live?Theme::accentInk:Theme::muted);
+        const COLORREF badgeInk=live?Theme::accentInk:id==DEMO_MAIN?Theme::blue:
+            (Theme::dark()?RGB(224,191,149):RGB(126,83,44));
+        const auto tint=glass::mix(Theme::panel,badgeInk,(live||demo)&&(hover||pressed)?.22:live?.15:.11);
+        surface(s,d.hDC,tile,tint,tint,live?36:18);
+        symbol(s,d.hDC,id,(tile.left+tile.right)/2-s.scale(9),hmid-s.scale(8),badgeInk);
         textBox.left=tile.right+s.scale(10);textBox.right-=s.scale(20);
         if(live){
             RECT top=textBox,bottom=textBox;
-            top.bottom=hmid+s.scale(2);bottom.top=hmid+s.scale(1);
+            top.top=hmid-s.scale(20);top.bottom=hmid+s.scale(1);
+            bottom.top=hmid;bottom.bottom=hmid+s.scale(20);
             lettering(d.hDC,label,top,font,fg,DT_LEFT);
             lettering(d.hDC,live_setup::inGameShortcut(),bottom,s.small,Theme::muted,DT_LEFT);
         }else lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
@@ -200,6 +229,11 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         MoveToEx(d.hDC,end-s.scale(3),hmid-s.scale(4),nullptr);
         LineTo(d.hDC,end+s.scale(1),hmid);LineTo(d.hDC,end-s.scale(3),hmid+s.scale(4));
         SelectObject(d.hDC,old);DeleteObject(pen);
+    }else if(primary && hasIcon){
+        const int start=box.left+(width-labelWidth-s.scale(24))/2;
+        textBox.left=start;textBox.right=start+labelWidth;
+        lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
+        symbol(s,d.hDC,id,textBox.right+s.scale(7),hmid-s.scale(8),fg);
     }else if(hasIcon){
         const int start=box.left+(width-labelWidth-s.scale(24))/2;
         symbol(s,d.hDC,id,start,hmid-s.scale(8),primary?fg:Theme::accentInk);
@@ -208,7 +242,7 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     }else lettering(d.hDC,label,textBox,font,fg,DT_CENTER);
     if(focus&&!disabled){
         RECT ring=box;InflateRect(&ring,-s.scale(4),-s.scale(4));
-        DrawFocusRect(d.hDC,&ring);
+        focusRing(s,d.hDC,ring,primary?Theme::onAccent:Theme::focus,21);
     }
 }
 inline void drawEmpty(const State& s,const DRAWITEMSTRUCT& d){
@@ -266,7 +300,7 @@ inline LRESULT CALLBACK header(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_
     if(m==WM_ERASEBKGND)return 1;
     if(m==WM_PAINT){
         PAINTSTRUCT ps{};auto dc=BeginPaint(h,&ps);
-        RECT all{};GetClientRect(h,&all);::fill(dc,all,Theme::head);
+        RECT all{};GetClientRect(h,&all);::fill(dc,all,Theme::panel);
         for(int i=0;i<Header_GetItemCount(h);++i){
             RECT cell{};Header_GetItemRect(h,i,&cell);
             if(cell.right<=cell.left)continue;
@@ -293,12 +327,19 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
     if(d.nmcd.dwDrawStage!=CDDS_ITEMPREPAINT)return CDRF_DODEFAULT;
     int row=(int)d.nmcd.dwItemSpec;
     if(row<0||row>=(int)s.rows.size()||s.busy)return CDRF_DODEFAULT;
-    RECT rowBox{};ListView_GetItemRect(s.list,row,&rowBox,LVIR_BOUNDS);
+    RECT rowBox{}, viewport{};ListView_GetItemRect(s.list,row,&rowBox,LVIR_BOUNDS);
+    GetClientRect(s.list,&viewport);rowBox.right=viewport.right;
     const bool selected=(ListView_GetItemState(s.list,row,LVIS_SELECTED)&LVIS_SELECTED)!=0;
     ::fill(d.nmcd.hdc,rowBox,Theme::panel);
     if(selected){
         RECT shape=rowBox;InflateRect(&shape,-s.scale(1),-s.scale(2));
-        surface(s,d.nmcd.hdc,shape,Theme::select,Theme::select,13);
+        surface(s,d.nmcd.hdc,shape,Theme::select,Theme::select,14);
+        const int mid=(shape.top+shape.bottom)/2;
+        RECT bar{shape.left+s.scale(2),mid-s.scale(8),shape.left+s.scale(4),mid+s.scale(8)};
+        surface(s,d.nmcd.hdc,bar,Theme::accent,Theme::accent,2);
+    }else if(row+1<(int)s.rows.size() && !(ListView_GetItemState(s.list,row+1,LVIS_SELECTED)&LVIS_SELECTED)){
+        RECT divider{rowBox.left+s.scale(10),rowBox.bottom-1,rowBox.right-s.scale(3),rowBox.bottom};
+        ::fill(d.nmcd.hdc,divider,glass::mix(Theme::panel,Theme::line,.63));
     }
     for(int column=0;column<5;++column){
         RECT cell{};Header_GetItemRect(ListView_GetHeader(s.list),column,&cell);
@@ -311,8 +352,11 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
         if(column==0){
             const int midY=(cell.top+cell.bottom)/2;
             if(cell.right-cell.left>=s.scale(174)){
-                symbol(s,d.nmcd.hdc,LIST,cell.left,midY-s.scale(9),selected?Theme::accentInk:Theme::muted);
-                cell.left+=s.scale(26);
+                const auto tint=selected?glass::mix(Theme::select,Theme::accent,.10):Theme::head;
+                RECT badge{cell.left,midY-s.scale(14),cell.left+s.scale(27),midY+s.scale(14)};
+                surface(s,d.nmcd.hdc,badge,tint,tint,12);
+                symbol(s,d.nmcd.hdc,LIST,cell.left+s.scale(5),midY-s.scale(9),selected?Theme::accentInk:Theme::muted);
+                cell.left+=s.scale(35);
             }
             wchar_t secondary[512]{};
             ListView_GetItemText(s.list,row,2,secondary,512);
@@ -336,6 +380,6 @@ inline LRESULT drawRow(State& s,NMLVCUSTOMDRAW& d){
         HFONT face=column>=3?s.number:column==0?s.emphasis:s.font;
         lettering(d.nmcd.hdc,caption,cell,face,ink,DT_LEFT);
     }
-    if(selected&&GetFocus()==s.list){RECT ring=rowBox;InflateRect(&ring,-s.scale(2),-s.scale(2));DrawFocusRect(d.nmcd.hdc,&ring);}
+    if(selected&&GetFocus()==s.list){RECT ring=rowBox;InflateRect(&ring,-s.scale(2),-s.scale(2));focusRing(s,d.nmcd.hdc,ring,Theme::focus,14);}
     return CDRF_SKIPDEFAULT;
 }

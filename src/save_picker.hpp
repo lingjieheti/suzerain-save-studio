@@ -57,7 +57,7 @@ inline void setFonts(State& s){
     auto make=[&](int dip,const wchar_t* face,LONG weight=FW_NORMAL){return typography::make(s.dpi,dip,face,weight);};
     HFONT old[]={s.font,s.small,s.bold,s.subheading,s.emphasis,s.number};
     s.font=make(14,faces.text);s.small=make(13,faces.text);
-    s.bold=make(27,faces.emphasis,faces.emphasisWeight);s.subheading=make(18,faces.emphasis,faces.emphasisWeight);
+    s.bold=make(29,faces.emphasis,faces.emphasisWeight);s.subheading=make(18,faces.emphasis,faces.emphasisWeight);
     s.emphasis=make(14,faces.emphasis,faces.emphasisWeight);
     s.number=make(14,typography::numbers);
     EnumChildWindows(s.win,[](HWND h,LPARAM p){auto&s=*reinterpret_cast<State*>(p);SendMessageW(h,WM_SETFONT,(WPARAM)s.font,TRUE);return TRUE;},(LPARAM)&s);
@@ -85,10 +85,10 @@ inline void layout(State& s){
     s.positioning=true;
     RECT r{};GetClientRect(s.win,&r);
     const int w=MulDiv(r.right,96,s.dpi), h=MulDiv(r.bottom,96,s.dpi);
-    const bool compact=h<470;
+    const bool compact=h<500;
     s.stacked=w<830;
     const int margin=s.stacked?16:26;
-    const int inner=w-2*margin, top=compact?7:17, headerH=compact?43:55;
+    const int inner=w-2*margin, top=compact?7:17, headerH=compact?43:59;
     const int bodyY=top+headerH+6;
     const int gap=s.stacked?8:20, rail=std::clamp(inner/4,206,270);
     const int cardW=s.stacked?inner:inner-rail-gap;
@@ -105,17 +105,16 @@ inline void layout(State& s){
     s.library=s.box(margin,bodyY,cardW,cardBottom-bodyY);
     s.searchFrame=s.box(filterX,filterY,filterW,30);
     const bool narrowHeader=w<660;
-    const int headingX=margin+(narrowHeader?0:47);
+    const int headingX=margin+(narrowHeader?0:55);
     const int browseWidth=narrowHeader?103:143;
     const int appearanceWidth=narrowHeader?138:179;
     const int browseX=w-margin-browseWidth;
     const int appearanceX=browseX-8-appearanceWidth;
     const int actionY=top+(compact?3:8);
     s.headerTools=s.box(appearanceX-3,actionY-3,browseX+browseWidth-appearanceX+6,41);
-    s.headingIcon=narrowHeader?RECT{}:s.box(margin,top+(compact?4:8),35,35);
+    s.headingIcon=narrowHeader?RECT{}:s.box(margin,top+(compact?2:6),42,42);
     SendMessageW(s.heading,WM_SETFONT,(WPARAM)(narrowHeader?s.subheading:s.bold),FALSE);
-    const int headingOffset=narrowHeader?8:0;
-    s.move(s.heading,headingX,top+headingOffset,appearanceX-headingX-9,headerH-headingOffset);
+    s.move(s.heading,headingX,actionY-4,appearanceX-headingX-9,43);
     s.move(s.appearance,appearanceX,actionY,appearanceWidth,35);
     s.move(s.browse,browseX,actionY,browseWidth,35);
     layoutSearch(s);
@@ -147,15 +146,16 @@ inline void layout(State& s){
         s.move(s.riziaDemo,margin+pad+itemWidth+6,by,itemWidth,bh);
         s.move(s.live,margin+practiceW+gap,y,liveWidth,bodyBottom-y);
     }else{
-        const int x=margin+cardW+gap, step=compact?37:46;
-        const int buttonY=bodyY+(compact?77:93);
-        const int boxH=buttonY-bodyY+step*2+13;
-        s.practice=s.box(x,bodyY,rail,boxH);
-        s.move(s.practiceTitle,x+16,bodyY+8,rail-32,29);
-        s.move(s.practiceHint,x+16,bodyY+40,rail-32,buttonY-bodyY-40);
-        s.move(s.mainDemo,x+7,buttonY,rail-14,step);
-        s.move(s.riziaDemo,x+7,buttonY+step,rail-14,step);
-        s.move(s.live,x+7,bodyY+boxH+7,rail-14,compact?45:54);
+        const int x=margin+cardW+gap, step=compact?38:46;
+        const int liveHeight=compact?48:62;
+        const int practiceY=bodyY+liveHeight+(compact?9:15);
+        const int buttonY=practiceY+(compact?76:89);
+        s.move(s.live,x,bodyY,rail,liveHeight);
+        s.practice=s.box(x,practiceY,rail,buttonY-practiceY+2*step+9);
+        s.move(s.practiceTitle,x+16,practiceY+9,rail-32,29);
+        s.move(s.practiceHint,x+16,practiceY+40,rail-32,buttonY-practiceY-40);
+        s.move(s.mainDemo,x+6,buttonY,rail-12,step);
+        s.move(s.riziaDemo,x+6,buttonY+step,rail-12,step);
     }
     const int footerButtons=s.footerY+(compact?6:12);
     HDC dc=GetDC(s.win);
