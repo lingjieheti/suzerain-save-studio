@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.20.1";
+constexpr wchar_t APP_VERSION[] = L"0.20.2";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -265,15 +265,20 @@ void showSelected(){
 }
 bool applyInput(bool redraw){
     if(!g.doc||g.selected.empty()||!g.editingDirty||g.tab>=5)return true;
+    const auto* f=g.doc->find(g.selected);if(!f)return false;
     try{
-        auto*f=g.doc->find(g.selected);if(!f)return false;
         std::string value=f->is_bool?(g.boolValue?"true":"false"):utf8(trim(textOf(g.edit)));
         g.doc->validateChanges({{f->key,value}});auto*d=definition(f->key);
         if(d&&d->nonnegative){if(value.empty()||!std::all_of(value.begin(),value.end(),[](char c){return c>='0'&&c<='9';}))throw WinFailure(L"资源、上限和军需请输入 0 或正整数，不使用小数、符号或科学计数法。");value=std::to_string(std::stoll(value));}
         g.session->applyBatch({{f->key,value}});g.editingDirty=false;
         if(redraw)refresh();else {for(size_t i=0;i<g.rows.size();++i)if(g.rows[i]==f->key)rowText((int)i,2,pending().count(f->key)?displayValue(value,f->is_bool,i18n::language):L"—");updatePreviewCount();updateStatus();}
         return true;
-    }catch(const std::exception&e){message(L"这个值还没有应用。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONWARNING);return false;}
+    }catch(const std::exception&e){
+        HWND input=f->is_bool?ctl(g.boolValue?BOOL_TRUE:BOOL_FALSE):g.edit;
+        message(L"这个值还没有应用。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONWARNING);
+        SetFocus(input);
+        return false;
+    }
 }
 bool discardIfNeeded(){
     return (pending().empty()&&!g.editingDirty)||localizedMessageBox(g.win,L"还有未保存的修改。放弃这些修改并继续吗？",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)==IDYES;
@@ -485,7 +490,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.20.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.20.2 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -499,6 +504,7 @@ void navigate(int tab){
     }
     if(tab==7)setHelp();
     refresh();
+    if(tab==5)SetFocus(g.rows.empty()?ctl(NAV_BASE+5):g.grid);
 }
 std::wstring documentTitle(){
     return g.demoResource?tr(L"内置练习示例")+L"  /  "+campaignLabel(g.doc->story):g.file.wstring();

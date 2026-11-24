@@ -1,6 +1,12 @@
-# v0.20.1 Preview — Windows validation
+# v0.20.2 Preview — Windows validation
 
-The Windows x64 archive includes the 0.20.1 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.20.2 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Reviewing changes with the arrow keys in 0.20.2
+
+In the published 0.20.1 Windows executable, pressing Ctrl+S from the value input showed a two-row review but left focus on the main window. Pressing Tab reached the language selector. This was reproduced locally. A player discussion illustrates why distinguishing budget from its cap matters when reviewing edits. Microsoft's keyboard guidance describes using arrow keys to navigate within a list. [Steam discussion](https://steamcommunity.com/sharedfiles/filedetails/?id=3463349353) · [Windows keyboard interaction guidance](https://learn.microsoft.com/en-us/windows/apps/develop/input/keyboard-interactions)
+
+We tested the 0.20.2 ZIP's executable with a synthetic Sordland save. Ctrl+S focused the change list, Down inspected the second change, and a second Ctrl+S kept that row selected. An empty review focused its navigation button. After an invalid number triggered a warning, dismissing the warning returned focus to the value input for correction. The source save retained its bytes and modification time. Native window checks covered all four themes at 800 and 1,200 DIP at 200% display scaling.
 
 ## Typing while the save picker scans in 0.20.1
 
