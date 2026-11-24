@@ -581,6 +581,17 @@ void testAppearance(const fs::path& path){
     check(Theme::index()==2,"A new user starts with Fjord");
     glass::refreshSettings();
     check(glass::preferred,"New profiles use glass when Windows allows transparency");
+    auto appearanceButton=ctl(APPEARANCE);
+    SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(5,6));
+    check(glassPointer(appearanceButton).x==5 && glassPointer(appearanceButton).y==6,
+          "A pointer entering a button locates its reflection in client coordinates");
+    if(glass::enabled()){
+        SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(33,9));
+        check(glassPointer(appearanceButton).x==33,"The light follows the pointer across one control");
+    }
+    SendMessageW(appearanceButton,WM_MOUSELEAVE,0,0);
+    check(!GetPropW(appearanceButton,L"RiziaHover") && pointerButton!=appearanceButton,
+          "Leaving a control clears its hover and its light source");
     const int languageBefore=i18n::language;
     for(int lang=0;lang<static_cast<int>(std::size(i18n::names));++lang){
         i18n::setLanguage(lang);

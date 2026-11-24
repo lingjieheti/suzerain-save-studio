@@ -28,12 +28,12 @@ void layout() {
     g.gridTop = a.listY; g.tableW = a.list; g.rightX = a.right;
     const int toolbarEnd = a.left + a.content;
     int toolsWidth = fileToolbarWidth(a);
-    int slot = (toolsWidth-18) / 10;
+    int slot = fileActionSlot(toolsWidth);
     int tx = toolbarEnd - toolsWidth;
     for (auto item : {std::pair<int,int>{RELOAD,2}, {FOLDER,2}, {OPEN,3}, {LATEST,3}}) {
         int bw = item.first == LATEST ? toolbarEnd - tx : slot * item.second;
         place(ctl(item.first), tx, a.shortScreen ? 7 : 14, bw, 32);
-        tx += bw + 6;
+        tx += bw + fileActionGap(item.first);
     }
     int themeWidth=116;
     if(!a.compactRail) {
@@ -46,7 +46,7 @@ void layout() {
     place(ctl(APPEARANCE),themeRight-themeWidth,a.shortScreen?44:55,themeWidth,29);
     int pathWidth=themeRight-themeWidth-a.left-8;
     place(g.meta, a.left, a.shortScreen ? 39 : 54, pathWidth, 20);
-    place(g.path, a.left, a.shortScreen ? 57 : 75, pathWidth, 19);
+    place(g.path, a.left+16, a.shortScreen ? 57 : 75, pathWidth-16, 19);
     if (a.compactRail) place(ctl(LANGUAGE), toolbarEnd-116, a.shortScreen ? 43 : 57,116,300);
     else place(ctl(LANGUAGE), 15, a.height - (a.shortScreen ? 39 : 73), a.rail-30, 300);
     const int navInset=a.compactRail?8:13;
@@ -77,14 +77,15 @@ void layout() {
     place(ctl(HELP_USAGE), a.left, a.toolsY, 120, 32);
     place(ctl(HELP_LICENSES), a.left+126, a.toolsY, 120, 32);
     int listY = review ? a.toolsY : a.listY;
-    place(g.grid,a.left+4,listY+4,a.list-8,a.bottom-listY-8);
+    const int gridInset=a.compactRail?4:7;
+    place(g.grid,a.left+gridInset,listY+gridInset,a.list-2*gridInset,a.bottom-listY-2*gridInset);
     place(g.empty, a.left+12, listY+std::max(35,(a.bottom-listY)/2-14), a.list-24, 44);
     place(g.helpText, a.left+14,a.listY+13,a.content-28,a.bottom-a.listY-26);
 
     const int pad = inspectorPad(a), rx = a.right+pad, rw = a.inspector-2*pad;
     int y = a.toolsY+(a.shortScreen?12:19);
     int nameH = edit ? (a.inspector<235?47:a.shortScreen?25:34) : (a.shortScreen ? 32 : 43);
-    place(g.name,rx,y,rw,nameH);
+    place(g.name,rx+9,y,rw-9,nameH);
     y += nameH + 3;
     int favoriteW=std::clamp(rw/2,70,100);
     place(g.oldValue,rx,y,edit?rw-favoriteW-5:rw,20);
@@ -219,46 +220,49 @@ void resourceSymbol(HDC dc,int kind,bool base,int x,int y,COLORREF ink) {
 void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
     const char* keys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
     const wchar_t* labels[]={L"预算",L"个人财富",L"经济水平"};
-    const COLORREF inks[]={Theme::accentInk,Theme::green,Theme::blue};
+    // Pigments belong to the resource, so the same tile is recognizable in
+    // every appearance. Light and dark variants keep the symbols readable.
+    const COLORREF inks[]={Theme::dark()?RGB(231,191,137):RGB(128,77,33),
+                           Theme::dark()?RGB(199,177,234):RGB(104,72,139),
+                           Theme::dark()?RGB(145,211,195):RGB(39,104,93)};
     const bool base=isBase(), tall=a.metricHeight>=70;
-    const int unit=a.content/3;
+    const int gutter=a.compactRail?6:10;
+    const int unit=(a.content-2*gutter)/3;
     rizia::ChangeMap linkedCaps;
     if(!base) {
         try { linkedCaps=linkedCapChanges(); }
         catch(const std::exception&) { /* Keep conflicting explicit values visible until Review. */ }
     }
-    rounded(dc,rect(a.left,a.headerBottom,a.content,a.metricHeight),Theme::panel,Theme::line,21);
     for(int i=0;i<3;++i) {
-        int x=a.left+i*unit, y=a.headerBottom;
+        int x=a.left+i*(unit+gutter), y=a.headerBottom;
         int width=i==2?a.left+a.content-x:unit;
-        int pad=tall?14:9, inner=width-2*pad;
+        const int pad=tall?17:10, inner=width-2*pad;
         const auto& resource=riziaResources[i];
         const char* key=base?keys[i]:resource.stock;
         const auto balance=val(key);
-        if(i>0) {
-            const int inset=tall?18:11;
-            fill(dc,rect(x,y+inset,1,a.metricHeight-2*inset),Theme::line);
+        const auto ink=inks[i];
+        const auto face=glass::mix(Theme::panel,ink,Theme::dark()?.085:.058);
+        workspaceCard(dc,rect(x,y,width,a.metricHeight),face,glass::mix(Theme::line,ink,.18),tall?17:12);
+        int labelX=x+pad, labelY=y+(tall?13:base?19:6);
+        HFONT numberFont=tall?g.large:g.compactNumber;
+        const int numberDip=MulDiv(typography::width(dc,numberFont,balance),96,g.dpi);
+        // At compact heights reserve the right of the first line for the value.
+        int labelW=tall?inner-35:std::clamp(inner-numberDip-8,inner/2,inner-4);
+        const auto label=tr(base?labels[i]:resource.balanceLabel);
+        const int numberX=tall?labelX:labelX+labelW+3;
+        if(tall) {
+            const int bx=x+width-pad-23, by=y+10;
+            auto chip=glass::mix(face,ink,Theme::dark()?.14:.13);
+            workspaceCard(dc,rect(bx,by,26,26),chip,chip,10);
+            resourceSymbol(dc,i,base,bx+5,by+5,ink);
+        } else if(typography::width(dc,g.small,label)<=px(labelW-22)) {
+            resourceSymbol(dc,i,base,labelX,labelY+3,ink);
+            labelX+=21;labelW-=21;
         }
-
-        bool showSymbol=tall;
-        int labelX=x+pad+(showSymbol?23:0);
-        int labelY=y+(tall?11:base?18:3);
-        if(showSymbol)resourceSymbol(dc,i,base,x+pad,labelY+2,inks[i]);
-        int available=inner-(showSymbol?23:0);
-        int labelW=tall?available:available*3/5;
-          HFONT numberFont=tall?g.large:g.compactNumber;
-          auto old=SelectObject(dc,numberFont);SIZE extent{};
-          GetTextExtentPoint32W(dc,balance.c_str(),static_cast<int>(balance.size()),&extent);
-          SelectObject(dc,old);
-          if(!tall)
-              labelW=std::max(labelW,available-MulDiv(extent.cx,96,g.dpi)-8);
-        drawText(dc,base?labels[i]:resource.balanceLabel,rect(labelX,labelY,labelW,20),g.small,Theme::muted);
-
-        // Reserve a second column for income and cap only on the tall DLC card.
-        int numberX=tall?x+pad:labelX+labelW+3;
-        int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
-        if(extent.cx>px(numberW))numberFont=tall?g.compactNumber:g.tableNumber;
-        drawText(dc,balance,rect(numberX,tall?y+33:base?y+15:y+1,numberW,tall?45:26),numberFont,
+        drawText(dc,label,rect(labelX,labelY,labelW,21),tall?g.emphasis:g.small,Theme::text);
+        const int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
+        if(numberDip>numberW)numberFont=tall?g.compactNumber:g.tableNumber;
+        drawText(dc,balance,rect(numberX,tall?y+38:base?y+15:y+3,numberW,tall?45:26),numberFont,
                  pending().count(key)?Theme::accentInk:Theme::text,
                  (tall?DT_LEFT:DT_RIGHT)|DT_VCENTER|DT_SINGLELINE);
         if(base)continue;
@@ -267,8 +271,8 @@ void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
         const auto capText=tr(L"上限 ")+(linked==linkedCaps.end()?val(resource.cap):wide(linked->second));
         const auto turnText=tr(L"每回合")+L" "+turnDelta(val(resource.turnTotal));
         // In short windows, keep both secondary values on a single baseline.
-        RECT turnBox=tall?rect(x+pad+numberW,y+33,inner-numberW,20):rect(x+pad,y+30,inner*55/100,21);
-        RECT capBox=tall?rect(x+pad+numberW,y+55,inner-numberW,20):rect(x+pad+inner*55/100,y+30,inner-inner*55/100,21);
+        RECT turnBox=tall?rect(x+pad+numberW,y+39,inner-numberW,21):rect(x+pad,y+30,inner*55/100,21);
+        RECT capBox=tall?rect(x+pad+numberW,y+62,inner-numberW,21):rect(x+pad+inner*55/100,y+30,inner-inner*55/100,21);
         drawText(dc,turnText,turnBox,g.small,pending().count(resource.turnTotal)?Theme::accentInk:Theme::muted,
                  (tall?DT_RIGHT:DT_LEFT)|DT_VCENTER|DT_SINGLELINE);
         drawText(dc,capText,capBox,g.small,linked!=linkedCaps.end()||pending().count(resource.cap)?Theme::accentInk:Theme::muted,
@@ -289,18 +293,23 @@ void paint() {
     PAINTSTRUCT ps{}; auto dc=BeginPaint(g.win,&ps);
     paintWorkspaceChildBackdrop(dc,g.win);
     auto a=workspaceGeometry();
-    int logoX=a.compactRail?12:20,logoY=a.shortScreen?13:20;
-    const bool fjord=Theme::index()==Theme::fjordIndex;
-    const auto logoFill=fjord?Theme::select:Theme::accent;
-    glass::surface(dc,rect(logoX,logoY,33,33),logoFill,px(11),true);
-    navSymbol(dc,7,px(logoX+7),px(logoY+7),fjord?Theme::accentInk:Theme::onAccent);
+    const int logoX=a.compactRail?11:19,logoY=a.shortScreen?12:20;
+    const int logoSize=a.compactRail?34:38;
+    const auto crest=Theme::dark()?Theme::select:Theme::accentInk;
+    const auto print=Theme::dark()?Theme::accentInk:Theme::onAccent;
+    workspaceCard(dc,rect(logoX,logoY,logoSize,logoSize),crest,glass::mix(crest,print,.16),12);
+    const int center=logoSize/2;
+    navSymbol(dc,7,px(logoX+center-9),px(logoY+center-9),print);
     if (!a.compactRail) {
-        drawText(dc,L"Suzerain",rect(59,logoY-7,a.rail-64,28),g.brand,Theme::sideText);
-        drawText(dc,L"Save Studio",rect(60,logoY+17,a.rail-64,19),g.small,Theme::sideMuted);
+        drawText(dc,L"Suzerain",rect(65,logoY-3,a.rail-70,27),g.brand,Theme::sideText);
+        drawText(dc,L"Save Studio",rect(66,logoY+19,a.rail-71,19),g.small,Theme::sideMuted);
         if (!a.shortScreen) {
             fill(dc,rect(16,84,a.rail-32,1),Theme::sideLine);
             drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(19,101,a.rail-32,26),g.font,Theme::sideMuted);
             drawText(dc,L"工作区",rect(19,navY(a,5)-27,a.rail-32,22),g.small,Theme::sideMuted);
+            const int supportRule=a.height-119;
+            if(supportRule>navY(a,7)+navStep(a)+6)
+                fill(dc,rect(18,supportRule,a.rail-36,1),Theme::sideLine);
             drawText(dc,std::wstring(L"v")+APP_VERSION,rect(16,a.height-37,a.rail-32,22),g.small,Theme::sideMuted);
         } else {
             drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(17,55,a.rail-30,23),g.small,Theme::sideMuted);
@@ -310,14 +319,26 @@ void paint() {
         fill(dc,rect(11,navY(a,5)-8,a.rail-22,1),Theme::sideLine);
     int titleWidth=a.content-fileToolbarWidth(a)-12;
     drawText(dc,pageTitle(g.tab),rect(a.left,a.shortScreen?5:10,titleWidth,37),g.title,Theme::text);
+    // A small document outline connects the filename with its campaign metadata.
+    const int docY=a.shortScreen?60:78;
+    const int guard=SaveDC(dc);
+    SelectObject(dc,GetStockObject(DC_PEN));SetDCPenColor(dc,Theme::muted);
+    SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
+    POINT file[]={{px(a.left+2),px(docY)},{px(a.left+8),px(docY)},{px(a.left+11),px(docY+3)},
+                  {px(a.left+11),px(docY+11)},{px(a.left+2),px(docY+11)},{px(a.left+2),px(docY)}};
+    Polyline(dc,file,static_cast<int>(std::size(file)));
+    RestoreDC(dc,guard);
     if(a.metricHeight) paintMetrics(dc,a);
     if(g.tab<7) {
         int listY=g.tab==5?a.toolsY:a.listY;
-        rounded(dc,rect(a.left,listY,a.list,a.bottom-listY),Theme::panel,Theme::line,18);
+        workspaceCard(dc,rect(a.left,listY,a.list,a.bottom-listY),Theme::panel,Theme::line,14);
         RECT inspector=rect(a.right,a.toolsY,a.inspector,a.bottom-a.toolsY);
         RECT notes{};GetWindowRect(g.desc,&notes);MapWindowPoints(nullptr,g.win,(POINT*)&notes,2);
         if(g.tab<5)inspector.bottom=std::min<LONG>(inspector.bottom,notes.bottom+px(a.shortScreen?10:16));
-        rounded(dc,inspector,Theme::panel,Theme::line,19);
+        workspaceCard(dc,inspector,Theme::panel,Theme::line,15);
+        RECT title{};GetWindowRect(g.name,&title);MapWindowPoints(nullptr,g.win,reinterpret_cast<POINT*>(&title),2);
+        RECT marker{title.left-px(9),title.top+px(3),title.left-px(6),title.top+px(19)};
+        workspaceCard(dc,marker,Theme::accent,Theme::accent,2);
         if(!a.shortScreen){
             RECT divider{notes.left,notes.top-px(7),notes.right,notes.top-px(7)+1};
             fill(dc,divider,Theme::line);
@@ -333,8 +354,10 @@ void paint() {
                 paintInputFrame(dc,box,g.edit,10);
             }
         }
-    } else rounded(dc,rect(a.left,a.listY,a.content,a.bottom-a.listY),Theme::panel,Theme::line,8);
-    rounded(dc,rect(a.left+1,a.footer+19,7,7),g.editingDirty||!pending().empty()?Theme::goldDark:Theme::green,
-            g.editingDirty||!pending().empty()?Theme::goldDark:Theme::green,7);
+    } else workspaceCard(dc,rect(a.left,a.listY,a.content,a.bottom-a.listY),Theme::panel,Theme::line,14);
+    const auto statusInk=g.editingDirty||!pending().empty()?Theme::goldDark:Theme::green;
+    auto halo=glass::mix(Theme::bg,statusInk,.18);
+    workspaceCard(dc,rect(a.left,a.footer+16,12,12),halo,halo,6);
+    workspaceCard(dc,rect(a.left+3,a.footer+19,6,6),statusInk,statusInk,3);
     EndPaint(g.win,&ps);
 }

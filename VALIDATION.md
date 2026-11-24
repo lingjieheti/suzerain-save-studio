@@ -1,6 +1,14 @@
-# v0.19.2 Preview — Windows validation
+# v0.20.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.19.2 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.20.0 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Glass controls and readable values in 0.20.0
+
+The sidebar and file tools sample the window's own backdrop. A narrow highlight follows the pointer along a control's rim. Data tables, text inputs and the change review keep a solid reading surface. The diffuse background, directional highlight and darker edge follow Apple's 2026 material refinements. Solid fallbacks respect Windows transparency and high-contrast preferences. [Apple material guidelines](https://developer.apple.com/design/human-interface-guidelines/materials) · [WWDC26 material demonstration](https://developer.apple.com/videos/play/wwdc2026/102/?time=1363) · [Windows guidance on layered materials](https://learn.microsoft.com/en-us/windows/apps/design/style/acrylic)
+
+We opened the native editor on the built-in Rizia campaign in four themes at 800 and 1,200 DIP and 200% display scaling. The picker was exercised with synthetic saves at 614 and 1,010 DIP in each theme. Checks covered moving keyboard focus from search to results, clearing an empty result, opening a sample and switching glass off and on. Moving the pointer between two positions on the same button moved its highlight. [Editor screenshots](docs/images/appearances.png) · [Save picker](docs/images/save-picker.png)
+
+The live panel and choice tooltip use a shared, cached texture with a curved reflection. In simulated campaigns, the panel tests checked keyboard input, both languages, compact layouts and text contrast over the brightest and darkest parts of the texture with black and white scene backgrounds. The live preview image comes from the production panel's drawing instructions with synthetic Rizia data. The new in-game material still awaits verification inside a running campaign. [Simulated panel](docs/images/live-glass-preview.png)
 
 ## Editing search results with Enter
 
