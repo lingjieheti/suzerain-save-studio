@@ -235,6 +235,57 @@ void testSearchControls(const fs::path& sample) {
     navigate(0);
 }
 
+void testFieldActivation(const fs::path& sample) {
+    const auto original=readFile(sample);
+    const auto modified=fs::last_write_time(sample);
+    loadDocumentBytes(original,sample,0);
+    navigate(4);
+    const std::string budget="BaseGame.GovernmentBudget";
+    selectRow(budget);
+    MSG enter{};
+    enter.hwnd=g.grid;enter.message=WM_KEYDOWN;enter.wParam=VK_RETURN;
+    check((SendMessageW(g.grid,WM_GETDLGCODE,VK_RETURN,reinterpret_cast<LPARAM>(&enter)) & DLGC_WANTMESSAGE)!=0,
+          "The focused field list receives Enter from the dialog message loop");
+    auto activate=[&](UINT code,int row=-1){
+        NMITEMACTIVATE item{};
+        item.hdr={g.grid,GRID,code};
+        item.iItem=row;
+        SetFocus(g.grid);
+        SendMessageW(g.win,WM_NOTIFY,GRID,reinterpret_cast<LPARAM>(&item));
+    };
+    const int budgetRow=ListView_GetNextItem(g.grid,-1,LVNI_SELECTED);
+    for(UINT code:{NM_RETURN,NM_DBLCLK}){
+        SendMessageW(g.edit,EM_SETSEL,1,1);
+        activate(code,budgetRow);
+        check(GetFocus()==g.edit && SendMessageW(g.edit,EM_GETSEL,0,0)==MAKELONG(0,2) &&
+              textOf(g.edit)==L"10" && pending().empty() && !g.editingDirty,
+              "Activating a numeric field selects its full value without staging an edit");
+    }
+    activate(NM_DBLCLK,-1);
+    check(GetFocus()==g.grid,"Double-clicking blank list space keeps focus in the list");
+
+    const std::string flag="BaseGame.Faction_OldGuard_Content";
+    selectRow(flag);
+    activate(NM_RETURN);
+    check(GetFocus()==ctl(BOOL_FALSE) && !g.editingDirty && pending().empty(),
+          "Enter focuses the current false value without toggling it");
+    command(BOOL_TRUE,BN_CLICKED);
+    activate(NM_RETURN);
+    check(GetFocus()==ctl(BOOL_TRUE) && g.editingDirty && pending().empty(),
+          "Enter focuses a draft true value without applying it");
+    check(applyInput(),"Stage the boolean for the review test");
+    const rizia::ChangeMap edits{{flag,"true"}};
+    SetWindowTextW(g.search,L"NoSuchSyntheticField");
+    activate(NM_RETURN);
+    check(GetFocus()!=g.edit && g.rows.empty() && pending()==edits,"An empty result cannot activate a field");
+    navigate(5);
+    selectRow(flag);
+    activate(NM_RETURN);
+    check(GetFocus()==g.grid && pending()==edits && !g.editingDirty,"Enter in review preserves the pending change");
+    check(readFile(sample)==original && fs::last_write_time(sample)==modified,
+          "Field and review activation preserve the source file and its timestamp");
+}
+
 void testHistoryShortcuts(const fs::path& sample) {
     const auto bytes=readFile(sample);
     loadDocumentBytes(bytes,sample,0);
@@ -893,6 +944,7 @@ int main(int argc,char** argv){
         testChoiceHintsPreference();
         testSaveQueries();
         testSearchControls(fs::u8path(argv[1]));
+        testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));

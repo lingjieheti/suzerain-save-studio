@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.19.1";
+constexpr wchar_t APP_VERSION[] = L"0.19.2";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -459,7 +459,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.19.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.19.2 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -670,6 +670,12 @@ LRESULT CALLBACK editProc(HWND w,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR){
     if(m==WM_GETDLGCODE){auto flags=DefSubclassProc(w,m,wp,lp);auto*msg=(MSG*)lp;return (wp==VK_RETURN||(msg&&msg->wParam==VK_RETURN))?flags|DLGC_WANTALLKEYS:flags;}
     if(m==WM_KEYDOWN&&wp==VK_RETURN){applyInput();return 0;}return DefSubclassProc(w,m,wp,lp);
 }
+LRESULT CALLBACK fieldGridProc(HWND grid,UINT message,WPARAM key,LPARAM detail,UINT_PTR,DWORD_PTR){
+    const auto result=DefSubclassProc(grid,message,key,detail);
+    if(message==WM_GETDLGCODE && detail && key==VK_RETURN && g.tab<5)
+        return result|DLGC_WANTMESSAGE;
+    return result;
+}
 void createControls(){
     auto languages=control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,LANGUAGE);for(const auto*name:i18n::names)SendMessageW(languages,CB_ADDSTRING,0,(LPARAM)name);SendMessageW(languages,CB_SETCURSEL,i18n::language,0);
     SetWindowSubclass(languages,languageFaceProc,1,0);
@@ -683,6 +689,7 @@ void createControls(){
     button(L"清除搜索",CLEAR_FIELD_SEARCH);
     button(L"只看待保存",FILTER_CHANGED);button(L"只看收藏",FILTER_FAVORITES);button(L"导入方案",PATCH_IMPORT);
     g.grid=control(WC_LISTVIEWW,L"",WS_TABSTOP|LVS_REPORT|LVS_SINGLESEL|LVS_SHOWSELALWAYS|LVS_SHAREIMAGELISTS,GRID);
+    SetWindowSubclass(g.grid,fieldGridProc,1,0);
     configureSearchField(g.search,g.grid,L"搜索项目或存档字段");
     SetWindowTheme(g.grid,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetExtendedListViewStyle(g.grid,LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER|LVS_EX_LABELTIP);
@@ -824,7 +831,16 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             }
             return 0;
         }
-        if(n->code==NM_DBLCLK&&g.tab<5){auto*f=g.doc?g.doc->find(g.selected):nullptr;if(f){SetFocus(f->is_bool?ctl(BOOL_TRUE):g.edit);if(!f->is_bool)SendMessageW(g.edit,EM_SETSEL,0,-1);}return 0;}
+        if((n->code==NM_RETURN || n->code==NM_DBLCLK) && g.tab<5){
+            const int row=ListView_GetNextItem(g.grid,-1,LVNI_SELECTED);
+            if(row<0 || (n->code==NM_DBLCLK && reinterpret_cast<NMITEMACTIVATE*>(lp)->iItem!=row))return 0;
+            const auto* field=g.doc?g.doc->find(g.selected):nullptr;
+            if(field){
+                if(field->is_bool)SetFocus(ctl(g.boolValue?BOOL_TRUE:BOOL_FALSE));
+                else{SetFocus(g.edit);SendMessageW(g.edit,EM_SETSEL,0,-1);}
+            }
+            return 0;
+        }
         if(n->code==NM_CUSTOMDRAW){auto*c=(NMLVCUSTOMDRAW*)lp;if(c->nmcd.dwDrawStage==CDDS_PREPAINT)return CDRF_NOTIFYITEMDRAW|CDRF_NOTIFYPOSTPAINT;
             if(c->nmcd.dwDrawStage==CDDS_POSTPAINT){fillGridRemainder(c->nmcd.hdc);return CDRF_DODEFAULT;}
             if(c->nmcd.dwDrawStage==CDDS_ITEMPREPAINT){drawWorkspaceRow(*c);return CDRF_SKIPDEFAULT;}}

@@ -1,6 +1,10 @@
-# v0.19.1 Preview — Windows validation
+# v0.19.2 Preview — Windows validation
 
-The Windows x64 archive includes the 0.19.1 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.19.2 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Editing search results with Enter
+
+In the 0.19.1 Windows editor, pressing Down from the search box focused the results, but pressing Enter left focus in the list. With the packaged 0.19.2 editor, Enter selected the whole budget value for typing. After typing 24, pressing Enter again staged the edit. On yes/no fields, focus landed on the current choice. We tested both choices, empty results, and a pending change in the review list. The synthetic save kept its original bytes and modification time in all four themes at 800 and 1,200 DIP with 200% display scaling.
 
 ## Finding the most recent save in a large library
 
