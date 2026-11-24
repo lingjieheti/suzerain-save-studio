@@ -210,6 +210,33 @@ void testSaveQueries() {
     }
 }
 
+void testPickerSearchWhileScanning(const fs::path& sample) {
+    save_picker::State picker;
+    picker.roots={sample.parent_path()};
+    struct alignas(DWORD) Template { DLGTEMPLATE dialog{}; WORD menu=0,cls=0,title=0; } form;
+    form.dialog.style=WS_POPUP|WS_CAPTION|DS_MODALFRAME;
+    HWND window=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&form.dialog,g.win,
+                                           save_picker::proc,reinterpret_cast<LPARAM>(&picker));
+    check(window && GetFocus()==picker.filter,"The save picker opens ready for typing");
+    MSG start{};
+    check(PeekMessageW(&start,window,save_picker::START_SCAN,save_picker::START_SCAN,PM_REMOVE),
+          "The picker queues its initial scan");
+    DispatchMessageW(&start);
+    check(picker.busy && IsWindowEnabled(picker.filter) && GetFocus()==picker.filter,
+          "Starting the scan keeps the search box enabled and focused");
+    for(wchar_t c:sample.stem().wstring())SendMessageW(GetFocus(),WM_CHAR,c,1);
+    check(textOf(picker.filter)==sample.stem().wstring() && ListView_GetItemCount(picker.list)==0,
+          "Typing during the scan records the query without exposing partial results");
+    SetFocus(picker.campaign);
+    // Deliver completion after input, even when the synthetic directory scans instantly.
+    picker.worker.join();
+    SendMessageW(window,WM_TIMER,1,0);
+    check(!picker.busy && GetFocus()==picker.campaign && picker.rows.size()==1 &&
+          picker.result.saves[picker.rows.front()].path.filename()==sample.filename(),
+          "The first results use the typed query and preserve the new focus");
+    DestroyWindow(window);
+}
+
 void testSearchControls(const fs::path& sample) {
     loadDocument(sample,false);
     navigate(4);
@@ -954,6 +981,7 @@ int main(int argc,char** argv){
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testChoiceHintsPreference();
         testSaveQueries();
+        testPickerSearchWhileScanning(fs::u8path(argv[1]));
         testSearchControls(fs::u8path(argv[1]));
         testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));
