@@ -1,6 +1,12 @@
-# v0.20.0 Preview — Windows validation
+# v0.20.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.20.0 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.20.1 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Typing while the save picker scans in 0.20.1
+
+Players describe checking the correct slot name before loading an edited save. In our 0.20.0 Windows test, opening the picker and immediately typing `rizia` left the search empty and all six synthetic saves visible. Clicking into the search box first returned the three Rizia saves. The picker disabled the initial focus control during its scan. [Player discussion](https://www.reddit.com/r/suzerain/comments/1lkdjif/guys_i_have_trouble_saving_my_edits/) · [Steam save editing guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3341333208)
+
+With the updated picker, the same keystrokes during a scan returned all three Rizia saves. We also cleared the search during a refresh, selected a campaign using the keyboard, and checked that completion left focus on the campaign selector. The test opened a matching synthetic save with Down and Enter. We ran it in a private Windows desktop with an isolated profile, six synthetic saves, all four themes and widths of 614 and 1,010 DIP at 200% scaling. All six files retained their original contents and modification times.
 
 ## Glass controls and readable values in 0.20.0
 

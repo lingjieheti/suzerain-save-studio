@@ -4,7 +4,7 @@
 
 I used to edit my *Suzerain* saves by hand. Loading the same save twice every time got old, so I made this tool for myself. You can edit a save file or adjust resources while you play. With choice previews turned on, hover over a choice and tap **Ctrl** to see its known direct effects. I’ve added a few other little features along the way. [I’d love to hear your suggestions.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.0/SuzerainSaveStudio-0.20.0-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.20.0)
+**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.1/SuzerainSaveStudio-0.20.1-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.20.1)
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel, then close the panel. Point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. To preview another choice, point to it and tap Ctrl. The feature is off by default. Some later outcomes depend on how the story unfolds.
 

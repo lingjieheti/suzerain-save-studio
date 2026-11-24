@@ -72,7 +72,7 @@ inline void setFonts(State& s){
     if(s.list){auto oldImage=s.rowHeight;s.rowHeight=ImageList_Create(1,s.scale(49),ILC_COLOR32,1,1);ListView_SetImageList(s.list,s.rowHeight,LVSIL_SMALL);if(oldImage)ImageList_Destroy(oldImage);}
 }
 inline void layoutSearch(State& s){
-    const bool showClear=!s.busy && GetWindowTextLengthW(s.filter)>0;
+    const bool showClear=GetWindowTextLengthW(s.filter)>0;
     RECT input=s.searchFrame;
     input.left+=s.scale(29);input.top+=s.scale(4);input.right-=s.scale(showClear?30:7);
     MoveWindow(s.filter,input.left,input.top,std::max<LONG>(1,input.right-input.left),s.scale(22),TRUE);
@@ -220,6 +220,10 @@ inline void fill(State& s){
 }
 inline void start(State& s){
     if(s.busy)return;
+    // Keep keyboard input in the picker when its current action becomes unavailable.
+    HWND focus=GetFocus();
+    if(focus==s.refresh || focus==s.add || focus==s.open || focus==s.list)
+        SetFocus(s.filter);
     int current=selected(s);
     if(current>=0&&current<(int)s.rows.size())s.beforeScan=s.result.saves[s.rows[current]].path;
     s.stop();s.cancel.store(false);s.done.store(false);s.error.clear();s.result={};s.rows.clear();
@@ -227,7 +231,7 @@ inline void start(State& s){
     layoutSearch(s);
     setText(s.status,L"");setText(s.path,L"");setText(s.empty,L"正在搜索…");
     ShowWindow(s.list,SW_HIDE);ShowWindow(s.empty,SW_SHOW);
-    for(auto h:{s.open,s.refresh,s.add,s.filter,s.campaign})EnableWindow(h,FALSE);
+    for(auto h:{s.open,s.refresh,s.add})EnableWindow(h,FALSE);
     // Captured roots cannot change until the worker finishes; all UI updates stay on the UI thread.
     auto roots=s.roots;
     s.worker=std::thread([&s,roots]{
@@ -311,7 +315,8 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             applyPickerAppearance(s);RECT owner{},area{};GetWindowRect(g.win,&owner);MONITORINFO mi{};mi.cbSize=sizeof(mi);GetMonitorInfoW(MonitorFromWindow(g.win,MONITOR_DEFAULTTONEAREST),&mi);area=mi.rcWork;
             int width=std::min(s.scale(1010),(int)(area.right-area.left)),height=std::min(s.scale(624),(int)(area.bottom-area.top));
             int x=std::max((int)area.left,std::min((int)area.right-width,(int)(owner.left+owner.right-width)/2));int y=std::max((int)area.top,std::min((int)area.bottom-height,(int)(owner.top+owner.bottom-height)/2));
-            SetWindowPos(w,nullptr,x,y,width,height,SWP_NOZORDER);layout(s);EnableWindow(s.open,FALSE);PostMessageW(w,START_SCAN,0,0);return TRUE;
+            SetWindowPos(w,nullptr,x,y,width,height,SWP_NOZORDER);layout(s);EnableWindow(s.open,FALSE);
+            SetFocus(s.filter);PostMessageW(w,START_SCAN,0,0);return FALSE;
         }
         if(!p)return FALSE;auto&s=*p;
         switch(m){
@@ -327,7 +332,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             applyPickerAppearance(s);
             return TRUE;
         case START_SCAN:start(s);return TRUE;
-        case WM_TIMER:if(wp==1&&s.done.load(std::memory_order_acquire)){KillTimer(w,1);if(s.worker.joinable())s.worker.join();s.busy=false;for(auto h:{s.refresh,s.add,s.filter,s.campaign})EnableWindow(h,TRUE);fill(s);}return TRUE;
+        case WM_TIMER:if(wp==1&&s.done.load(std::memory_order_acquire)){KillTimer(w,1);if(s.worker.joinable())s.worker.join();s.busy=false;for(auto h:{s.refresh,s.add})EnableWindow(h,TRUE);fill(s);}return TRUE;
         case WM_COMMAND:{int id=LOWORD(wp);if(id==IDCANCEL){s.stop();EndDialog(w,IDCANCEL);return TRUE;}if(id==IDOK){accept(s);return TRUE;}
             if(id==DEMO_MAIN||id==DEMO_RIZIA){s.chosenDemo=id==DEMO_MAIN?demo::sordland:demo::rizia;s.stop();EndDialog(w,IDOK);return TRUE;}
             if(id==BROWSE){auto picked=pickFile(false,0,w);if(!picked.empty()){s.choice=picked;s.stop();EndDialog(w,IDOK);}return TRUE;}
@@ -340,8 +345,12 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
                 return TRUE;
             }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}
-            if(id==FILTER&&HIWORD(wp)==EN_CHANGE&&!s.busy&&s.list&&s.status&&s.path){fill(s);return TRUE;}
-            if(id==CLEAR_SEARCH&&HIWORD(wp)==BN_CLICKED&&!s.busy){clearSearchField(s.filter);return TRUE;}
+            if(id==FILTER&&HIWORD(wp)==EN_CHANGE&&s.list&&s.status&&s.path){
+                // The worker owns the results until completion. Only update the clear button meanwhile.
+                if(s.busy)layoutSearch(s);else fill(s);
+                return TRUE;
+            }
+            if(id==CLEAR_SEARCH&&HIWORD(wp)==BN_CLICKED){clearSearchField(s.filter);return TRUE;}
             if(id==CAMPAIGN_FILTER&&HIWORD(wp)==CBN_SELCHANGE&&!s.busy){fill(s);return TRUE;}
             if(id==RESCAN&&!s.busy){start(s);return TRUE;}
             if(id==ADD_FOLDER&&!s.busy){auto path=folder(w);if(!path.empty()){s.roots.push_back(path);extraRoots.push_back(path);start(s);}return TRUE;}break;}
