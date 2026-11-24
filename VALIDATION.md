@@ -1,6 +1,12 @@
-# v0.19.0 Preview — Windows validation
+# v0.19.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.19.0 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.19.1 editor and optional 0.19.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Finding the most recent save in a large library
+
+With 2,000 older synthetic saves in one folder and one newer save in another, the 0.19.0 picker could miss the newest save when it scanned the older folder first. The updated scan compares modification times across the entries it visits before parsing up to 2,000 eligible JSON files. The separate 20,000-entry traversal limit still applies.
+
+In a real Windows picker with 2,001 synthetic JSON files, the newest save appeared first, could be found by name, and opened with Enter. The test covered all four themes at 650 and 1,010 DIP at 200% scaling. All file contents and modification times were preserved.
 
 ## Liquid Glass on Windows in 0.19.0
 

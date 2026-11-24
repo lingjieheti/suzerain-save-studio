@@ -1,6 +1,6 @@
 # 玩家反馈与同类工具对照
 
-首次调研于 2026 年 11 月 21 日，11 月 23 日补充字段前缀搜索案例。以下记录可以回看原帖、产品说明和公开实现。样本来自公开讨论，能说明玩家遇到了哪些问题，无法估计问题在全体玩家中的发生率。
+首次调研于 2026 年 11 月 21 日，11 月 24 日补充大量文件中定位最近存档的案例。以下记录可以回看原帖、产品说明和公开实现。样本来自公开讨论，能说明玩家遇到了哪些问题，无法估计问题在全体玩家中的发生率。
 
 ## 玩家的操作遇到了什么问题
 
@@ -23,6 +23,10 @@
 Steam 攻略在人物关系一节让玩家复制 `[\"RiziaDLC.Relations_`，从结果中挑选具体人物。Reddit 的玩家回复也沿用了这段写法。0.18.1 能找到完整的键，粘贴这段带左括号的前缀却没有结果。新版按键的开头筛选，在里奇亚示例中可以找到 `Relations_Hugo` 和 `Relations_Vina`。[Steam 攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3204074586) · [Reddit 玩家回复](https://www.reddit.com/r/suzerain/comments/1hbn4bx/)
 
 2026 年 10 月，另一位 Windows 玩家询问如何找到帕莱斯的外交关系，回复建议先搜 `negotiatingpower` 再找具体国家。这个例子说明玩家也会用部分键名查找外交字段。双方没有报告修改后的游戏结果。[玩家原帖](https://www.reddit.com/r/suzerain/comments/1wxmfpx/save_editing_in_rizia/)
+
+### 在多个目录中找回最新存档
+
+一位 Windows 玩家按修改时间排序，找到了刚生成的里奇亚存档。另一位玩家提到，积累多个战役后，游戏提示清理旧档。这让我们用合成目录检查了修改器的「最新在前」。在 0.19.0 中，先扫描的目录如果占满 2,000 个候选，更晚扫描的目录即使有刚保存的档也可能没有结果。这个数字来自修改器的测试。[Steam 玩家操作记录](https://steamcommunity.com/app/1207650/discussions/0/4361247820932531716/) · [Reddit 玩家原帖](https://www.reddit.com/r/suzerain/comments/1u87ikh/comment/os6wmrh/)
 
 ## 五款工具的公开做法
 
