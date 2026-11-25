@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.20.3";
+constexpr wchar_t APP_VERSION[] = L"0.21.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -85,7 +85,7 @@ LRESULT CALLBACK buttonProc(HWND h,UINT m,WPARAM wp,LPARAM lp,UINT_PTR,DWORD_PTR
         }
         const POINT position{(short)LOWORD(lp),(short)HIWORD(lp)};
         const int threshold=std::max(2,MulDiv(2,GetDpiForWindow(h),96));
-        if(entering || (glass::enabled() && (pointerButton!=h ||
+        if(entering || (glass::followsPointer() && (pointerButton!=h ||
            std::abs(position.x-pointerPosition.x)>=threshold || std::abs(position.y-pointerPosition.y)>=threshold))){
             pointerButton=h;
             pointerPosition=position;
@@ -196,9 +196,11 @@ void applyAppearanceCommand(int command) {
 }
 void syncAppearance() {
     const bool oldGlass=glass::enabled();
+    const bool oldReflection=glass::followsPointer();
     glass::refreshSettings();
     recolorWorkspace(Theme::stored());useChineseFont(typography::stored());
-    if(oldGlass!=glass::enabled())RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    if(oldGlass!=glass::enabled() || oldReflection!=glass::followsPointer())
+        RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 void updateStatus(){
     bool loaded=bool(g.doc),any=!pending().empty()||g.editingDirty;
@@ -349,7 +351,10 @@ void refreshBackups(){
     g.populating=true;ListView_DeleteAllItems(g.grid);g.rows.clear();setColumns({{L"备份时间",180},{L"大小",72},{L"原档备份",std::max(170,g.tableW-260)}});
     for(size_t i=0;i<g.backups.size();++i){const auto&b=g.backups[i];addRow((int)i,{fileTimeText(b.path,b.timestamp),std::to_wstring((b.size+1023)/1024)+L" KB",b.path.filename().wstring()});if(b.path==keep)g.backupIndex=(int)i;}
     if(g.backupIndex<0&&!g.backups.empty())g.backupIndex=0;
-    if(g.backupIndex>=0)ListView_SetItemState(g.grid,g.backupIndex,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
+    if(g.backupIndex>=0){
+        ListView_SetItemState(g.grid,g.backupIndex,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
+        ListView_EnsureVisible(g.grid,g.backupIndex,FALSE);
+    }
     g.populating=false;selectBackup(g.backupIndex);
 }
 void resetFieldBrowser(){
@@ -490,7 +495,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.20.3 Preview · Windows 10 / 11 x64\r\n"
+        L"0.21.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -602,7 +607,10 @@ void restoreSelected(){
         toast(L"再次确认后，将用选中备份替换当前文件；当前版本仍会另做备份。");InvalidateRect(g.win,nullptr,FALSE);return;}
     try{auto data=readFile(g.backups[g.backupIndex].path);if(data!=g.backupDoc->original)throw WinFailure(L"这份备份在预览后发生了变化。请刷新列表，重新确认后再恢复。");auto d=rizia::Document::parse(data);if(d.story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");
         atomicSave(g.file,data,&g.doc->original);auto target=g.file;g.restoreArmed=false;loadDocument(target,false);toast(L"备份已恢复。恢复前的版本也已保存，可在列表中回退。");
-    }catch(const std::exception&e){g.restoreArmed=false;setText(ctl(BACKUP_RESTORE),L"恢复这份备份");message(L"恢复没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
+    }catch(const std::exception&e){
+        g.restoreArmed=false;setText(ctl(BACKUP_RESTORE),L"恢复这份备份");visible(BACKUP_CANCEL,false);
+        message(L"恢复没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);
+    }
 }
 void writePatch(const fs::path&p,const std::string&data){
     if(isBackupDestination(p))throw WinFailure(tr(L"请选择备份目录以外的位置导出文件。"));

@@ -494,6 +494,45 @@ double textContrast(COLORREF ink, COLORREF surface){
     return (std::max(a,b) + 0.05) / (std::min(a,b) + 0.05);
 }
 
+void testBackupRefreshAndRestore(const fs::path& sample){
+    AppearanceTestRegistry registry;
+    const auto root=fs::temp_directory_path()/(L"suzerain-backup-ui-"+writeId());
+    const auto target=root/L"Active.json",folder=root/L".rizia-backups";
+    fs::create_directories(folder);
+    fs::copy_file(sample,target);
+    const auto original=readFile(target);
+    loadDocumentBytes(original,target,0);
+    navigate(6);
+    const int count=std::max(1,ListView_GetCountPerPage(g.grid))+5;
+    for(int i=0;i<count;++i)
+        fs::copy_file(sample,folder/(L"Active.json.slot-"+std::to_wstring(i)+L".bak"));
+    command(BACKUP_REFRESH,0);
+    check(static_cast<int>(g.backups.size())==count,"Backup history extends beyond one page");
+    const int last=count-1;
+    ListView_SetItemState(g.grid,last,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
+    ListView_EnsureVisible(g.grid,last,FALSE);
+    const auto selected=g.backups[last].path;
+    command(BACKUP_REFRESH,0);
+    const int top=ListView_GetTopIndex(g.grid);
+    check(g.backupIndex==last && g.backups[last].path==selected &&
+          ListView_GetNextItem(g.grid,-1,LVNI_SELECTED)==last &&
+          top<=last && last<top+ListView_GetCountPerPage(g.grid),
+          "Refreshing keeps the previewed backup selected and in view");
+
+    auto cancelShown=[]{return (GetWindowLongPtrW(ctl(BACKUP_CANCEL),GWL_STYLE)&WS_VISIBLE)!=0;};
+    command(BACKUP_RESTORE,0);
+    check(g.restoreArmed && cancelShown(),"The first restore click shows its cancel action");
+    std::ofstream(selected,std::ios::binary|std::ios::app).put('\n');
+    const auto timer=SetTimer(nullptr,0,50,dismissValidationWarning);
+    check(timer!=0,"Install a timer to dismiss the changed-backup warning");
+    command(BACKUP_RESTORE,0);
+    KillTimer(nullptr,timer);
+    check(!g.restoreArmed && !cancelShown() && readFile(target)==original,
+          "A changed backup clears confirmation and leaves the open save intact");
+    for(const auto& backup:g.backups)fs::remove(backup.path);
+    fs::remove(target);fs::remove(folder);fs::remove(root);
+}
+
 void testChoiceHintsPreference(){
     AppearanceTestRegistry registry;
     check(!live_setup::choiceHintsEnabled(),"Choice previews default to off");
@@ -652,10 +691,17 @@ void testAppearance(const fs::path& path){
     SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(5,6));
     check(glassPointer(appearanceButton).x==5 && glassPointer(appearanceButton).y==6,
           "A pointer entering a button locates its reflection in client coordinates");
-    if(glass::enabled()){
+    if(glass::followsPointer()){
         SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(33,9));
         check(glassPointer(appearanceButton).x==33,"The light follows the pointer across one control");
     }
+    const auto previousPosition=glassPointer(appearanceButton);
+    const bool previousMotion=glass::motionAllowed;
+    glass::motionAllowed=false;
+    SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(46,12));
+    check(glassPointer(appearanceButton).x==previousPosition.x && !glass::followsPointer(),
+          "Reduced motion keeps the hover state without tracking a moving reflection");
+    glass::motionAllowed=previousMotion;
     SendMessageW(appearanceButton,WM_MOUSELEAVE,0,0);
     check(!GetPropW(appearanceButton,L"RiziaHover") && pointerButton!=appearanceButton,
           "Leaving a control clears its hover and its light source");
@@ -1051,6 +1097,7 @@ int main(int argc,char** argv){
         const HWND window=CreateWindowW(wc.lpszClassName,L"",WS_OVERLAPPEDWINDOW,0,0,1120,740,nullptr,nullptr,wc.hInstance,nullptr);
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testChoiceHintsPreference();
+        testBackupRefreshAndRestore(fs::u8path(argv[1]));
         testSaveQueries();
         testPickerSearchWhileScanning(fs::u8path(argv[1]));
         testPickerCurrentSave(fs::u8path(argv[1]));
