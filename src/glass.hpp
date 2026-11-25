@@ -2,11 +2,16 @@
 
 // An in-window material. Alpha is composited over the application's own canvas.
 namespace glass {
-inline constexpr int menuCommand = 16410;
-inline bool preferred = true;
+// GlassEffects used to be a Boolean. Its original 0 and 1 values retain
+// their meanings, including when an older desktop build reads this preference.
+enum Finish { Solid, Clear, Frosted };
+inline constexpr int firstFinishCommand = 16410;
+inline constexpr int headingCommand = firstFinishCommand + 3;
+inline Finish preferred = Clear;
 inline bool systemAllows = true;
 inline bool motionAllowed = true;
-inline bool enabled() { return preferred && systemAllows; }
+inline Finish effectiveFinish() { return systemAllows ? preferred : Solid; }
+inline bool enabled() { return effectiveFinish() != Solid; }
 inline bool followsPointer() { return enabled() && motionAllowed; }
 
 inline void refreshSettings() {
@@ -20,11 +25,15 @@ inline void refreshSettings() {
                               (contrast.dwFlags & HCF_HIGHCONTRASTON);
     BOOL animations=TRUE;
     motionAllowed=!SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION,0,&animations,0) || animations;
-    preferred = setting(Theme::settingsKey, L"GlassEffects");
+    DWORD finish=Clear, bytes=sizeof(finish);
+    if(RegGetValueW(HKEY_CURRENT_USER,Theme::settingsKey,L"GlassEffects",RRF_RT_REG_DWORD,
+                    nullptr,&finish,&bytes)!=ERROR_SUCCESS || finish>Frosted)finish=Clear;
+    preferred=static_cast<Finish>(finish);
     systemAllows = !highContrast && setting(L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", L"EnableTransparency");
 }
-inline bool toggle() {
-    const DWORD value = preferred ? 0 : 1;
+inline bool saveFinish(Finish finish) {
+    if(!systemAllows || finish<Solid || finish>Frosted)return false;
+    const DWORD value=finish;
     if (RegSetKeyValueW(HKEY_CURRENT_USER, Theme::settingsKey, L"GlassEffects",
                         REG_DWORD, &value, sizeof(value)) != ERROR_SUCCESS) return false;
     refreshSettings();
@@ -34,6 +43,16 @@ inline const wchar_t* label() {
     static constexpr const wchar_t* names[] = {L"液态玻璃",L"液態玻璃",L"Liquid Glass",L"リキッドグラス",
         L"리퀴드 글라스",L"Liquid Glass",L"Liquid Glass",L"Liquid Glass",L"Liquid Glass",L"Liquid Glass",L"Liquid Glass"};
     return names[i18n::language];
+}
+inline const wchar_t* finishLabel(Finish finish) {
+    static constexpr const wchar_t* names[][3]={
+        {L"纯色",L"通透",L"柔雾"},{L"純色",L"通透",L"柔霧"},{L"Solid",L"Clear",L"Frosted"},
+        {L"単色",L"クリア",L"すりガラス"},{L"단색",L"투명",L"반투명"},
+        {L"Deckend",L"Klar",L"Mattiert"},{L"Opaque",L"Clair",L"Dépoli"},
+        {L"Opaco",L"Claro",L"Esmerilado"},{L"Opaco",L"Transparente",L"Fosco"},
+        {L"Сплошной",L"Прозрачный",L"Матовый"},{L"Opak",L"Şeffaf",L"Buzlu"}
+    };
+    return names[i18n::language][finish];
 }
 
 inline COLORREF mix(COLORREF a, COLORREF b, double fraction) {
@@ -193,11 +212,11 @@ inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
             // The fine dark silhouette sits outside the specular lip. Keeping
             // them apart leaves the sides clear where neither light strikes.
             const double depth=-d/scale;
-            pigment(a,r,g,b,shadow,(darkTint?.64:.35)*bump((depth-.03)/.70));
-            pigment(a,r,g,b,shadow,(darkTint?.13:.075)*bump((depth-2.45)/1.20));
-            pigment(a,r,g,b,reflection,(darkTint?.30:.24)*bounce*bump((depth-3.0)/1.75));
-            const double specular=darkTint?.035+.75*sun+.43*bounce:.055+.92*sun+.56*bounce;
-            pigment(a,r,g,b,RGB(255,255,255),specular*bump((depth-1.12)/(darkTint?.65:.75)));
+            pigment(a,r,g,b,shadow,(darkTint?.55:.29)*bump((depth-.02)/.62));
+            pigment(a,r,g,b,shadow,(darkTint?.082:.045)*bump((depth-2.45)/1.14));
+            pigment(a,r,g,b,reflection,(darkTint?.27:.22)*bounce*bump((depth-2.84)/1.58));
+            const double specular=darkTint?.022+.88*sun+.49*bounce:.033+.98*sun+.58*bounce;
+            pigment(a,r,g,b,RGB(255,255,255),specular*bump((depth-1.03)/(darkTint?.61:.68)));
             entry.image.pixels[y*size+x]=argb(a,r,g,b);
         }
         found=&entry;
@@ -283,7 +302,12 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     for(int x=0;x<cols;++x) sx[x]=refract(x,cols,w,radius);
     const auto crest=mix(tint,white,darkTint?(active?.07:.14):.68);
     const auto base=mix(tint,Theme::accent,darkTint?.075:.09);
-    const unsigned density=active?(darkTint?244:202):(darkTint?150:112);
+    const bool frosted=effectiveFinish()==Frosted;
+    // A milkier body keeps color from the canvas but attenuates its detail.
+    // Preserve the stronger pigment of primary actions in both finishes.
+    const unsigned clearDensity=active?(darkTint?244:202):(darkTint?150:112);
+    const unsigned density=frosted?std::max(clearDensity,darkTint?216u:208u):clearDensity;
+    const int spread=frosted?3:1;
     // Diffuse the already downsampled backdrop across the shoulder and keep
     // its refracted color. Reading the four surrounding samples also softens
     // hard background transitions as they pass under a floating control.
@@ -293,14 +317,14 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     for(int y=0;y<rows;++y) {
         const int sy=refract(y,rows,h,radius);
         const DWORD* scan=backdrop.data()+sy*cols;
-        const DWORD* above=backdrop.data()+std::max(0,sy-1)*cols;
-        const DWORD* below=backdrop.data()+std::min(rows-1,sy+1)*cols;
+        const DWORD* above=backdrop.data()+std::max(0,sy-spread)*cols;
+        const DWORD* below=backdrop.data()+std::min(rows-1,sy+spread)*cols;
         const double v=double(y)/(rows-1);
         const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
         const auto right=mix(base,crest,.12+.27*v);
         for(int x=0;x<cols;++x) {
             const int ix=sx[x];
-            const DWORD horizontal=averagePixel(scan[std::max(0,ix-1)],scan[std::min(cols-1,ix+1)]);
+            const DWORD horizontal=averagePixel(scan[std::max(0,ix-spread)],scan[std::min(cols-1,ix+spread)]);
             const DWORD vertical=averagePixel(above[ix],below[ix]);
             const DWORD sample=averagePixel(scan[ix],averagePixel(horizontal,vertical));
             const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);

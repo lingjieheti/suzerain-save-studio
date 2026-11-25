@@ -6,6 +6,8 @@ Antes, quando queria mudar alguma coisa nas minhas partidas de *Suzerain*, eu qu
 
 **[Baixar a versão preliminar 0.22.0 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)**
 
+Na janela de seleção de saves ou no editor, abra **Aparência**. Você pode combinar qualquer um dos quatro temas de cor com o acabamento **Transparente**, **Fosco** ou **Opaco**.
+
 Pressione **Ctrl+F8** para consultar a pontuação interna de opinião pública da campanha, quando disponível. No editor de arquivos salvos, pesquise `PO` para encontrar esse valor.
 
 Ative a prévia das escolhas no painel **Ctrl+F8** e feche o painel. Posicione o cursor sobre uma opção e pressione e solte a tecla **Ctrl** da esquerda ou da direita para ver os efeitos. Pressione a tecla novamente ou afaste o cursor para fechar a prévia. Para comparar outra opção, posicione o cursor sobre ela e pressione Ctrl. O recurso vem desativado. Algumas consequências dependem do desenrolar da história.

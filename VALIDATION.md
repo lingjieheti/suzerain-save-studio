@@ -2,6 +2,12 @@
 
 The Windows x64 archive includes the 0.22.0 editor and optional 0.22.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
 
+## Desktop materials in 0.22.0
+
+The Windows editor uses its own renderer for a full-height sidebar, a shared file toolbar and a campaign-aware save picker. Clear and Frosted take their color from the application canvas. Solid uses the theme’s opaque surface. Numerical rows keep a stable background in all three finishes. These choices draw on Apple's guidance for navigation materials and its 2026 refinements to translucency and sidebar structure. [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/materials) · [Platforms State of the Union, WWDC26](https://developer.apple.com/videos/play/wwdc2026/102/)
+
+Native tests compare the same control over light and dark backgrounds in each theme. The Frosted finish transmits less background contrast than Clear, and Solid returns the theme's panel color. In an isolated Windows profile we selected finishes from the actual menus, switched between the picker and editor, reopened the app and verified the saved preference. With transparency disabled the editor used Solid. We also checked the picker at 200% scaling with four themes and two widths, using synthetic files.
+
 ## Looking up public opinion in 0.22.0
 
 In the 0.21.1 Windows editor, searching for 民意 or “public approval” in the Sordland and Rizia examples returned no rows even though both files contained a public opinion field. The desktop editor now recognizes those terms and the guide abbreviation PO. Each campaign uses its own total opinion field. In Advanced, an exact PO query puts the total first and retains other matches such as Manpower. We checked 288 searches and 32 keyboard focus transitions across four themes at widths of 800 and 1,200 DIP. A separate check used the EXE extracted from the release ZIP.

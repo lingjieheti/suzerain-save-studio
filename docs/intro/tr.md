@@ -6,6 +6,8 @@ Eskiden *Suzerain* oynarken bir şeyi değiştirmek istediğimde çoğunlukla ka
 
 **[Windows 10/11 x64 için 0.22.0 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)**
 
+Kayıt seçim ekranında veya düzenleyicide **Görünüm** menüsünü açın. Dört renk temasının her birinde **Şeffaf**, **Buzlu** veya **Opak** görünümü seçebilirsiniz.
+
 Oyunun sunduğu durumlarda **Ctrl+F8** ile mevcut seferin kamuoyu puanını görebilirsiniz. Kayıt düzenleyicisinde bu değeri `PO` yazarak arayabilirsiniz.
 
 **Ctrl+F8** panelinde seçenek önizlemesini açıp paneli kapatın. İmleci bir seçeneğin üzerine getirin ve etkilerini görmek için sol veya sağ **Ctrl** tuşuna bir kez basıp bırakın. Tekrar bastığınızda veya imleci uzaklaştırdığınızda ipucu kapanır. Başka bir seçeneği incelemek için imleci üzerine getirip Ctrl tuşuna basın. Özellik varsayılan olarak kapalıdır. Bazı sonuçlar hikâyenin ilerleyişine bağlıdır.

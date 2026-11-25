@@ -14,7 +14,7 @@
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
-[按钮反光动图](docs/images/glass-hover.gif) · [四套配色与宽窄窗口](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
+[三种材质实拍对比](docs/images/glass-finishes.png) · [按钮反光动图](docs/images/glass-hover.gif) · [四套配色与宽窄窗口](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
 
 ## 快速上手
 
@@ -42,7 +42,7 @@
 
 打开里奇亚存档后，可以在同一行比较预算、权威和能源。大字是现有库存，旁边的小字显示每回合变化与上限。游戏内的 Ctrl+F8 面板使用游戏自带字体显示中文和英文。
 
-默认配色是 **雾蓝**。侧栏和文件工具栏会映出背景的颜色。沿按钮边缘移动鼠标，反光会跟随指针，按下时向内收。数值和修改预览使用实色底，长时间对照也清楚。选档器和编辑器的 **外观** 菜单提供 **雾蓝、暖纸、林间、午夜** 四套配色，也可以单独关闭 **液态玻璃**。关闭 Windows 动画效果后，桌面端保留静态玻璃。开启高对比度或关闭系统透明效果时，桌面端使用实色。
+默认配色是 **雾蓝**。侧栏和文件工具栏会映出背景的颜色。沿按钮边缘移动鼠标，反光会跟随指针，按下时向内收。数值和修改预览使用实色底，长时间对照也清楚。选档器和编辑器的 **外观** 菜单提供 **雾蓝、暖纸、林间、午夜** 四套配色，每套配色都可以再选择一种材质。**通透**能看见背后的色彩，**柔雾**让工具栏和侧栏的底色更均匀，**纯色**适合偏爱实色界面的玩家。关闭 Windows 动画效果后，桌面端保留静态玻璃。开启高对比度或关闭系统透明效果时，桌面端使用实色。
 
 ## 功能
 
@@ -74,7 +74,7 @@ To see what a choice changes, enable **Preview choices with Ctrl** in the **Ctrl
 
 The desktop editor uses equal-width digits in numeric columns and inputs. The Ctrl+F8 panel uses the game's own font for English and Chinese, with bold headings and larger resource values. [View the new panel with simulated campaign data](docs/images/live-glass-preview.png)
 
-New installations open in **Fjord**. Move the pointer along a glass button to see the highlight follow its edge, then press to see it shift inward. Rizia’s three resource balances share one solid strip, with income and caps alongside each balance. Under **Appearance**, choose **Paper**, **Forest**, **Fjord** or **Midnight**, or turn off **Liquid Glass**. Turning off Windows animations keeps the desktop glass still. High contrast or disabled transparency gives it a solid finish.
+New installations open in **Fjord**. Move the pointer along a glass button to see the highlight follow its edge, then press to see it shift inward. Rizia’s three resource balances share one solid strip, with income and caps alongside each balance. Under **Appearance**, choose **Paper**, **Forest**, **Fjord** or **Midnight**. Pair any theme with **Clear** for more background color, **Frosted** for a quieter toolbar and sidebar, or **Solid** for an opaque finish. Turning off Windows animations keeps the desktop glass still. High contrast or disabled transparency gives it a solid finish.
 
 Download and extract the Windows x64 ZIP above. Run the executable, open a discovered save or try either built-in sample. Select a field, enter a value and apply it. In **Review changes**, inspect each original and proposed value before saving. To use the optional in-game resource panel, choose **Live mode** on startup. It requires an existing BepInEx 6 IL2CPP installation. After installation, open a campaign and press **Ctrl+F8**. In a live Sordland campaign, v0.13.1 changed the government budget from 16 to 17 and personal wealth from 1 to 2, and restored both original values. The game's top bar and the panel agreed after all four writes. Rizia’s three resources have been tested in simulation only. [HUD verification and test coverage](VALIDATION.md)
 

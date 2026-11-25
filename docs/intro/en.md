@@ -6,6 +6,8 @@ I used to edit my *Suzerain* saves by hand. Loading the same save twice every ti
 
 **[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.22.0)
 
+In the save picker or editor, open **Appearance** and choose **Clear**, **Frosted** or **Solid** for any of the four color themes.
+
 Press **Ctrl+F8** to check the current campaign’s internal public opinion score when available. Search for `PO` in the desktop editor’s Advanced tab to find the saved score.
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel, then close the panel. Point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. To preview another choice, point to it and tap Ctrl. The feature is off by default. Some later outcomes depend on how the story unfolds.

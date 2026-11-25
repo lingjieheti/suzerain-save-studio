@@ -6,6 +6,8 @@
 
 [下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)
 
+選檔視窗和編輯器都可以從「外觀」選擇「通透」「柔霧」或「純色」，四套配色都適用。
+
 載入戰役後按 **Ctrl+F8**，即可查看遊戲提供的民意分值。在桌面編輯器搜尋「民意」或 `PO`，也能找到存檔裡的公眾支持度。
 
 按 **Ctrl+F8** 開啟面板，啟用選項結果預覽後關閉面板。將滑鼠指向選項，輕按一下左邊或右邊的 **Ctrl** 鍵即可查看效果。再按一次或移開滑鼠即可收起提示。想查看其他選項時，將滑鼠移過去再按 Ctrl。這項功能預設關閉，部分結果要等後續劇情才能確定。

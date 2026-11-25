@@ -6,6 +6,8 @@ Früher habe ich in *Suzerain* fast alles über die Spielstände geändert. Nach
 
 **[Vorschauversion 0.22.0 für Windows 10/11 (x64) herunterladen](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)**
 
+Im Auswahlfenster für Spielstände und im Editor stehen unter **Design** für jedes der vier Farbthemen die Varianten **Klar**, **Mattiert** und **Deckend** zur Wahl.
+
 Mit **Strg+F8** kannst du den internen Wert für die öffentliche Meinung im aktuellen Spielstand ablesen, sofern er verfügbar ist. Im Desktop-Editor findest du ihn über die Suche nach `PO`.
 
 Aktiviere die Auswahlvorschau im **Ctrl+F8**-Panel und schließe das Panel. Zeige mit der Maus auf eine Option und drücke kurz die linke oder rechte **Strg**-Taste. Drücke sie erneut oder bewege den Mauszeiger von der Option weg, um die Vorschau zu schließen. Für eine andere Option drückst du dort erneut Strg. Die Funktion ist standardmäßig ausgeschaltet. Manche Folgen hängen vom späteren Spielverlauf ab.

@@ -182,8 +182,11 @@ void useChineseFont(typography::ChineseFont font) {
     RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
 }
 void applyAppearanceCommand(int command) {
-    if(command==glass::menuCommand) {
-        if(glass::toggle())RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    if(command>=glass::firstFinishCommand && command<glass::headingCommand) {
+        const auto finish=static_cast<glass::Finish>(command-glass::firstFinishCommand);
+        if(!glass::systemAllows || finish==glass::preferred)return;
+        if(glass::saveFinish(finish))RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+        else message(i18n::language<=1?tr(L"无法保存外观设置。"):L"The appearance setting could not be saved.",MB_ICONWARNING);
     }else if(command>=Theme::menuBase && command<fontHeadingCommand) {
         applyAppearance(command-Theme::menuBase);
     }else if(command>=firstFontCommand && command<firstFontCommand+typography::fontCount) {
@@ -195,11 +198,11 @@ void applyAppearanceCommand(int command) {
     }
 }
 void syncAppearance() {
-    const bool oldGlass=glass::enabled();
+    const auto oldFinish=glass::effectiveFinish();
     const bool oldReflection=glass::followsPointer();
     glass::refreshSettings();
     recolorWorkspace(Theme::stored());useChineseFont(typography::stored());
-    if(oldGlass!=glass::enabled() || oldReflection!=glass::followsPointer())
+    if(oldFinish!=glass::effectiveFinish() || oldReflection!=glass::followsPointer())
         RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 void updateStatus(){

@@ -10,7 +10,7 @@
 
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
-点“外观”可以切换雾蓝、暖纸、林间和午夜。开启“液态玻璃”时，指针沿按钮移动会带动边缘高光。想让反光静止，可以关闭 Windows 动画效果。想使用实色，可以在“外观”中取消勾选“液态玻璃”。
+在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
 
 覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
 
@@ -28,7 +28,7 @@
 
 In a campaign, press **Ctrl+F8** to see the internal public opinion score if available. To look it up in a save, search Advanced for `PO`.
 
-Open **Appearance** to choose a color theme. Turn off Windows animations for a stationary reflection, or uncheck **Liquid Glass** for solid navigation and controls in the same color theme.
+Open **Appearance** in the picker or editor. Choose a theme, then **Clear**, **Frosted** or **Solid**. Frosted softens more of the background color behind controls. Turn off Windows animations for stationary highlights.
 
 Open **Support the author** in the save picker or editor sidebar. Scan the appreciation code with WeChat to tip the author, or choose PayPal or USDT. For USDT, use the TRON (TRC20) network.
 
