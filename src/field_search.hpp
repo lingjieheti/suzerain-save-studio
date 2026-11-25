@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include "win_text.hpp"
 
 namespace field_search {
 inline bool space(wchar_t c) {
@@ -77,13 +78,15 @@ inline PastedKey pastedKey(std::wstring_view query) {
             if (key.size() < quote.size() || key.substr(key.size() - quote.size()) != quote) return {};
             key.remove_suffix(quote.size());
         }
-    } else if (equals == query.npos) return {};
-
-    if (key.find(L'.') == key.npos || !std::all_of(key.begin(), key.end(), [](wchar_t c) {
-        return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z') ||
-               (c >= L'0' && c <= L'9') || c == L'_' || c == L'.';
-    })) return {};
-    return {std::string(key.begin(), key.end()), prefix};
+        if (key.find(quote.back()) != key.npos || key.find_first_of(L"[]\\\r\n") != key.npos) return {};
+    } else {
+        if (equals == query.npos || !std::all_of(key.begin(), key.end(), [](wchar_t c) {
+            return (c >= L'A' && c <= L'Z') || (c >= L'a' && c <= L'z') ||
+                   (c >= L'0' && c <= L'9') || c == L'_' || c == L'.' || (c >= 128 && !space(c));
+        })) return {};
+    }
+    if (key.find(L'.') == key.npos) return {};
+    return {utf8(key), prefix};
 }
 
 inline bool matches(const std::wstring& index, const std::vector<std::wstring>& terms) {
