@@ -501,9 +501,17 @@ namespace SuzerainSaveStudio.Live
                 ? (snapshot.Story=="StoryPack_Main"?T("索德兰","Sordland"):T("里奇亚","Rizia"))+
                     "  ·  "+T("回合 ","Turn ")+snapshot.Turn+"  ·  "+T("步骤 ","Step ")+snapshot.Step
                 : T("等待战役","Waiting for a campaign");
-            Fill(new Rect(Inset,59,7,7),ready ? palette.Success : palette.Muted,3.5f);
-            GUI.Label(new Rect(Inset+14,49,content-97,26),campaign,caption);
-            if (Button(new Rect(width-Inset-74,49,74,26),"refresh",T("刷新","Refresh"),quiet:true)) Refresh();
+            var opinion = known ? snapshot.PublicOpinion : null;
+            float metadataTop = opinion.HasValue ? 45 : 49;
+            Fill(new Rect(Inset,metadataTop+10,7,7),ready ? palette.Success : palette.Muted,3.5f);
+            GUI.Label(new Rect(Inset+14,metadataTop,content-97,26),campaign,caption);
+            if (Button(new Rect(width-Inset-74,metadataTop,74,26),"refresh",T("刷新","Refresh"),quiet:true)) Refresh();
+            if (opinion.HasValue)
+            {
+                string score = opinion.Value.ToString("G12",CultureInfo.InvariantCulture);
+                DrawFittedLabel(new Rect(Inset+14,71,content-14,16),
+                    T("民意分值  ","Public opinion score  ")+score,caption);
+            }
             bool hasFields = snapshot != null && snapshot.Fields.Count > 0;
             if (hasFields) DrawFields(content,ready);
             if (!ready || !hasFields)

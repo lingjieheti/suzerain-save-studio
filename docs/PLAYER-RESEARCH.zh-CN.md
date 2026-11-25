@@ -4,6 +4,8 @@
 
 ## 玩家的操作遇到了什么问题
 
+11 月 25 日，同一位 Steam 玩家在两帖中提到，希望随时了解公众支持、党内派系占比和经济走势。另一位 Reddit 玩家描述过在做决定前后重新打开存档、对照民意的做法。索德兰和里奇亚都已有可识别的总民意字段，0.22.0 将这个分数加到 Ctrl+F8 面板供只读查看，也补上了桌面搜索「民意」的入口。党内席位占比与民调百分比需要其他数据。[Steam 玩家首帖](https://steamcommunity.com/app/1207650/discussions/0/570429913810610042/) · [同一玩家的补充](https://steamcommunity.com/app/1207650/discussions/0/570429913810674831/) · [Reddit 玩家讨论](https://www.reddit.com/r/suzerain/comments/1qq1buh/the_assembly_always_overturn_my_vetos_for_the/)
+
 | 玩家要做的事 | 玩家实际遇到的问题 | 本次改动 |
 | --- | --- | --- |
 | 每次开档都能找到同一组变量 | 有玩家点名预算、预算上限和权威，希望自行收藏任意字段。作者随后回复已加入置顶。[玩家的具体需求](https://www.reddit.com/r/suzerain/comments/1luxuyg/comment/n23cjhw/) · [作者回复](https://www.reddit.com/r/suzerain/comments/1luxuyg/comment/n23ioml/) | 用原始键记住收藏，同一战役换档、重启后仍可使用。 |

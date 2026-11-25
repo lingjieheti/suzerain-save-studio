@@ -1,6 +1,12 @@
-# v0.21.1 Preview — Windows validation
+# v0.22.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.21.1 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.22.0 editor and optional 0.22.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Looking up public opinion in 0.22.0
+
+In the 0.21.1 Windows editor, searching for 民意 or “public approval” in the Sordland and Rizia examples returned no rows even though both files contained a public opinion field. The desktop editor now recognizes those terms and the guide abbreviation PO. Each campaign uses its own total opinion field. In Advanced, an exact PO query puts the total first and retains other matches such as Manpower. We checked 288 searches and 32 keyboard focus transitions across four themes at widths of 800 and 1,200 DIP. A separate check used the EXE extracted from the release ZIP.
+
+The live panel reads the active campaign’s numeric Dialogue System variable when the scene, turn, story and loaded save match. The indicator is read-only. In simulated Sordland and Rizia sessions we checked zero, negative and fractional scores, missing and invalid variables, refreshes during editing, and campaign switches. An unavailable score left resource editing available. The Chinese and English layouts were checked across four themes and compact and wide simulated screens. This readout has been compiled against the local Steam interop assemblies and tested with game API doubles. Its value and appearance in a running game have yet to be independently verified. [Sordland and Rizia field records](docs/FIELD-EVIDENCE.md)
 
 ## Custom field names in 0.21.1
 

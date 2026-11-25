@@ -7,9 +7,11 @@
 | 索德兰 | 政府预算、私人资产 |
 | 里奇亚 | 预算、权威、能源 |
 
-![雾蓝主题的游戏内实时面板模拟预览，显示里奇亚的预算、权威与能源](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.20.0/docs/images/live-glass-preview.png)
+按 **Ctrl+F8** 可以查看当前战役的**民意分值**。游戏提供该值时，面板会只读显示，保留负值与小数。它表示游戏内部的公众支持度。面板打开期间会定时重新读取。
 
-上图根据 v0.20.0 面板在模拟里奇亚战役中的绘制指令生成。载入战役后，面板会列出当前可调的资源。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。[v0.16.1 游戏主菜单实拍](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.16.1/docs/images/live-panel-preview.png)
+![v0.22.0 雾蓝主题模拟预览，显示里奇亚的民意分值与资源](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.22.0/docs/images/live-glass-preview.png)
+
+上图来自 Windows 上的模拟里奇亚战役，按面板实际绘制指令生成。民意读取已在模拟战役验证，真实游戏内显示仍待核验。面板内可用 Tab 和 Shift+Tab 移动焦点、Enter 操作选中的按钮、Esc 取消。[v0.16.1 游戏主菜单实拍](https://raw.githubusercontent.com/lingjieheti/suzerain-save-studio/v0.16.1/docs/images/live-panel-preview.png)
 
 0.16.1 使用游戏自带的界面字体显示中文和英文。标题与主按钮加粗，库存和确认前后的数值使用较大的常规字。窄屏下，较长的英文资源名和数值会按可用宽度缩小。
 

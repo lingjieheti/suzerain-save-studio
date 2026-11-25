@@ -25,6 +25,7 @@ internal static class Program
         SceneManager.Handle = 1;
         SceneManager.Loaded = true;
         DialogueLua.ThrowOnRead = false;
+        DialogueLua.UnreadableKey = null;
         DialogueLua.OnSet = null;
         DialogueLua.Writes.Clear();
         DialogueLua.Variables.Clear();
@@ -82,6 +83,49 @@ internal static class Program
         Game(Sordland);
         Reject(LiveGame.Read(), Stock, 1, "Foreign campaign key");
         Reject(LiveGame.Read(), "BaseGame.Arbitrary", 1, "Unlisted field");
+    }
+
+    private static void PublicOpinion()
+    {
+        const string mainOpinion = "BaseGame.Public_Opinion", riziaOpinion = "RiziaDLC.Country_PublicOpinion";
+        foreach (var story in new[] { Sordland, Rizia })
+        {
+            Game(story);
+            string key = story == Sordland ? mainOpinion : riziaOpinion;
+            string foreign = story == Sordland ? riziaOpinion : mainOpinion;
+            DialogueLua.Put(foreign, 91);
+            Check(LiveGame.Read().PublicOpinion == null, "A foreign opinion variable cannot substitute for a missing campaign value");
+            foreach (double value in new[] { -3.5, 0, 1.125, 12345678901.25 })
+            {
+                DialogueLua.Put(key, value);
+                var view = LiveGame.Read();
+                Check(view.PublicOpinion == value && view.Find(key) == null, "The current campaign exposes the unscaled opinion only for reading");
+                Reject(view, key, 4, "An observed opinion cannot be written");
+            }
+            foreach (double invalid in new[] { double.NaN, double.NegativeInfinity, double.PositiveInfinity })
+            {
+                DialogueLua.Put(key, invalid);
+                Check(LiveGame.Read().PublicOpinion == null, "Nonfinite opinion is unavailable");
+            }
+            DialogueLua.Variables[key] = new Result { luaValue = new Language.Lua.LuaValue() };
+            Check(LiveGame.Read().PublicOpinion == null, "Nonnumeric opinion is unavailable");
+            DialogueLua.Put(key, 7);
+            DialogueLua.UnreadableKey = key;
+            var resource = story == Sordland ? Budget : Stock;
+            var snapshot = LiveGame.Read();
+            Check(snapshot.PublicOpinion == null && snapshot.Status == "" &&
+                  LiveGame.TrySet(snapshot, resource, 4, out _) && DialogueLua.Writes.SequenceEqual(new[] { resource }),
+                  "A failed opinion lookup preserves normal resource reading and writing");
+            DialogueLua.UnreadableKey = null;
+            File.saveData.currentStoryPack = story == Sordland ? Rizia : Sordland;
+            Check(LiveGame.Read().PublicOpinion == null, "A save from a different campaign cannot expose stale opinion");
+            File.saveData = null;
+            Check(LiveGame.Read().PublicOpinion == null, "Opinion is absent until an active save is loaded");
+        }
+        Game(Sordland);
+        DialogueLua.Put(mainOpinion, 7);
+        Flow.currentStep = null;
+        Check(LiveGame.Read().PublicOpinion == null, "The menu or an inactive step cannot expose a previous campaign's opinion");
     }
 
     private static void Values()
@@ -205,6 +249,7 @@ internal static class Program
     private static void Main()
     {
         ActivityAndIdentity();
+        PublicOpinion();
         Values();
         DraftSteps();
         Readback();

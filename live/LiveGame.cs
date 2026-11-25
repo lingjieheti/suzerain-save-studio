@@ -25,6 +25,7 @@ public sealed class Snapshot
     public string Story { get; }
     public int Turn { get; }
     public int Step { get; }
+    public double? PublicOpinion { get; }
     public bool CanEdit => LoadedData != null && Fields.Count > 0;
     public string Status { get; }
     public IReadOnlyList<LiveField> Fields { get; }
@@ -36,11 +37,12 @@ public sealed class Snapshot
 
     internal Snapshot(string status, string story = "", int turn = 0, int step = 0,
         List<LiveField> fields = null, SaveData data = null, StepEntry loadedStep = null,
-        int sceneHandle = 0, int flowId = 0)
+        int sceneHandle = 0, int flowId = 0, double? publicOpinion = null)
     {
         Story = story;
         Turn = turn;
         Step = step;
+        PublicOpinion = publicOpinion;
         Fields = fields == null
             ? (IReadOnlyList<LiveField>)Array.Empty<LiveField>()
             : fields.AsReadOnly();
@@ -78,7 +80,7 @@ public static class LiveGame
     private const string Inactive = "请载入战役。 / Load a campaign.";
     private const string Stale = "战役或回合已切换，请刷新。 / Session changed. Refresh.";
 
-    private static bool ReadNumber(string key, out int value)
+    private static bool ReadFiniteNumber(string key, out double value)
     {
         value = 0;
         if (!DialogueLua.DoesVariableExist(key)) return false;
@@ -86,22 +88,43 @@ public static class LiveGame
         if (result == null || !result.IsNumber) return false;
         var number = result.luaValue?.TryCast<LuaNumber>();
         if (number == null) return false;
-        double raw = number.Number;
-        if (raw < int.MinValue || raw > int.MaxValue || raw != Math.Truncate(raw)) return false;
+        value = number.Number;
+        return double.IsFinite(value);
+    }
+
+    private static bool ReadInteger(string key, out int value)
+    {
+        value = 0;
+        if (!ReadFiniteNumber(key, out var raw) || raw < int.MinValue || raw > int.MaxValue ||
+            raw != Math.Truncate(raw)) return false;
         value = (int)raw;
         return true;
     }
 
     private static void AddField(List<LiveField> list, string key, string capKey = null)
     {
-        if (!ReadNumber(key, out var value)) return;
+        if (!ReadInteger(key, out var value)) return;
         int? cap = null;
         if (capKey != null)
         {
-            if (!ReadNumber(capKey, out var maximum) || maximum < 0) return;
+            if (!ReadInteger(capKey, out var maximum) || maximum < 0) return;
             cap = maximum;
         }
         list.Add(new LiveField(key, value, cap));
+    }
+
+    private static double? ReadPublicOpinion(string story)
+    {
+        var key = story == Main ? "BaseGame.Public_Opinion" : "RiziaDLC.Country_PublicOpinion";
+        try
+        {
+            return ReadFiniteNumber(key, out var value) ? value : null;
+        }
+        catch (Exception)
+        {
+            // An optional indicator can be unavailable while the resource slots are still usable.
+            return null;
+        }
     }
 
     public static Snapshot Read()
@@ -144,7 +167,7 @@ public static class LiveGame
             string status = fields.Count == expectedCount ? "" :
                 "部分数值尚未就绪。 / Some fields are unavailable.";
             return new Snapshot(status, story, turn, step, fields, data, currentStep,
-                scene.handle, flow.GetInstanceID());
+                scene.handle, flow.GetInstanceID(), ReadPublicOpinion(story));
         }
         catch (Exception)
         {

@@ -18,11 +18,15 @@
 
 如果想在游戏运行时微调资源，请查阅[实时面板说明](../live/README.zh-CN.md)。
 
+载入战役后，按 **Ctrl+F8** 可查看当前的民意分值。面板打开时会定期读取这一内部数值。要查存档里的公众支持度，可打开「高级字段」搜「民意」或 `PO`。
+
 想支持作者，可从选档窗口底部或编辑器侧栏打开 **赞助作者**，用微信「扫一扫」扫描赞赏码，也可以选择 PayPal 或 USDT。USDT 使用 TRON（TRC20）网络，可在窗口中复制地址。
 
 按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
+
+In a campaign, press **Ctrl+F8** to see the internal public opinion score if available. To look it up in a save, search Advanced for `PO`.
 
 Open **Appearance** to choose a color theme. Turn off Windows animations for a stationary reflection, or uncheck **Liquid Glass** for solid navigation and controls in the same color theme.
 

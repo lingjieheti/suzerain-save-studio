@@ -964,6 +964,58 @@ void testResourceSearch(const fs::path& path){
     check(g.doc->render({})==example && pending().empty(), "Resource inspection preserves save bytes and edits");
 }
 
+void testPublicOpinionSearch() {
+    i18n::setLanguage(0);
+    for (const bool sordland : {true, false}) {
+        const auto story = sordland ? "StoryPack_Main" : "StoryPack_Rizia";
+        const std::string key = sordland ? "BaseGame.Public_Opinion" : "RiziaDLC.Country_PublicOpinion";
+        const std::string bytes = std::string(R"({"currentStoryPack":")") + story +
+            R"(","variables":"Variable={[\"BaseGame.Public_Opinion\"]=9,[\"BaseGame.Bludish_Opinion\"]=17,)"
+            R"([\"RiziaDLC.Country_PublicOpinion\"]=8,[\"RiziaDLC.Country_DastnuristOpinion\"]=12,)"
+            R"([\"RiziaDLC.Resources_Military_Manpower\"]=4,[\"RiziaDLC.Decision_Floating_DastnuristApproval_Happened\"]=true}"})";
+        loadDocumentBytes(bytes, {}, 0);
+        for (const int tab : {sordland ? 1 : 2, 4}) {
+            navigate(tab);
+            for (const auto query : {L"民意",L"支持率",L"民调",L"民調",L"public approval",L"公众支持度",L"public opinion"}) {
+                SetWindowTextW(g.search, query);
+                check(g.rows == std::vector<std::string>{key} && g.selected == key,
+                      "Public opinion terms select the active campaign's overall score");
+                check(textOf(g.name) == L"公众支持度" && textOf(g.desc).find(L"不是百分比") != std::wstring::npos,
+                      "Polling aliases preserve the score label and its units");
+            }
+            SetWindowTextW(g.search, wide(key).c_str());
+            check(g.rows == std::vector<std::string>{key}, "The raw public opinion key remains searchable");
+            SetWindowTextW(g.search, L" pO ");
+            check(!g.rows.empty() && g.rows.front() == key && std::count(g.rows.begin(),g.rows.end(),key) == 1,
+                  "The PO abbreviation shows the active campaign score first, once");
+        }
+        if (!sordland) {
+            const std::string manpower = "RiziaDLC.Resources_Military_Manpower";
+            check(g.rows == std::vector<std::string>{key,manpower}, "PO keeps unrelated substring results available");
+            selectRow(manpower);
+            refresh();
+            check(g.selected == manpower, "A player's chosen substring result keeps its selection");
+            command(FILTER_CHANGED,0);
+            check(g.rows.empty(), "The PO shortcut respects pending-only filtering");
+            command(FILTER_CHANGED,0);
+            const auto oldFavorites = g.favorites;
+            g.favorites = {manpower};
+            command(FILTER_FAVORITES,0);
+            check(g.rows == std::vector<std::string>{manpower}, "The PO shortcut respects favorites-only filtering");
+            command(FILTER_FAVORITES,0);
+            g.favorites = oldFavorites;
+            SetWindowTextW(g.search, L"P-O");
+            check(g.rows.front() == manpower, "Only a complete PO query changes the normal substring order");
+        }
+        check(g.doc->render({}) == bytes && pending().empty(), "Searching opinion scores leaves the save unchanged");
+    }
+    loadDocumentBytes(R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={[\"RiziaDLC.Resources_Military_Manpower\"]=4}"})",{},0);
+    navigate(4);
+    SetWindowTextW(g.search,L"PO");
+    check(g.rows == std::vector<std::string>{"RiziaDLC.Resources_Military_Manpower"},
+          "Without a public opinion field, PO still shows ordinary matches");
+}
+
 void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
     const auto riziaBytes=readFile(riziaPath);
     loadDocumentBytes(riziaBytes,riziaPath,0);
@@ -1129,6 +1181,7 @@ int main(int argc,char** argv){
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
+        testPublicOpinionSearch();
         testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));
         testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));

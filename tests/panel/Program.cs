@@ -10,6 +10,8 @@ using UnityEngine.SceneManagement;
 internal static class Program
 {
     private const string Budget = "BaseGame.GovernmentBudget";
+    private const string SordlandOpinion = "BaseGame.Public_Opinion";
+    private const string RiziaOpinion = "RiziaDLC.Country_PublicOpinion";
     private const string RiziaBudget = "RiziaDLC.Resources_Budget";
     private const string RiziaCap = "RiziaDLC.Rizia_HUDStat_Budget_Max";
     private static readonly LivePanel Panel = new(IntPtr.Zero);
@@ -111,6 +113,7 @@ internal static class Program
         var fjord = PanelAppearance.Choices[PanelAppearance.Fjord];
         Check(GUI.Fills[0] == (PanelPreferences.ReadGlassEffects() ? fjord.GlassFace : fjord.Background),
             "The panel opens using Fjord when there is no saved choice");
+        Check(!GUI.Labels.Any(label => label.Contains("opinion score")), "Absent opinion has no display row");
         foreach (var (button, expected) in new[] { ("+5", "27"), ("-1", "26"), ("-5", "21"), ("+1", "22") })
         {
             Click(button);
@@ -120,13 +123,25 @@ internal static class Program
         Key(KeyCode.Tab);
         Key(KeyCode.Return);
         Check(GUI.DisplayedDraft == "27", "Activate the focused step with Enter");
+        DialogueLua.Put(SordlandOpinion, -2.5);
+        Poll();
+        Check(GUI.Labels.Contains("Public opinion score  -2.5") && GUI.DisplayedDraft == "27",
+            "Polling the Sordland score preserves the resource draft and its keyboard focus");
         Key(KeyCode.Tab);
         Key(KeyCode.Return);
         Check(GUI.Labels.Contains("22   →   27") && DialogueLua.Writes.Count == 0, "Keyboard preview shows both values");
+        DialogueLua.Put(SordlandOpinion, 0);
+        Poll();
+        Check(GUI.Labels.Contains("Public opinion score  0") && GUI.Labels.Contains("22   →   27"),
+            "Zero is visible and score changes leave a pending confirmation intact");
         Key(KeyCode.Tab);
         Key(KeyCode.Return);
         Check(DialogueLua.Writes.SequenceEqual(new[] { Budget }) && LiveGame.Read().Find(Budget).Value == 27 &&
             GUI.Labels.Any(label => label.Contains("Verified in game")), "Confirmation writes once and rereads the value");
+        DialogueLua.Variables.Remove(SordlandOpinion);
+        Poll();
+        Check(!GUI.Labels.Any(label => label.Contains("opinion score")) && GUI.DisplayedDraft == "27",
+            "A score that disappears leaves no stale label and keeps resources available");
     }
 
     private static void ChoiceHints(RegistryKey root)
@@ -185,7 +200,12 @@ internal static class Program
             Click(step);
             Check(GUI.DisplayedDraft == draft && DialogueLua.Writes.Count == 1, "Invalid step preserves the draft");
         }
+        DialogueLua.Put(SordlandOpinion, 1.5);
+        Poll();
+        Check(GUI.Labels.Contains("Public opinion score  1.5") && GUI.DisplayedDraft == "-",
+            "Refreshing a score preserves a partly typed resource value");
         LoadCampaign("StoryPack_Rizia");
+        DialogueLua.Put(RiziaOpinion, 4.25);
         foreach (string resource in new[] { "Budget", "Authority", "Energy" })
         {
             DialogueLua.Put("RiziaDLC.Resources_" + resource, 10);
@@ -286,6 +306,14 @@ internal static class Program
                 var name = GUI.LabelTypes[chinese ? "王国预算" : "Royal budget"];
                 var value = GUI.LabelTypes["10"];
                 var primary = GUI.ButtonTypes[chinese ? "预览修改" : "Preview change"];
+                string opinionLabel = chinese ? "民意分值  4.25" : "Public opinion score  4.25";
+                var opinion = GUI.LabelTypes[opinionLabel];
+                var refresh = GUI.Buttons[chinese ? "刷新" : "Refresh"];
+                var opinionStyle = new GUIStyle { fontSize = opinion.Size };
+                Check(refresh.y + refresh.height <= opinion.Bounds.y &&
+                    opinion.Bounds.y + opinion.Bounds.height <= name.Bounds.y &&
+                    opinionStyle.CalcSize(new GUIContent(opinionLabel)).x <= opinion.Bounds.width,
+                    $"Opinion fits between campaign controls and resource cards in {theme.English} at {width}×{height}");
                 Check(GUI.LabelTypes.Values.All(label => label.Font == null) &&
                     GUI.ButtonTypes.Values.All(button => button.Font == null),
                     "Every painted label and action inherits the player's registered GUI font");
@@ -314,6 +342,7 @@ internal static class Program
     {
         LoadCampaign("StoryPack_Main");
         DialogueLua.Put(Budget, int.MinValue);
+        DialogueLua.Put(SordlandOpinion, -double.MaxValue);
         Poll();
         Click("English");
         Screen.width = 334;
@@ -328,6 +357,7 @@ internal static class Program
         }
         Fits("Government budget");
         Fits("-2147483648");
+        Fits("Public opinion score  -1.79769313486E+308");
         GUI.TypedText = "2147483647";
         Frame(EventType.Repaint);
         Click("Preview change");
@@ -351,6 +381,8 @@ internal static class Program
             Check(GUI.Labels.Count(s => s==title)==1 && GUI.Labels.Count(s => s==hint)==1 &&
                 GUI.Labels.Contains(state) && header.Bounds.y < 20 && footer.Bounds.y > 350 &&
                 header.Size > footer.Size, "The title, empty state and footer survive a complete menu repaint");
+            Check(!GUI.Labels.Any(label => label.Contains(zh ? "民意分值" : "opinion score")),
+                "Returning to the game menu clears the previous campaign's score");
         }
     }
 
