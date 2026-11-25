@@ -21,7 +21,7 @@ struct State {
     fs::path beforeScan;
     int chosenDemo=0, appearanceIndex=-1;
     typography::ChineseFont fontPreference=typography::Automatic;
-    bool stacked=false, positioning=false, glassVisible=false;
+    bool stacked=false, positioning=false, glassVisible=false, pointerReflection=false;
     RECT library{}, practice{}, searchFrame{}, headingIcon{}, headerTools{};
     HDC backdrop{};
     HBITMAP backdropBitmap{};
@@ -276,6 +276,7 @@ inline void applyPickerAppearance(State& s) {
     s.appearanceIndex=Theme::index();
     s.fontPreference=typography::selected;
     s.glassVisible=glass::enabled();
+    s.pointerReflection=glass::followsPointer();
     Theme::caption(s.win);
     SetWindowTheme(s.list,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
     ListView_SetBkColor(s.list,Theme::panel);
@@ -330,6 +331,10 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
                 syncAppearance();
                 if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected ||
                    s.glassVisible!=glass::enabled())applyPickerAppearance(s);
+                else if(s.pointerReflection!=glass::followsPointer()) {
+                    s.pointerReflection=glass::followsPointer();
+                    RedrawWindow(w,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+                }
             }
             break;
         case WM_SYSCOLORCHANGE:case WM_SETTINGCHANGE:

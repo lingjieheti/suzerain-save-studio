@@ -220,47 +220,49 @@ void resourceSymbol(HDC dc,int kind,bool base,int x,int y,COLORREF ink) {
 void paintMetrics(HDC dc,const WorkspaceGeometry& a) {
     const char* keys[]={"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"};
     const wchar_t* labels[]={L"预算",L"个人财富",L"经济水平"};
-    // Pigments belong to the resource, so the same tile is recognizable in
-    // every appearance. Light and dark variants keep the symbols readable.
+    // Resource colors stay in the symbols. One quiet surface lets the eye
+    // compare balances across the three columns on the same baseline.
     const COLORREF inks[]={Theme::dark()?RGB(231,191,137):RGB(128,77,33),
                            Theme::dark()?RGB(199,177,234):RGB(104,72,139),
                            Theme::dark()?RGB(145,211,195):RGB(39,104,93)};
     const bool base=isBase(), tall=a.metricHeight>=70;
-    const int gutter=a.compactRail?6:10;
-    const int unit=(a.content-2*gutter)/3;
+    const int y=a.headerBottom;
+    workspaceCard(dc,rect(a.left,y,a.content,a.metricHeight),Theme::panel,Theme::line,tall?18:14);
     rizia::ChangeMap linkedCaps;
     if(!base) {
         try { linkedCaps=linkedCapChanges(); }
         catch(const std::exception&) { /* Keep conflicting explicit values visible until Review. */ }
     }
     for(int i=0;i<3;++i) {
-        int x=a.left+i*(unit+gutter), y=a.headerBottom;
-        int width=i==2?a.left+a.content-x:unit;
-        const int pad=tall?17:10, inner=width-2*pad;
+        const int x=a.left+i*a.content/3;
+        const int width=a.left+(i+1)*a.content/3-x;
+        const int pad=tall?19:12, inner=width-2*pad;
+        if(i>0) {
+            const int inset=tall?18:11;
+            fill(dc,rect(x,y+inset,1,a.metricHeight-2*inset),Theme::line);
+        }
         const auto& resource=riziaResources[i];
         const char* key=base?keys[i]:resource.stock;
         const auto balance=val(key);
         const auto ink=inks[i];
-        const auto face=glass::mix(Theme::panel,ink,Theme::dark()?.085:.058);
-        workspaceCard(dc,rect(x,y,width,a.metricHeight),face,glass::mix(Theme::line,ink,.18),tall?17:12);
-        int labelX=x+pad, labelY=y+(tall?13:base?19:6);
+        int labelX=x+pad, labelY=y+(tall?14:base?19:6);
         HFONT numberFont=tall?g.large:g.compactNumber;
         const int numberDip=MulDiv(typography::width(dc,numberFont,balance),96,g.dpi);
         // At compact heights reserve the right of the first line for the value.
-        int labelW=tall?inner-35:std::clamp(inner-numberDip-8,inner/2,inner-4);
+        int labelW=tall?inner:std::clamp(inner-numberDip-8,inner/2,inner-4);
         const auto label=tr(base?labels[i]:resource.balanceLabel);
         const int numberX=tall?labelX:labelX+labelW+3;
         if(tall) {
-            const int bx=x+width-pad-23, by=y+10;
-            auto chip=glass::mix(face,ink,Theme::dark()?.14:.13);
-            workspaceCard(dc,rect(bx,by,26,26),chip,chip,10);
-            resourceSymbol(dc,i,base,bx+5,by+5,ink);
+            const auto tint=glass::mix(Theme::panel,ink,Theme::dark()?.16:.10);
+            workspaceCard(dc,rect(labelX,y+12,25,25),tint,tint,12);
+            resourceSymbol(dc,i,base,labelX+5,y+16,ink);
+            labelX+=33;labelW-=33;
         } else if(typography::width(dc,g.small,label)<=px(labelW-22)) {
             resourceSymbol(dc,i,base,labelX,labelY+3,ink);
             labelX+=21;labelW-=21;
         }
         drawText(dc,label,rect(labelX,labelY,labelW,21),tall?g.emphasis:g.small,Theme::text);
-        const int numberW=tall?(base?inner:inner/2):x+width-pad-numberX;
+        const int numberW=tall?(base?inner:std::clamp(numberDip+3,inner/3,inner*3/5)):x+width-pad-numberX;
         if(numberDip>numberW)numberFont=tall?g.compactNumber:g.tableNumber;
         drawText(dc,balance,rect(numberX,tall?y+38:base?y+15:y+3,numberW,tall?45:26),numberFont,
                  pending().count(key)?Theme::accentInk:Theme::text,
@@ -289,17 +291,32 @@ void paintInputFrame(HDC dc,RECT box,HWND input,int radius) {
     }
 }
 
+void paintArchiveIcon(HDC dc,int x,int y,int pixels) {
+    struct IconCache {
+        HICON icon{};
+        int size{};
+        ~IconCache(){if(icon)DestroyIcon(icon);}
+    };
+    static IconCache archive;
+    if(archive.size!=pixels) {
+        HICON next{};
+        if(FAILED(LoadIconWithScaleDown(GetModuleHandleW(nullptr),MAKEINTRESOURCEW(101),pixels,pixels,&next)))return;
+        if(archive.icon)DestroyIcon(archive.icon);
+        archive.icon=next;
+        archive.size=pixels;
+    }
+    DrawIconEx(dc,x,y,archive.icon,pixels,pixels,0,nullptr,DI_NORMAL);
+}
+
 void paint() {
     PAINTSTRUCT ps{}; auto dc=BeginPaint(g.win,&ps);
     paintWorkspaceChildBackdrop(dc,g.win);
     auto a=workspaceGeometry();
     const int logoX=a.compactRail?11:19,logoY=a.shortScreen?12:20;
     const int logoSize=a.compactRail?34:38;
-    const auto crest=Theme::dark()?Theme::select:Theme::accentInk;
-    const auto print=Theme::dark()?Theme::accentInk:Theme::onAccent;
-    workspaceCard(dc,rect(logoX,logoY,logoSize,logoSize),crest,glass::mix(crest,print,.16),12);
-    const int center=logoSize/2;
-    navSymbol(dc,7,px(logoX+center-9),px(logoY+center-9),print);
+    // Use the same archive and ribbon as the executable and taskbar. The icon
+    // resource supplies a size-appropriate bitmap when the monitor DPI changes.
+    paintArchiveIcon(dc,px(logoX),px(logoY),px(logoSize));
     if (!a.compactRail) {
         drawText(dc,L"Suzerain",rect(65,logoY-3,a.rail-70,27),g.brand,Theme::sideText);
         drawText(dc,L"Save Studio",rect(66,logoY+19,a.rail-71,19),g.small,Theme::sideMuted);

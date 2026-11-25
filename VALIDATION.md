@@ -1,6 +1,14 @@
-# v0.20.3 Preview — Windows validation
+# v0.21.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.20.3 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.21.0 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Desktop materials and backup selection in 0.21.0
+
+The desktop renderer samples the editor’s own canvas beneath floating controls. The updated edge has a narrow dark outline and a directional highlight. Adjacent file actions share a continuous surface. Resource values sit on one solid panel. These choices follow Apple’s guidance on functional layers, diffusion and legibility. [Materials](https://developer.apple.com/design/human-interface-guidelines/materials) · [WWDC26 material refinements](https://developer.apple.com/videos/play/wwdc2026/102/?time=1363)
+
+We compared both campaigns at five window widths in all 11 interface languages using synthetic saves. No additional text clipping was observed relative to 0.20.3, including with three-digit balances. An offscreen Windows drawing check verified the stationary reflection with reduced motion, the solid fallback, and different hover and pressed states. GDI handle counts remained stable over 3,000 pointer and press redraws.
+
+With 44 synthetic backups, refreshing the list in 0.20.3 left backup 43 selected but showed the top of the list. In 0.21.0 the selected backup stays in view. If an external change invalidates a backup after preview, the restore confirmation closes and the original save retains its bytes. The local native editor suite passed 1,181 checks. Save I/O passed 58 checks.
 
 ## Reopening the current save in 0.20.3
 

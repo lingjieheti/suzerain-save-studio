@@ -4,7 +4,7 @@
 
 我以前玩《Suzerain》主要靠改存檔，每次都要讀兩次檔，覺得有點麻煩，就給自己做了這個修改器。現在既可以改存檔，也可以直接在遊戲裡調整資源。開啟選項預覽後，把滑鼠移到選項上，輕按一下 **Ctrl** 就能看到已知的直接效果。我還順手做了幾個小功能，歡迎大家[提提建議](https://github.com/lingjieheti/suzerain-save-studio/issues)～
 
-[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.3/SuzerainSaveStudio-0.20.3-Live-Preview-win-x64.zip)
+[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.21.0/SuzerainSaveStudio-0.21.0-Live-Preview-win-x64.zip)
 
 按 **Ctrl+F8** 開啟面板，啟用選項結果預覽後關閉面板。將滑鼠指向選項，輕按一下左邊或右邊的 **Ctrl** 鍵即可查看效果。再按一次或移開滑鼠即可收起提示。想查看其他選項時，將滑鼠移過去再按 Ctrl。這項功能預設關閉，部分結果要等後續劇情才能確定。
 

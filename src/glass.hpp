@@ -5,7 +5,9 @@ namespace glass {
 inline constexpr int menuCommand = 16410;
 inline bool preferred = true;
 inline bool systemAllows = true;
+inline bool motionAllowed = true;
 inline bool enabled() { return preferred && systemAllows; }
+inline bool followsPointer() { return enabled() && motionAllowed; }
 
 inline void refreshSettings() {
     auto setting = [](const wchar_t* path, const wchar_t* name) {
@@ -16,6 +18,8 @@ inline void refreshSettings() {
     HIGHCONTRASTW contrast{sizeof(contrast)};
     const bool highContrast = SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
                               (contrast.dwFlags & HCF_HIGHCONTRASTON);
+    BOOL animations=TRUE;
+    motionAllowed=!SystemParametersInfoW(SPI_GETCLIENTAREAANIMATION,0,&animations,0) || animations;
     preferred = setting(Theme::settingsKey, L"GlassEffects");
     systemAllows = !highContrast && setting(L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", L"EnableTransparency");
 }
@@ -167,8 +171,8 @@ inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
         const int size=2*half+middle;
         if(!entry.image.size(dc,size,size)) { entry.palette=-1; return; }
         entry.radius=radius; entry.pad=pad; entry.palette=Theme::index(); entry.dark=darkTint;
-        const COLORREF shadow=mix(Theme::accentInk,RGB(9,18,29),.70);
-        const COLORREF cold=mix(Theme::blue,RGB(244,253,255),.78);
+        const COLORREF shadow=mix(Theme::accent,RGB(9,18,29),.78);
+        const COLORREF reflection=mix(Theme::accent,RGB(251,253,255),.77);
         GdiFlush();
         for(int y=0;y<size;++y) for(int x=0;x<size;++x) {
             double nx,ny;
@@ -177,19 +181,23 @@ inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
             // Give long edges a broad pool of light instead of stretching a uniform line.
             const double u=std::clamp(double(x-half)/(middle-1),0.,1.);
             const double v=std::clamp(double(y-half)/(middle-1),0.,1.);
-            const double key=.31+.69*bump((u-.21)/.46)*bump((v-.19)/.65);
-            const double reflected=.32+.68*bump((u-.78)/.66)*bump((v-.84)/.68);
-            const double sun=std::max(0.,-.46*nx-.87*ny)*key;
-            const double bounce=std::max(0.,.75*nx+.65*ny)*reflected;
+            const double key=.10+.90*bump((u-.22)/(darkTint?.24:.40))*bump((v-.13)/(darkTint?.41:.58));
+            const double reflected=.10+.90*bump((u-.76)/(darkTint?.36:.52))*bump((v-.89)/.55);
+            const double sun=std::max(0.,-.54*nx-.84*ny)*key;
+            const double bounce=std::max(0.,.57*nx+.82*ny)*reflected;
             double a=0,r=0,g=0,b=0;
             if(d>0) {
-                const double spread=d/(2.6*scale);
-                pigment(a,r,g,b,shadow,(.055+.15*std::max(0.,ny))*bump(spread));
+                const double below=std::max(0.,ny);
+                pigment(a,r,g,b,shadow,(.025+.14*below)*bump(d/((1.4+1.7*below)*scale)));
             }
-            pigment(a,r,g,b,shadow,(darkTint?.36:.185)*bump((d+.20)/(.83*scale)));
-            pigment(a,r,g,b,shadow,(darkTint?.10:.075)*bump((d+3.4*scale)/(1.9*scale)));
-            pigment(a,r,g,b,cold,(darkTint?.08+.32*bounce:.045+.245*bounce)*bump((d+1.55*scale)/(.94*scale)));
-            pigment(a,r,g,b,RGB(255,255,255),(darkTint?.19+.68*sun:.105+.63*sun)*bump((d+.86*scale)/(.76*scale)));
+            // The fine dark silhouette sits outside the specular lip. Keeping
+            // them apart leaves the sides clear where neither light strikes.
+            const double depth=-d/scale;
+            pigment(a,r,g,b,shadow,(darkTint?.64:.35)*bump((depth-.03)/.70));
+            pigment(a,r,g,b,shadow,(darkTint?.13:.075)*bump((depth-2.45)/1.20));
+            pigment(a,r,g,b,reflection,(darkTint?.30:.24)*bounce*bump((depth-3.0)/1.75));
+            const double specular=darkTint?.035+.75*sun+.43*bounce:.055+.92*sun+.56*bounce;
+            pigment(a,r,g,b,RGB(255,255,255),specular*bump((depth-1.12)/(darkTint?.65:.75)));
             entry.image.pixels[y*size+x]=argb(a,r,g,b);
         }
         found=&entry;
@@ -273,16 +281,28 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     };
     std::array<int,cols> sx{};
     for(int x=0;x<cols;++x) sx[x]=refract(x,cols,w,radius);
-    const auto crest=mix(tint,white,darkTint?(active?.07:.16):.72);
+    const auto crest=mix(tint,white,darkTint?(active?.07:.14):.68);
     const auto base=mix(tint,Theme::accent,darkTint?.075:.09);
-    const unsigned density=active?(darkTint?244:202):(darkTint?174:132);
+    const unsigned density=active?(darkTint?244:202):(darkTint?150:112);
+    // Diffuse the already downsampled backdrop across the shoulder and keep
+    // its refracted color. Reading the four surrounding samples also softens
+    // hard background transitions as they pass under a floating control.
+    auto averagePixel=[](DWORD p,DWORD q) {
+        return (p&q)+(((p^q)&0x00fefefeu)>>1);
+    };
     for(int y=0;y<rows;++y) {
         const int sy=refract(y,rows,h,radius);
+        const DWORD* scan=backdrop.data()+sy*cols;
+        const DWORD* above=backdrop.data()+std::max(0,sy-1)*cols;
+        const DWORD* below=backdrop.data()+std::min(rows-1,sy+1)*cols;
         const double v=double(y)/(rows-1);
         const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
         const auto right=mix(base,crest,.12+.27*v);
         for(int x=0;x<cols;++x) {
-            const DWORD sample=backdrop[sy*cols+sx[x]];
+            const int ix=sx[x];
+            const DWORD horizontal=averagePixel(scan[std::max(0,ix-1)],scan[std::min(cols-1,ix+1)]);
+            const DWORD vertical=averagePixel(above[ix],below[ix]);
+            const DWORD sample=averagePixel(scan[ix],averagePixel(horizontal,vertical));
             const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);
             const auto color=mix(left,right,double(x)/(cols-1));
             image.pixels[y*cols+x]=rgbPixel(mix(local,color,density/255.));
@@ -293,10 +313,39 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     rim(dc,box,radius,darkTint);
 }
 
+// Highlight one action within a shared toolbar. The translucent fill keeps
+// its parent's reflection continuous through the button. Reuse the mask as
+// the pointer moves; the opacity changes independently when the button presses.
+inline void tintSegment(HDC dc,const RECT& box,int radiusPixels,COLORREF tint,BYTE opacity) {
+    const int w=box.right-box.left,h=box.bottom-box.top;
+    if(w<2 || h<2) return;
+    const int radius=std::clamp(radiusPixels,1,std::min({w/2,h/2,72}));
+    const int stampWidth=2*radius+1;
+    static Dib stamp;
+    static COLORREF lastTint=CLR_INVALID;
+    if(stamp.width!=stampWidth || stamp.height!=h || tint!=lastTint) {
+        if(!stamp.size(dc,stampWidth,h)) return;
+        GdiFlush();
+        for(int y=0;y<h;++y) for(int x=0;x<stampWidth;++x) {
+            const double dx=std::max(0.,std::abs(x-radius)-.5);
+            const double dy=std::max(0.,radius-std::min(y,h-1-y)-.5);
+            const double coverage=std::clamp(radius+.5-std::hypot(dx,dy),0.,1.);
+            stamp.pixels[y*stampWidth+x]=argb(255*coverage,GetRValue(tint)*coverage,
+                                                GetGValue(tint)*coverage,GetBValue(tint)*coverage);
+        }
+        lastTint=tint;
+    }
+    const BLENDFUNCTION blend{AC_SRC_OVER,0,opacity,AC_SRC_ALPHA};
+    GdiAlphaBlend(dc,box.left,box.top,radius,h,stamp.dc,0,0,radius,h,blend);
+    if(w>2*radius)
+        GdiAlphaBlend(dc,box.left+radius,box.top,w-2*radius,h,stamp.dc,radius,0,1,h,blend);
+    GdiAlphaBlend(dc,box.right-radius,box.top,radius,h,stamp.dc,radius+1,0,radius,h,blend);
+}
+
 // A pointer lights only the bevel close to it. The stationary material remains
 // unchanged and the patch has a fixed cost independent of the pane's area.
 inline void glint(HDC dc,const RECT& box,int radiusPixels,POINT light,bool pressed=false) {
-    if(!enabled() || !PtInRect(&box,light)) return;
+    if(!followsPointer() || !PtInRect(&box,light)) return;
     const int w=box.right-box.left,h=box.bottom-box.top;
     if(w<2 || h<2) return;
     const int radius=std::clamp(radiusPixels,1,std::min({w/2,h/2,72}));
@@ -312,8 +361,11 @@ inline void glint(HDC dc,const RECT& box,int radiusPixels,POINT light,bool press
         const double radial=std::max(0.,1.-(dx*dx+dy*dy)/(reach*reach));
         double nx,ny;
         const double d=contour(x-box.left+.5-w/2.,y-box.top+.5-h/2.,w/2.,h/2.,radius,nx,ny);
-        const double bevel=std::max(0.,1.-std::abs(d+1.35*scale)/(2.65*scale));
-        const BYTE alpha=BYTE((pressed?166:205)*radial*radial*bevel);
+        // A pressed lens contracts. Its reflection moves just inside the lip
+        // and broadens without whitening the label at the center of the button.
+        const double depth=-d/scale;
+        const double bevel=std::max(0.,1.-std::abs(depth-(pressed?2.35:1.05))/(pressed?3.1:1.95));
+        const BYTE alpha=BYTE((pressed?171:239)*radial*radial*bevel);
         patch.pixels[(y-top)*patch.width+x-left]=(DWORD(alpha)*0x01010101u);
     }
     GdiAlphaBlend(dc,left,top,right-left,bottom-top,patch.dc,0,0,right-left,bottom-top,

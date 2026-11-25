@@ -225,21 +225,32 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     if(inspector)fill(d->hDC,r,Theme::panel);
     else paintWorkspaceChildBackdrop(d->hDC,d->hwndItem);
     const bool grouped=nav || fileAction || history || id==SAVE;
+    const bool material=glass::enabled();
+    RECT lens=r;
+    if(material && down && !disabled && (grouped || id==APPEARANCE))
+        InflateRect(&lens,-px(2),-px(1));
     if(nav && (activeNav || hover || down)) {
-        glass::surface(d->hDC,r,activeNav?Theme::select:Theme::sideHover,px(15),activeNav);
+        if(material && !activeNav)
+            glass::tintSegment(d->hDC,lens,px(15),Theme::accent,down?44:28);
+        else
+            glass::surface(d->hDC,lens,activeNav?Theme::select:Theme::sideHover,px(15),activeNav);
     } else if(grouped) {
-        if(primary || (!disabled && (hover || down))) {
+        if(material && primary && !disabled) {
+            glass::surface(d->hDC,lens,bg,px(16),true);
+        } else if(material && !disabled && (hover || down || id==LATEST)) {
+            glass::tintSegment(d->hDC,lens,px(16),Theme::accent,down?48:hover?32:18);
+        } else if(primary || (!disabled && (hover || down))) {
             workspaceCard(d->hDC,r,bg,border,16);
         } else if(id==LATEST && !disabled) {
             workspaceCard(d->hDC,r,Theme::select,glass::mix(Theme::select,Theme::accent,.17),16);
         }
     } else if(id==APPEARANCE) {
-        glass::surface(d->hDC,r,hover?Theme::select:Theme::input,px(14));
+        glass::surface(d->hDC,lens,hover?Theme::select:Theme::input,px(14));
     } else if(!check && (!quiet || toggle || hover || down || primary)) {
         workspaceCard(d->hDC,r,bg,border,9);
     }
-    if(hover && !disabled && glass::enabled() && (nav || grouped || id==APPEARANCE)) {
-        glass::glint(d->hDC,r,px(15),glassPointer(d->hwndItem),down);
+    if(hover && !disabled && material && (grouped || id==APPEARANCE)) {
+        glass::glint(d->hDC,lens,px(15),glassPointer(d->hwndItem),down);
     }
     if(fileAction && id==LATEST && !primary && !disabled)fg=Theme::accentInk;
     RECT tx = r;
@@ -253,8 +264,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             RECT tile{glyphX-px(4),glyphY-px(4),glyphX+px(22),glyphY+px(22)};
             workspaceCard(d->hDC,tile,Theme::accent,Theme::accent,8);
         }
-        navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,
-                  activeNav?Theme::onAccent:Theme::sideMuted);
+        const auto iconInk=activeNav?Theme::onAccent:material?Theme::accentInk:Theme::sideMuted;
+        navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,iconInk);
         if (!compact) {
             tx.left += px(longSupport?27:42); tx.right -= px(5);
             auto title=textOf(d->hwndItem);
