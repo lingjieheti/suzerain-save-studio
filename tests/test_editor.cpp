@@ -210,9 +210,7 @@ void testSaveQueries() {
     }
 }
 
-void testPickerSearchWhileScanning(const fs::path& sample) {
-    save_picker::State picker;
-    picker.roots={sample.parent_path()};
+void beginPickerScan(save_picker::State& picker) {
     struct alignas(DWORD) Template { DLGTEMPLATE dialog{}; WORD menu=0,cls=0,title=0; } form;
     form.dialog.style=WS_POPUP|WS_CAPTION|DS_MODALFRAME;
     HWND window=CreateDialogIndirectParamW(GetModuleHandleW(nullptr),&form.dialog,g.win,
@@ -222,19 +220,61 @@ void testPickerSearchWhileScanning(const fs::path& sample) {
     check(PeekMessageW(&start,window,save_picker::START_SCAN,save_picker::START_SCAN,PM_REMOVE),
           "The picker queues its initial scan");
     DispatchMessageW(&start);
+}
+
+void finishPickerScan(save_picker::State& picker) {
+    // Deliver completion deterministically even when the synthetic directory scans instantly.
+    picker.worker.join();
+    SendMessageW(picker.win,WM_TIMER,1,0);
+}
+
+void testPickerSearchWhileScanning(const fs::path& sample) {
+    save_picker::State picker;
+    picker.roots={sample.parent_path()};
+    beginPickerScan(picker);
     check(picker.busy && IsWindowEnabled(picker.filter) && GetFocus()==picker.filter,
           "Starting the scan keeps the search box enabled and focused");
     for(wchar_t c:sample.stem().wstring())SendMessageW(GetFocus(),WM_CHAR,c,1);
     check(textOf(picker.filter)==sample.stem().wstring() && ListView_GetItemCount(picker.list)==0,
           "Typing during the scan records the query without exposing partial results");
     SetFocus(picker.campaign);
-    // Deliver completion after input, even when the synthetic directory scans instantly.
-    picker.worker.join();
-    SendMessageW(window,WM_TIMER,1,0);
+    finishPickerScan(picker);
     check(!picker.busy && GetFocus()==picker.campaign && picker.rows.size()==1 &&
           picker.result.saves[picker.rows.front()].path.filename()==sample.filename(),
           "The first results use the typed query and preserve the new focus");
-    DestroyWindow(window);
+    DestroyWindow(picker.win);
+}
+
+void testPickerCurrentSave(const fs::path& sample) {
+    const auto root=fs::temp_directory_path()/(L"suzerain-picker-"+writeId());
+    const auto newest=root/L"Slot.json", other=root/L"Other.json", current=root/L"older"/L"Slot.json";
+    fs::create_directories(current.parent_path());
+    fs::copy_file(sample,newest);fs::copy_file(sample,other);fs::copy_file(sample,current);
+    const auto now=fs::file_time_type::clock::now();
+    fs::last_write_time(newest,now);
+    fs::last_write_time(other,now-std::chrono::hours(1));
+    fs::last_write_time(current,now-std::chrono::hours(2));
+    const auto contents=readFile(sample);
+    auto openPicker=[&](const fs::path& opened,const fs::path& expected,bool refresh=false){
+        loadDocumentBytes(contents,opened,opened.empty()?demo::sordland:0);
+        save_picker::State picker;
+        picker.roots={root};
+        beginPickerScan(picker);finishPickerScan(picker);
+        check(picker.rows.size()==3 && fs::path(textOf(picker.path))==expected,
+              "Reopening selects the current full path, or the newest save if it is absent");
+        if(refresh){
+            ListView_SetItemState(picker.list,1,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
+            SendMessageW(picker.win,WM_COMMAND,save_picker::RESCAN,0);
+            finishPickerScan(picker);
+            check(fs::path(textOf(picker.path))==other,"Refreshing preserves the player's new selection");
+        }
+        DestroyWindow(picker.win);
+    };
+    const auto alternate=current.parent_path()/L"."/L"SLOT.JSON";
+    openPicker(fs::exists(alternate)?alternate:current,current,true);
+    openPicker(root/L"missing"/L"Slot.json",newest);
+    openPicker({},newest);
+    for(const auto& path:{current,other,newest,current.parent_path(),root})fs::remove(path);
 }
 
 void testSearchControls(const fs::path& sample) {
@@ -1013,6 +1053,7 @@ int main(int argc,char** argv){
         testChoiceHintsPreference();
         testSaveQueries();
         testPickerSearchWhileScanning(fs::u8path(argv[1]));
+        testPickerCurrentSave(fs::u8path(argv[1]));
         testSearchControls(fs::u8path(argv[1]));
         testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));

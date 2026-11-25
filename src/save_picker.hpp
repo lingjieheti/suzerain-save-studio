@@ -203,6 +203,11 @@ inline void fill(State& s){
                               save.modifiedText.empty()?tr(L"未知时间"):save.modifiedText};
         for(int c=0;c<4;++c)ListView_SetItemText(s.list,row,c+1,cells[c].data());
         if(save.path==keep)at=row;
+        else if(at<0 && !keep.empty() && CompareStringOrdinal(save.path.c_str(),-1,keep.c_str(),-1,TRUE)==CSTR_EQUAL){
+            // A case-sensitive directory can contain distinct files with these two spellings.
+            std::error_code ec;
+            if(fs::equivalent(save.path,keep,ec))at=row;
+        }
     }
     if(at<0&&!s.rows.empty())at=0;
     if(at>=0){ListView_SetItemState(s.list,at,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);ListView_EnsureVisible(s.list,at,FALSE);}
@@ -331,7 +336,9 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             glass::refreshSettings();
             applyPickerAppearance(s);
             return TRUE;
-        case START_SCAN:start(s);return TRUE;
+        case START_SCAN:
+            s.beforeScan=g.file.lexically_normal();
+            start(s);return TRUE;
         case WM_TIMER:if(wp==1&&s.done.load(std::memory_order_acquire)){KillTimer(w,1);if(s.worker.joinable())s.worker.join();s.busy=false;for(auto h:{s.refresh,s.add})EnableWindow(h,TRUE);fill(s);}return TRUE;
         case WM_COMMAND:{int id=LOWORD(wp);if(id==IDCANCEL){s.stop();EndDialog(w,IDCANCEL);return TRUE;}if(id==IDOK){accept(s);return TRUE;}
             if(id==DEMO_MAIN||id==DEMO_RIZIA){s.chosenDemo=id==DEMO_MAIN?demo::sordland:demo::rizia;s.stop();EndDialog(w,IDOK);return TRUE;}

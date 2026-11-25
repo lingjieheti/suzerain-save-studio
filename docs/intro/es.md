@@ -4,7 +4,7 @@
 
 Antes, para cambiar algo en mis partidas de *Suzerain*, casi siempre editaba el archivo de guardado. Tenía que cargar la partida dos veces con cada cambio. Me cansé de hacerlo y creé este editor. Te permite editar partidas guardadas y ajustar recursos directamente en el juego. Si activas la vista previa de las decisiones, basta con pasar el cursor sobre una opción y pulsar brevemente Ctrl para ver los efectos directos que se conocen de esa elección. También hay algunas funciones más. [Si tienes alguna sugerencia, me encantará leerla.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Descargar la versión preliminar 0.20.2 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.2/SuzerainSaveStudio-0.20.2-Live-Preview-win-x64.zip)**
+**[Descargar la versión preliminar 0.20.3 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.3/SuzerainSaveStudio-0.20.3-Live-Preview-win-x64.zip)**
 
 Activa la vista previa de las opciones en el panel **Ctrl+F8** y cierra el panel. Coloca el cursor sobre una opción y pulsa brevemente la tecla **Ctrl** izquierda o derecha para ver sus efectos. Vuelve a pulsarla o retira el cursor para cerrar la vista previa. Para comparar otra opción, coloca el cursor sobre ella y pulsa Ctrl. La función está desactivada de forma predeterminada. Algunas consecuencias dependen de cómo avance la historia.
 
