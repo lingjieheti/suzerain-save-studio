@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstring>
 #include "advanced_zh_dictionary.hpp"
+#include "win_text.hpp"
 
 // A display-only, literal gloss of internal names. Never use it as a save key.
 inline bool fieldUpper(char c){return c>='A'&&c<='Z';}
@@ -41,6 +42,10 @@ inline const wchar_t* advancedZhExactSegment(const std::string& segment){
 }
 inline std::wstring advancedZhSegment(const std::string& segment){
     if(auto exact=advancedZhExactSegment(segment))return exact;
+    // Custom names can mix scripts inside a single segment. The game glossary
+    // splits ASCII identifiers only, so keep the whole UTF-8 name in this case.
+    if(std::any_of(segment.begin(),segment.end(),[](unsigned char c){return c>=0x80;}))
+        return wide(segment);
     // Retain ambiguous script codes as codes; do not invent gameplay meaning.
     if(segment=="InT"||segment=="EnT"||segment=="SnT"||segment=="SnO"||segment=="PSnW"||segment=="FPnT")return L"场景（"+std::wstring(segment.begin(),segment.end())+L"）";
     if(segment.size()>4&&segment.rfind("Turn",0)==0&&std::all_of(segment.begin()+4,segment.end(),fieldDigit))return L"第"+std::wstring(segment.begin()+4,segment.end())+L"回合";

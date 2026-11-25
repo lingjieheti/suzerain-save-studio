@@ -35,6 +35,7 @@
 #include "save_discovery.hpp"
 #include "edit_session.hpp"
 #include "i18n.hpp"
+#include "win_text.hpp"
 #include "advanced_field_zh.hpp"
 #include "display_values.hpp"
 
@@ -46,19 +47,6 @@ enum { OPEN=101, LATEST, FOLDER, HELP, TABS, SEARCH, GRID, EDITVALUE, BOOLVALUE,
        APPLY, UNDOONE, PRESET99, PRESET999, AUTOCAP, UNDOALL, SAVEAS, SAVE,
        RESTORE, FILTER_CHANGED, PREVIEW_OK=301, PREVIEW_CANCEL };
 
-std::wstring wide(const std::string& s) {
-    if(s.empty()) return {};
-    int n=MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.data(), (int)s.size(), nullptr, 0);
-    if(!n) return L"（无法显示的文本）";
-    std::wstring out(n, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n); return out;
-}
-std::string utf8(const std::wstring& s) {
-    if(s.empty()) return {};
-    int n=WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0, nullptr, nullptr);
-    std::string out(n, '\0');
-    WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n, nullptr, nullptr); return out;
-}
 std::wstring textOf(HWND h) {
     int n=GetWindowTextLengthW(h); std::wstring s(n+1,L'\0');
     GetWindowTextW(h,s.data(),n+1); s.resize(n); return s;

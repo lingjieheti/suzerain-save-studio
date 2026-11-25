@@ -19,6 +19,9 @@ int main(int argc,char** argv) {
         check(advancedZhLabel("RiziaDLC.Turn00")==L"第00回合","leading zero preserved");
         check(advancedZhLabel("BaseGame.123_004")==L"123 · 004","numeric segments preserved");
         check(advancedZhLabel("BaseGame.Zzqvzyxw_999")==L"Zzqvzyxw · 999","unknown label fallback");
+        check(advancedZhLabel(u8"RiziaDLC.汉字")==L"汉字","Unicode-only custom name");
+        check(advancedZhLabel(u8"RiziaDLC.Army_Unit_外交Mod🦊_InTraining")==L"军队 · 部队 · 外交Mod🦊 · 训练中",
+              "Mixed-script custom name keeps supplementary characters and adjacent game terms");
         check(advancedZhWord("Zzqvzyxw")==nullptr,"unknown word lookup");
         check(advancedZhLabel("Zzqvzyxw")==L"Zzqvzyxw","unqualified fallback");
         check(advancedZhLabel("").empty(),"empty label");

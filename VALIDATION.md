@@ -1,6 +1,12 @@
-# v0.21.0 Preview — Windows validation
+# v0.21.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.21.0 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.21.1 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Custom field names in 0.21.1
+
+We opened synthetic saves containing custom Unicode fields in the released 0.21.0 desktop editor. The Chinese field list corrupted all-Chinese labels and dropped letters or characters in mixed-script labels. Searching for the raw name found the field, but pasting its quoted assignment returned no results. A separate CSV reader confirmed that the raw key survived export while its display label was corrupted.
+
+In 0.21.1 the display label preserves mixed-script segments and applies the existing Traditional Chinese display rules where selected. Quoted assignments and prefixes find the original field without staging the value from the query. We compared the Simplified and Traditional Chinese labels of all 4,097 catalogued stock keys with 0.21.0. Both sets were identical. A UTF-8 CSV round trip also preserved punctuation, the original key, and pending boolean values.
 
 ## Desktop materials and backup selection in 0.21.0
 

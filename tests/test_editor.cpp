@@ -1011,6 +1011,28 @@ void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
     check(mainCsv==renderFieldCsv(*g.doc,{})&&mainCsv.find("RiziaDLC.")==std::string::npos,
           "Rizia linked values do not leak into a new Sordland session");
     check(readFile(mainPath)==mainBytes,"Export keeps the Sordland save byte-for-byte intact");
+
+    const std::string customKey=u8"BaseGame.汉字Mod🦊,\"Q\"";
+    const std::string customSave=u8R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.汉字Mod🦊,\"Q\"']=false}"})";
+    const int originalLanguage=i18n::language;
+    for(int language:{0,1}){
+        i18n::setLanguage(language);
+        loadDocumentBytes(customSave,{},0);
+        navigate(4);
+        SetWindowTextW(g.search,L"汉字Mod🦊");
+        check(g.rows==std::vector<std::string>{customKey},"The original Unicode field name is searchable in both Chinese interfaces");
+        SetWindowTextW(g.search,LR"(['BaseGame.汉字Mod🦊,"Q"']=true)");
+        check(g.rows==std::vector<std::string>{customKey} && pending().empty(),
+              "Pasted custom keys preserve Unicode and quoted punctuation without applying their value");
+        SetWindowTextW(g.search,LR"([\"BaseGame.汉字Mod🦊)");
+        check(g.rows==std::vector<std::string>{customKey},"An escaped guide prefix can contain multiple scripts");
+        g.session->applyBatch({{customKey,"true"}});
+        const std::string prefix=u8"\"StoryPack_Main\",\"BaseGame.汉字Mod🦊,\"\"Q\"\"\",\"";
+        const std::string caption=language==0?u8"汉字Mod🦊":u8"漢字Mod🦊";
+        check(exportCsv().find(prefix+caption+",\"\"Q\"\"\",\"false\",\"true\",\"boolean\"\r\n")!=std::string::npos,
+              "Chinese field CSV preserves Unicode keys, localized labels, quotes and boolean edits");
+    }
+    i18n::setLanguage(originalLanguage);
 }
 
 void testReviewShortcut(const fs::path& sample) {
