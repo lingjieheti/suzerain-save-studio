@@ -10,7 +10,7 @@
 
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
-点“外观”可以切换雾蓝、暖纸、林间和午夜。开启“液态玻璃”时，指针沿按钮移动会带动边缘高光。想让反光静止，可以关闭 Windows 动画效果。想使用实色，可以在“外观”中取消勾选“液态玻璃”。
+在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
 
 覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
 
@@ -18,13 +18,17 @@
 
 如果想在游戏运行时微调资源，请查阅[实时面板说明](../live/README.zh-CN.md)。
 
+载入战役后，按 **Ctrl+F8** 可查看当前的民意分值。面板打开时会定期读取这一内部数值。要查存档里的公众支持度，可打开「高级字段」搜「民意」或 `PO`。
+
 想支持作者，可从选档窗口底部或编辑器侧栏打开 **赞助作者**，用微信「扫一扫」扫描赞赏码，也可以选择 PayPal 或 USDT。USDT 使用 TRON（TRC20）网络，可在窗口中复制地址。
 
 按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
 
-Open **Appearance** to choose a color theme. Turn off Windows animations for a stationary reflection, or uncheck **Liquid Glass** for solid navigation and controls in the same color theme.
+In a campaign, press **Ctrl+F8** to see the internal public opinion score if available. To look it up in a save, search Advanced for `PO`.
+
+Open **Appearance** in the picker or editor. Choose a theme, then **Clear**, **Frosted** or **Solid**. Frosted softens more of the background color behind controls. Turn off Windows animations for stationary highlights.
 
 Open **Support the author** in the save picker or editor sidebar. Scan the appreciation code with WeChat to tip the author, or choose PayPal or USDT. For USDT, use the TRON (TRC20) network.
 

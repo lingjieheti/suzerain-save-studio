@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.21.1";
+constexpr wchar_t APP_VERSION[] = L"0.22.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -182,8 +182,11 @@ void useChineseFont(typography::ChineseFont font) {
     RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_FRAME|RDW_ALLCHILDREN);
 }
 void applyAppearanceCommand(int command) {
-    if(command==glass::menuCommand) {
-        if(glass::toggle())RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+    if(command>=glass::firstFinishCommand && command<glass::headingCommand) {
+        const auto finish=static_cast<glass::Finish>(command-glass::firstFinishCommand);
+        if(!glass::systemAllows || finish==glass::preferred)return;
+        if(glass::saveFinish(finish))RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
+        else message(i18n::language<=1?tr(L"无法保存外观设置。"):L"The appearance setting could not be saved.",MB_ICONWARNING);
     }else if(command>=Theme::menuBase && command<fontHeadingCommand) {
         applyAppearance(command-Theme::menuBase);
     }else if(command>=firstFontCommand && command<firstFontCommand+typography::fontCount) {
@@ -195,11 +198,11 @@ void applyAppearanceCommand(int command) {
     }
 }
 void syncAppearance() {
-    const bool oldGlass=glass::enabled();
+    const auto oldFinish=glass::effectiveFinish();
     const bool oldReflection=glass::followsPointer();
     glass::refreshSettings();
     recolorWorkspace(Theme::stored());useChineseFont(typography::stored());
-    if(oldGlass!=glass::enabled() || oldReflection!=glass::followsPointer())
+    if(oldFinish!=glass::effectiveFinish() || oldReflection!=glass::followsPointer())
         RedrawWindow(g.win,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
 }
 void updateStatus(){
@@ -410,9 +413,14 @@ void appendFieldRows(){
         }
         std::set<const rizia::Field*> common;
         if(!terms.empty()){
+            if (_wcsicmp(trim(query).c_str(), L"PO") == 0) {
+                if (const auto* score = g.doc->find(isBase() ? sordlandPublicOpinion : riziaPublicOpinion)) {
+                    common.insert(score);
+                    append(*score);
+                }
+            }
             for(const auto& def:currentDefs())if(const auto* field=g.doc->find(def.key)){
-                common.insert(field);
-                append(*field);
+                if(common.insert(field).second)append(*field);
             }
         }
         for(const auto* field:g.allFields)if(!common.count(field))append(*field);
@@ -495,7 +503,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.21.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.22.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }

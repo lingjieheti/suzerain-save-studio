@@ -4,7 +4,11 @@
 
 Avant, pour changer quelque chose dans mes parties de *Suzerain*, je passais surtout par les fichiers de sauvegarde. Il fallait charger la partie deux fois à chaque modification. J’ai fini par en avoir assez et j’ai créé cet éditeur. Il permet de modifier une sauvegarde ou d’ajuster les ressources en cours de partie. Une fois l’aperçu des choix activé, survolez une option et appuyez brièvement sur Ctrl pour voir ses effets directs connus. Vous y trouverez aussi quelques autres petites fonctionnalités. [Vos suggestions sont les bienvenues.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Télécharger la version préliminaire 0.21.1 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.21.1/SuzerainSaveStudio-0.21.1-Live-Preview-win-x64.zip)**
+**[Télécharger la version préliminaire 0.22.0 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)**
+
+Dans la fenêtre de sélection des sauvegardes ou dans l’éditeur, ouvrez **Apparence**. Chacun des quatre thèmes propose les finitions **Clair**, **Dépoli** et **Opaque**.
+
+Appuyez sur **Ctrl+F8** pour consulter le score interne d’opinion publique de la campagne, s’il est disponible. Dans l’éditeur de sauvegardes, recherchez `PO` pour retrouver cette valeur.
 
 Activez l’aperçu des choix dans le panneau **Ctrl+F8**, puis fermez le panneau. Placez le pointeur sur un choix et appuyez brièvement sur la touche **Ctrl** de gauche ou de droite pour en voir les effets. Appuyez de nouveau ou éloignez le pointeur pour masquer l’infobulle. Pour comparer un autre choix, pointez-le et appuyez sur Ctrl. La fonction est désactivée par défaut. Certaines conséquences dépendent de la suite du récit.
 

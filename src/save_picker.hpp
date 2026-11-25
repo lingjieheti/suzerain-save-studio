@@ -19,9 +19,9 @@ struct State {
     std::vector<size_t> rows;
     fs::path choice;
     fs::path beforeScan;
-    int chosenDemo=0, appearanceIndex=-1;
+    int chosenDemo=0, appearanceIndex=-1, finishIndex=-1;
     typography::ChineseFont fontPreference=typography::Automatic;
-    bool stacked=false, positioning=false, glassVisible=false, pointerReflection=false;
+    bool stacked=false, positioning=false, pointerReflection=false;
     RECT library{}, practice{}, searchFrame{}, headingIcon{}, headerTools{};
     HDC backdrop{};
     HBITMAP backdropBitmap{};
@@ -173,7 +173,8 @@ inline void layout(State& s){
     s.move(s.open,openX,footerButtons,openWidth,34);
     const int columns=tableWidth-20;
     // Slot type and campaign name share the second line and a native subitem.
-    int widths[]={0,columns>=510?90:84,0,columns>=510?56:48,columns>=510?143:110};
+    // Date and time occupy separate lines so both stay visible at compact widths.
+    int widths[]={0,columns>=510?90:84,0,columns>=510?56:48,columns>=510?109:98};
     widths[0]=std::max(108,columns-widths[1]-widths[2]-widths[3]-widths[4]);
     for(int i=0;i<5;++i)ListView_SetColumnWidth(s.list,i,s.scale(widths[i]));
     s.positioning=false;
@@ -275,7 +276,7 @@ inline void accept(State& s){
 inline void applyPickerAppearance(State& s) {
     s.appearanceIndex=Theme::index();
     s.fontPreference=typography::selected;
-    s.glassVisible=glass::enabled();
+    s.finishIndex=static_cast<int>(glass::effectiveFinish());
     s.pointerReflection=glass::followsPointer();
     Theme::caption(s.win);
     SetWindowTheme(s.list,Theme::dark()?L"DarkMode_Explorer":L"Explorer",nullptr);
@@ -330,7 +331,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(LOWORD(wp)!=WA_INACTIVE&&s.appearanceIndex>=0){
                 syncAppearance();
                 if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected ||
-                   s.glassVisible!=glass::enabled())applyPickerAppearance(s);
+                   s.finishIndex!=static_cast<int>(glass::effectiveFinish()))applyPickerAppearance(s);
                 else if(s.pointerReflection!=glass::followsPointer()) {
                     s.pointerReflection=glass::followsPointer();
                     RedrawWindow(w,nullptr,nullptr,RDW_INVALIDATE|RDW_ALLCHILDREN);
@@ -353,7 +354,7 @@ inline INT_PTR CALLBACK proc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(id==APPEARANCE){
                 applyAppearanceCommand(pickAppearance(w,s.appearance));
                 if(s.appearanceIndex!=Theme::index() || s.fontPreference!=typography::selected ||
-                   s.glassVisible!=glass::enabled())applyPickerAppearance(s);
+                   s.finishIndex!=static_cast<int>(glass::effectiveFinish()))applyPickerAppearance(s);
                 return TRUE;
             }
             if(id==FILTER&&(HIWORD(wp)==EN_SETFOCUS||HIWORD(wp)==EN_KILLFOCUS)){InvalidateRect(w,&s.searchFrame,FALSE);return TRUE;}

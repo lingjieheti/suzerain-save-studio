@@ -574,10 +574,15 @@ void testChineseFonts(const fs::path& path) {
         auto menu=CreatePopupMenu();
         AppearanceMenuMetrics metrics{96,g.font};
         populateAppearanceMenu(menu,metrics);
+        for(auto finish:{glass::Clear,glass::Frosted,glass::Solid}){
+            const auto state=GetMenuState(menu,glass::firstFinishCommand+finish,MF_BYCOMMAND);
+            check(state!=UINT(-1) && bool(state&MF_CHECKED)==(finish==glass::effectiveFinish()),
+                  "The menu checks exactly the finish that is currently visible");
+        }
         if(!isChinese(language)){
-            check(GetMenuItemCount(menu)==Theme::count+1,"All languages include themes and the glass setting");
+            check(GetMenuItemCount(menu)==Theme::count+4,"All languages include themes and three material choices");
         }else{
-            check(GetMenuItemCount(menu)==Theme::count+2+fontCount,"Both Chinese languages also expose a font section");
+            check(GetMenuItemCount(menu)==Theme::count+5+fontCount,"Both Chinese languages also expose a font section");
             check(metrics.fontNames[Automatic].find(L'（')!=std::wstring::npos,
                   "Automatic selection displays the current fallback");
             for(auto font:{PingFang,Noto,System}){
@@ -681,12 +686,49 @@ void testTypography(const fs::path& path) {
     fonts();layout();
 }
 
+void testGlassFinishes(){
+    const int originalTheme=Theme::index();
+    const auto originalFinish=glass::preferred;
+    const bool originalSystem=glass::systemAllows;
+    glass::systemAllows=true;
+    auto dc=GetDC(g.win);
+    glass::Dib sample;
+    const bool created=sample.size(dc,150,55);
+    ReleaseDC(g.win,dc);
+    check(created,"A compatible surface is available for the material check");
+    if(created){
+        auto center=[&](COLORREF background){
+            fill(sample.dc,{0,0,150,55},background);
+            glass::surface(sample.dc,{5,5,145,50},Theme::panel,18);
+            return GetPixel(sample.dc,75,27);
+        };
+        for(int theme=0;theme<Theme::count;++theme){
+            Theme::use(theme);
+            auto transmission=[&](glass::Finish finish){
+                glass::preferred=finish;
+                const auto dark=center(RGB(0,0,0));
+                const auto bright=center(RGB(255,255,255));
+                return int(GetGValue(bright))-int(GetGValue(dark));
+            };
+            const auto clear=transmission(glass::Clear);
+            const auto frosted=transmission(glass::Frosted);
+            check(clear>frosted && frosted>0,"Frosted transmits less backdrop contrast than clear in every theme");
+            check(transmission(glass::Solid)==0 && center(RGB(0,0,0))==Theme::panel,
+                  "Solid gives the exact theme surface regardless of its backdrop");
+        }
+    }
+    Theme::use(originalTheme);
+    glass::preferred=originalFinish;
+    glass::systemAllows=originalSystem;
+}
+
 void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
     check(Theme::index()==2,"A new user starts with Fjord");
     glass::refreshSettings();
-    check(glass::preferred,"New profiles use glass when Windows allows transparency");
+    testGlassFinishes();
+    check(glass::preferred==glass::Clear,"A new profile uses the clear finish by default");
     auto appearanceButton=ctl(APPEARANCE);
     SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(5,6));
     check(glassPointer(appearanceButton).x==5 && glassPointer(appearanceButton).y==6,
@@ -712,6 +754,9 @@ void testAppearance(const fs::path& path){
         for(int index=0;index<Theme::count;++index)names.insert(Theme::name(index));
         check(*Theme::label() && names.size()==Theme::count && !names.count(L""),
               "Each supported language has four distinct named appearances");
+        std::set<std::wstring> finishes;
+        for(auto finish:{glass::Clear,glass::Frosted,glass::Solid})finishes.insert(glass::finishLabel(finish));
+        check(finishes.size()==3 && !finishes.count(L""),"Each language has three distinct material choices");
     }
     i18n::setLanguage(languageBefore);
     loadDocumentBytes(readFile(path),path,0);
@@ -722,20 +767,27 @@ void testAppearance(const fs::path& path){
     check(applyInput(),"Stage a budget edit before changing the appearance");
     SetWindowTextW(g.edit,L"unfinished");
     auto* session=g.session.get();
-    applyAppearanceCommand(glass::menuCommand);
+    applyAppearanceCommand(glass::firstFinishCommand+glass::Solid);
     glass::refreshSettings();
-    check(!glass::preferred && !glass::enabled() && Theme::index()==Theme::fjordIndex,
+    check(glass::preferred==glass::Solid && !glass::enabled() && Theme::index()==Theme::fjordIndex,
           "Turning off the material persists independently of the color theme");
-    applyAppearanceCommand(glass::menuCommand);
-    check(glass::preferred && g.session.get()==session && pending().at(budget)=="43" &&
-          g.editingDirty && textOf(g.edit)==L"unfinished","Toggling glass preserves the active field draft");
+    applyAppearanceCommand(glass::firstFinishCommand+glass::Frosted);
+    glass::refreshSettings();
+    check(glass::preferred==glass::Frosted && g.session.get()==session && pending().at(budget)=="43" &&
+          g.editingDirty && textOf(g.edit)==L"unfinished","Switching to frosted glass persists and preserves the active field draft");
     const wchar_t* personalization=L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize";
     DWORD opaque=0;
     RegSetKeyValueW(HKEY_CURRENT_USER,personalization,L"EnableTransparency",REG_DWORD,&opaque,sizeof(opaque));
     glass::refreshSettings();
-    check(!glass::enabled() && glass::preferred,"Windows can suppress glass without replacing the saved choice");
+    check(glass::effectiveFinish()==glass::Solid && glass::preferred==glass::Frosted,
+          "Windows can suppress glass without replacing the saved finish");
     RegDeleteKeyValueW(HKEY_CURRENT_USER,personalization,L"EnableTransparency");
     glass::refreshSettings();
+    check(glass::effectiveFinish()==glass::Frosted || !glass::systemAllows,
+          "Restoring system transparency recovers the chosen material");
+    applyAppearanceCommand(glass::firstFinishCommand+glass::Clear);
+    glass::refreshSettings();
+    check(glass::preferred==glass::Clear,"The original clear finish can be selected again");
     for(int index:{1,2,3,0}){
         applyAppearance(index);
         check(Theme::index()==index,"The selected appearance applies immediately");
@@ -964,6 +1016,58 @@ void testResourceSearch(const fs::path& path){
     check(g.doc->render({})==example && pending().empty(), "Resource inspection preserves save bytes and edits");
 }
 
+void testPublicOpinionSearch() {
+    i18n::setLanguage(0);
+    for (const bool sordland : {true, false}) {
+        const auto story = sordland ? "StoryPack_Main" : "StoryPack_Rizia";
+        const std::string key = sordland ? "BaseGame.Public_Opinion" : "RiziaDLC.Country_PublicOpinion";
+        const std::string bytes = std::string(R"({"currentStoryPack":")") + story +
+            R"(","variables":"Variable={[\"BaseGame.Public_Opinion\"]=9,[\"BaseGame.Bludish_Opinion\"]=17,)"
+            R"([\"RiziaDLC.Country_PublicOpinion\"]=8,[\"RiziaDLC.Country_DastnuristOpinion\"]=12,)"
+            R"([\"RiziaDLC.Resources_Military_Manpower\"]=4,[\"RiziaDLC.Decision_Floating_DastnuristApproval_Happened\"]=true}"})";
+        loadDocumentBytes(bytes, {}, 0);
+        for (const int tab : {sordland ? 1 : 2, 4}) {
+            navigate(tab);
+            for (const auto query : {L"民意",L"支持率",L"民调",L"民調",L"public approval",L"公众支持度",L"public opinion"}) {
+                SetWindowTextW(g.search, query);
+                check(g.rows == std::vector<std::string>{key} && g.selected == key,
+                      "Public opinion terms select the active campaign's overall score");
+                check(textOf(g.name) == L"公众支持度" && textOf(g.desc).find(L"不是百分比") != std::wstring::npos,
+                      "Polling aliases preserve the score label and its units");
+            }
+            SetWindowTextW(g.search, wide(key).c_str());
+            check(g.rows == std::vector<std::string>{key}, "The raw public opinion key remains searchable");
+            SetWindowTextW(g.search, L" pO ");
+            check(!g.rows.empty() && g.rows.front() == key && std::count(g.rows.begin(),g.rows.end(),key) == 1,
+                  "The PO abbreviation shows the active campaign score first, once");
+        }
+        if (!sordland) {
+            const std::string manpower = "RiziaDLC.Resources_Military_Manpower";
+            check(g.rows == std::vector<std::string>{key,manpower}, "PO keeps unrelated substring results available");
+            selectRow(manpower);
+            refresh();
+            check(g.selected == manpower, "A player's chosen substring result keeps its selection");
+            command(FILTER_CHANGED,0);
+            check(g.rows.empty(), "The PO shortcut respects pending-only filtering");
+            command(FILTER_CHANGED,0);
+            const auto oldFavorites = g.favorites;
+            g.favorites = {manpower};
+            command(FILTER_FAVORITES,0);
+            check(g.rows == std::vector<std::string>{manpower}, "The PO shortcut respects favorites-only filtering");
+            command(FILTER_FAVORITES,0);
+            g.favorites = oldFavorites;
+            SetWindowTextW(g.search, L"P-O");
+            check(g.rows.front() == manpower, "Only a complete PO query changes the normal substring order");
+        }
+        check(g.doc->render({}) == bytes && pending().empty(), "Searching opinion scores leaves the save unchanged");
+    }
+    loadDocumentBytes(R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={[\"RiziaDLC.Resources_Military_Manpower\"]=4}"})",{},0);
+    navigate(4);
+    SetWindowTextW(g.search,L"PO");
+    check(g.rows == std::vector<std::string>{"RiziaDLC.Resources_Military_Manpower"},
+          "Without a public opinion field, PO still shows ordinary matches");
+}
+
 void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
     const auto riziaBytes=readFile(riziaPath);
     loadDocumentBytes(riziaBytes,riziaPath,0);
@@ -1129,6 +1233,7 @@ int main(int argc,char** argv){
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
+        testPublicOpinionSearch();
         testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));
         testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));

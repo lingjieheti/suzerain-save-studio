@@ -107,8 +107,9 @@ namespace PixelCrushers.DialogueSystem
         public static readonly List<string> Writes = new();
         public static Action<string, int> OnSet;
         public static bool ThrowOnRead;
+        public static string UnreadableKey;
         public static bool DoesVariableExist(string key) => Variables.ContainsKey(key);
-        public static Result GetVariable(string key) => ThrowOnRead
+        public static Result GetVariable(string key) => ThrowOnRead || key == UnreadableKey
             ? throw new InvalidOperationException("Unavailable")
             : Variables[key];
         public static void Put(string key, double number) =>

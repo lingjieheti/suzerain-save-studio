@@ -10,7 +10,8 @@ struct AppearanceMenuMetrics {
 };
 
 bool appearanceMenuItem(UINT id) {
-    return id==glass::menuCommand || (id>=Theme::menuBase && id<firstFontCommand+typography::fontCount);
+    return (id>=glass::firstFinishCommand && id<=glass::headingCommand) ||
+           (id>=Theme::menuBase && id<firstFontCommand+typography::fontCount);
 }
 
 bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
@@ -21,7 +22,8 @@ bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
         if(item.CtlType!=ODT_MENU || !appearanceMenuItem(item.itemID))return false;
         const auto& metrics=*reinterpret_cast<const AppearanceMenuMetrics*>(item.itemData);
         item.itemWidth=MulDiv(typography::isChinese(i18n::language)?220:168,metrics.dpi,96);
-        item.itemHeight=MulDiv(item.itemID==fontHeadingCommand?27:36,metrics.dpi,96);
+        const bool heading=item.itemID==fontHeadingCommand || item.itemID==glass::headingCommand;
+        item.itemHeight=MulDiv(heading?27:36,metrics.dpi,96);
         return true;
     }
     auto& item=*reinterpret_cast<DRAWITEMSTRUCT*>(param);
@@ -34,10 +36,11 @@ bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
     fill(dc,bounds,active?Theme::select:Theme::panel);
     int x=bounds.left+measure(12), y=(bounds.top+bounds.bottom)/2;
     RECT caption=bounds;caption.left=x;caption.right-=measure(25);
-    if(item.itemID==fontHeadingCommand) {
+    if(item.itemID==fontHeadingCommand || item.itemID==glass::headingCommand) {
         RECT line{bounds.left,bounds.top,bounds.right,bounds.top+1};
         fill(dc,line,Theme::line);
-        literalText(dc,i18n::language==0?L"中文字体":L"中文字體",caption,metrics.font,Theme::muted);
+        const auto heading=item.itemID==glass::headingCommand?glass::label():(i18n::language==0?L"中文字体":L"中文字體");
+        literalText(dc,heading,caption,metrics.font,Theme::muted);
         return true;
     }
     const wchar_t* label;
@@ -50,8 +53,8 @@ bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
         swatch.right=swatch.left+measure(8);fill(dc,swatch,sample.accent);
         caption.left+=measure(37);
         label=Theme::name(id);
-    }else if(item.itemID==glass::menuCommand){
-        label=glass::label();
+    }else if(item.itemID>=glass::firstFinishCommand){
+        label=glass::finishLabel(static_cast<glass::Finish>(item.itemID-glass::firstFinishCommand));
     }else{
         label=metrics.fontNames[item.itemID-firstFontCommand].c_str();
     }
@@ -79,7 +82,12 @@ void populateAppearanceMenu(HMENU menu,AppearanceMenuMetrics& metrics) {
     };
     for(int i=0;i<Theme::count;++i)
         append(Theme::menuBase+i,Theme::name(i),i==Theme::index()?MFS_CHECKED:MFS_ENABLED);
-    append(glass::menuCommand,glass::label(),!glass::systemAllows?MFS_DISABLED:(glass::preferred?MFS_CHECKED:MFS_ENABLED));
+    append(glass::headingCommand,glass::label(),MFS_DISABLED);
+    for(auto finish:{glass::Clear,glass::Frosted,glass::Solid}) {
+        UINT state=glass::systemAllows?MFS_ENABLED:MFS_DISABLED;
+        if(finish==glass::effectiveFinish())state|=MFS_CHECKED;
+        append(glass::firstFinishCommand+finish,glass::finishLabel(finish),state);
+    }
     if(!typography::isChinese(i18n::language))return;
 
     const bool simplified=i18n::language==0;

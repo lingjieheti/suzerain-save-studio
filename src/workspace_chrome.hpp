@@ -58,22 +58,37 @@ void workspaceCard(HDC dc,RECT box,COLORREF face,COLORREF edge,int radius) {
     RestoreDC(dc,saved);
 }
 
-// The two file groups share their geometry with the actual child controls.
+// The separator between the two file commands and the two open commands
+// shares the same spacing as the child controls.
 int fileActionSlot(int width) { return (width-18)/10; }
 int fileActionGap(int id) { return id==FOLDER?14:2; }
 
 void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& a) {
     glass::wash(dc,client,Theme::bg);
-    const int inset=a.compactRail?4:7;
-    glass::surface(dc,rect(inset,6,a.rail-2*inset,a.height-12),Theme::sidebar,px(a.compactRail?21:24));
+    const RECT rail=rect(0,0,a.rail,a.height);
+    if(glass::enabled()) {
+        // A sidebar extends to the window edges. At its free edge a thin
+        // stripe samples the wash just outside the pane, like a ground edge.
+        const int lip=px(3);
+        const int saved=SaveDC(dc);
+        SetStretchBltMode(dc,HALFTONE);SetBrushOrgEx(dc,0,0,nullptr);
+        StretchBlt(dc,rail.right-lip,rail.top,lip,rail.bottom,dc,rail.right,rail.top,2*lip,rail.bottom,SRCCOPY);
+        RestoreDC(dc,saved);
+        const BYTE clearDensity=Theme::dark()?138:114;
+        const BYTE density=glass::effectiveFinish()==glass::Frosted?218:clearDensity;
+        glass::tintSegment(dc,rail,1,Theme::sidebar,density);
+    } else {
+        fill(dc,rail,Theme::sidebar);
+    }
+    fill(dc,rect(a.rail-1,0,1,a.height),Theme::sideLine);
     const int end=a.left+a.content;
     const int toolbarWidth=fileToolbarWidth(a);
     const int toolbarY=a.shortScreen?7:14;
     const int first=end-toolbarWidth;
     const int localWidth=4*fileActionSlot(toolbarWidth)+2;
-    glass::surface(dc,rect(first-3,toolbarY-3,localWidth+6,38),Theme::panel,px(19));
-    const int openGroup=first+localWidth+fileActionGap(FOLDER);
-    glass::surface(dc,rect(openGroup-3,toolbarY-3,end-openGroup+6,38),Theme::panel,px(19));
+    glass::surface(dc,rect(first-3,toolbarY-3,toolbarWidth+6,38),Theme::panel,px(19));
+    const int divider=first+localWidth+fileActionGap(FOLDER)/2;
+    fill(dc,rect(divider,toolbarY+8,1,16),glass::mix(Theme::line,Theme::sideMuted,.24));
     if(g.tab!=7) {
         const int width=2*footerHistoryWidth(a)+5+(g.tab==5?0:footerSaveWidth(a)+7);
         glass::surface(dc,rect(end-width-4,a.footer+3,width+8,40),Theme::panel,px(20));
@@ -90,15 +105,14 @@ void paintWorkspaceChildBackdrop(HDC dc, HWND child) {
         HBITMAP bitmap{};
         SIZE size{};
         UINT dpi{};
-        int theme=-1,page=-1;
-        bool glassEnabled{};
+        int theme=-1,page=-1,finish=-1;
         ~Backdrop() { if(dc)DeleteDC(dc); if(bitmap)DeleteObject(bitmap); }
     };
     static Backdrop cache;
     RECT area{},part{};
     GetClientRect(g.win,&area);
     if(area.right<=0 || area.bottom<=0)return;
-    const bool enabled=glass::enabled();
+    const int finish=static_cast<int>(glass::effectiveFinish());
     const int page=g.tab==7?7:g.tab==5?5:0;
     if(cache.size.cx!=area.right || cache.size.cy!=area.bottom || !cache.bitmap) {
         if(!cache.dc)cache.dc=CreateCompatibleDC(dc);
@@ -110,9 +124,9 @@ void paintWorkspaceChildBackdrop(HDC dc, HWND child) {
         if(cache.bitmap)DeleteObject(cache.bitmap);
         cache.bitmap=bitmap; cache.size={area.right,area.bottom}; cache.theme=-1;
     }
-    if(cache.theme!=Theme::index() || cache.page!=page || cache.dpi!=g.dpi || cache.glassEnabled!=enabled) {
+    if(cache.theme!=Theme::index() || cache.page!=page || cache.dpi!=g.dpi || cache.finish!=finish) {
         drawWorkspaceBackdrop(cache.dc,area,workspaceGeometry());
-        cache.theme=Theme::index();cache.page=page;cache.dpi=g.dpi;cache.glassEnabled=enabled;
+        cache.theme=Theme::index();cache.page=page;cache.dpi=g.dpi;cache.finish=finish;
     }
     POINT origin{};
     MapWindowPoints(child,g.win,&origin,1);
@@ -212,7 +226,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     COLORREF bg = quiet ? surface : Theme::input, border = quiet ? surface : Theme::line, fg = Theme::text;
     if (nav) {
         bg = activeNav ? Theme::select : hover ? Theme::sideHover : Theme::sidebar;
-        border = bg; fg = activeNav ? Theme::accentInk : Theme::sideText;
+        border = bg; fg = activeNav ? Theme::onAccent : Theme::sideText;
     } else if (primary) {
         bg = border = hover || down ? Theme::accentHover : Theme::accent; fg = Theme::onAccent;
     } else if (toggle || hover || down) {
@@ -227,21 +241,27 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     const bool grouped=nav || fileAction || history || id==SAVE;
     const bool material=glass::enabled();
     RECT lens=r;
-    if(material && down && !disabled && (grouped || id==APPEARANCE))
+    if(nav)InflateRect(&lens,-px(1),-px(2));
+    const int lensRadius=nav?int(lens.bottom-lens.top)/2:px(16);
+    if(down && !disabled && (grouped || id==APPEARANCE))
         InflateRect(&lens,-px(2),-px(1));
     if(nav && (activeNav || hover || down)) {
-        if(material && !activeNav)
-            glass::tintSegment(d->hDC,lens,px(15),Theme::accent,down?44:28);
+        if(activeNav)
+            glass::surface(d->hDC,lens,down?Theme::accentHover:Theme::accent,lensRadius,true);
+        else if(material)
+            glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,down?44:28);
         else
-            glass::surface(d->hDC,lens,activeNav?Theme::select:Theme::sideHover,px(15),activeNav);
+            workspaceCard(d->hDC,lens,Theme::sideHover,Theme::sideHover,15);
     } else if(grouped) {
         if(material && primary && !disabled) {
             glass::surface(d->hDC,lens,bg,px(16),true);
-        } else if(material && !disabled && (hover || down || id==LATEST)) {
-            glass::tintSegment(d->hDC,lens,px(16),Theme::accent,down?48:hover?32:18);
+        } else if(material && !disabled && (hover || down || id==LATEST || id==SAVE)) {
+            const BYTE restingTint=id==SAVE?28:18;
+            glass::tintSegment(d->hDC,lens,px(16),Theme::accent,down?48:hover?32:restingTint);
         } else if(primary || (!disabled && (hover || down))) {
-            workspaceCard(d->hDC,r,bg,border,16);
-        } else if(id==LATEST && !disabled) {
+            const auto face=down && !primary?Theme::select:bg;
+            workspaceCard(d->hDC,lens,face,border,16);
+        } else if((id==LATEST || id==SAVE) && !disabled) {
             workspaceCard(d->hDC,r,Theme::select,glass::mix(Theme::select,Theme::accent,.17),16);
         }
     } else if(id==APPEARANCE) {
@@ -252,7 +272,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     if(hover && !disabled && material && (grouped || id==APPEARANCE)) {
         glass::glint(d->hDC,lens,px(15),glassPointer(d->hwndItem),down);
     }
-    if(fileAction && id==LATEST && !primary && !disabled)fg=Theme::accentInk;
+    if((id==LATEST || id==SAVE) && !primary && !disabled)fg=Theme::accentInk;
     RECT tx = r;
     if (nav) {
         bool compact = r.right - r.left < px(64);
@@ -260,10 +280,6 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             typography::width(d->hDC,g.font,textOf(d->hwndItem))>r.right-r.left-px(47);
         int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
         const int glyphY=(r.bottom-px(18))/2;
-        if(activeNav) {
-            RECT tile{glyphX-px(4),glyphY-px(4),glyphX+px(22),glyphY+px(22)};
-            workspaceCard(d->hDC,tile,Theme::accent,Theme::accent,8);
-        }
         const auto iconInk=activeNav?Theme::onAccent:material?Theme::accentInk:Theme::sideMuted;
         navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,iconInk);
         if (!compact) {
@@ -328,10 +344,11 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                  (check ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE);
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
-        RECT focus = r; InflateRect(&focus, -px(4), -px(4));
-        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary?Theme::onAccent:Theme::focus);
+        RECT focus = lens; InflateRect(&focus, -px(3), -px(3));
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary||activeNav?Theme::onAccent:Theme::focus);
         auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
-        RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,px(12),px(12));
+        const int diameter=grouped||id==APPEARANCE?std::max(px(6),2*lensRadius-px(6)):px(12);
+        RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,diameter,diameter);
         SelectObject(d->hDC,oldBrush);SelectObject(d->hDC,oldPen);DeleteObject(pen);
     }
 }
