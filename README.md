@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.20.2 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.2/SuzerainSaveStudio-0.20.2-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.20.2) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.20.3 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.20.3/SuzerainSaveStudio-0.20.3-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.20.3) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
@@ -54,7 +54,7 @@
 | 保存与恢复 | 覆盖与恢复前都会备份当前文件。备份页按完整存档名区分相似档位。可以打开备份查看，并另存到备份目录之外。 |
 | 界面与语言 | 窄窗口切换为图标导航，支持高 DPI 和 11 种界面语言。部分较长说明及少见报错使用英文。 |
 
-`Ctrl+L` 选择存档，`Ctrl+O` 手动打开，`Ctrl+F` 搜索，`Ctrl+S` 打开修改预览，按 ↑ / ↓ 逐项核对原值和新值。编辑历史支持撤销与重做。备份保存在原档同目录的 `.rizia-backups` 文件夹。
+`Ctrl+L` 重开选档器时会选中正在编辑的存档，列表仍按最近修改时间排序。`Ctrl+O` 手动打开，`Ctrl+F` 搜索，`Ctrl+S` 打开修改预览，按 ↑ / ↓ 逐项核对原值和新值。编辑历史支持撤销与重做。备份保存在原档同目录的 `.rizia-backups` 文件夹。
 
 ## 兼容性与验证
 

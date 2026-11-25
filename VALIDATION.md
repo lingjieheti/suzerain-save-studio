@@ -1,6 +1,14 @@
-# v0.20.2 Preview — Windows validation
+# v0.20.3 Preview — Windows validation
 
-The Windows x64 archive includes the 0.20.2 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.20.3 editor and optional 0.20.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+
+## Reopening the current save in 0.20.3
+
+A Rizia player described accidentally reloading a slot saved two minutes earlier. To check how the picker distinguishes similar slots, we opened the older of two synthetic files named `Active_slot.json` in different directories. In the 0.20.2 picker, Ctrl+L selected the newer file in the other folder. [Player account](https://www.reddit.com/r/suzerain/comments/1vg1em9/i_accidentally_reloaded_the_game_and_it_changed/) · [Steam guide to identifying save slots](https://steamcommunity.com/sharedfiles/filedetails/?id=3341333208)
+
+The 0.20.3 picker selected the open file in its original position in the newest-first list, including when the opening path differed in letter case. With no open file, or after the open file was moved away, the first result was selected. Refreshing after choosing a different row preserved that choice. We exercised the production picker in a private Windows desktop with an isolated settings key and synthetic save directories, across four themes at 614 and 1,010 DIP at 200% scaling. Keyboard focus stayed in search on opening. All three fixture files retained their contents and modification times.
+
+In a separate 43-save library, reopening the picker at 614 DIP scrolled the current file into view at row 43, with rows 41 through 43 visible.
 
 ## Reviewing changes with the arrow keys in 0.20.2
 
