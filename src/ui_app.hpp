@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.22.0";
+constexpr wchar_t APP_VERSION[] = L"0.22.1";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -63,7 +63,9 @@ void rounded(HDC dc,RECT r,COLORREF fill,COLORREF border,int radius=10){
     RoundRect(dc,r.left,r.top,r.right,r.bottom,corner,corner);SelectObject(dc,ob);SelectObject(dc,op);DeleteObject(b);DeleteObject(p);
 }
 const wchar_t* pageTitle(int);void updateCampaign();
-void layout();void refresh();void updateStatus();void showSelected();void loadDocument(const fs::path&,bool=true);
+enum class DocumentLoad { Open, Reload };
+void layout();void refresh();void updateStatus();void showSelected();
+void loadDocument(const fs::path&,bool=true,DocumentLoad=DocumentLoad::Open);
 bool applyInput(bool=true);void navigate(int);void refreshBackups();void selectBackup(int);void command(int,int);
 std::map<std::string,std::string> preparedChanges();
 void updatePreviewCount();
@@ -360,15 +362,6 @@ void refreshBackups(){
     }
     g.populating=false;selectBackup(g.backupIndex);
 }
-void resetFieldBrowser(){
-    g.pages={};
-    g.captions.clear();
-    g.allFields.clear();
-    g.review.clear();
-    g.reviewError.clear();
-    g.selected.clear();
-}
-
 void appendFieldRows(){
     if(!g.doc)return;
     const auto& query=g.pages[g.tab].query;
@@ -503,7 +496,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.22.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.22.1 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -522,26 +515,40 @@ void navigate(int tab){
 std::wstring documentTitle(){
     return g.demoResource?tr(L"内置练习示例")+L"  /  "+campaignLabel(g.doc->story):g.file.wstring();
 }
-void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resource){
+void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resource,DocumentLoad mode=DocumentLoad::Open){
     auto doc=std::make_unique<rizia::Document>(rizia::Document::parse(bytes));
     if(!rizia::isSupportedStory(doc->story))throw WinFailure(L"Unsupported campaign.");
     auto session=std::make_unique<rizia::EditSession>(*doc);
+    const bool keepView=mode==DocumentLoad::Reload && g.doc && doc->story==g.doc->story && samePath(path,g.file);
+    if(keepView){
+        for(auto& page:g.pages){
+            if(!page.preferred.empty() && !doc->find(page.preferred))page.preferred.clear();
+        }
+        if(!doc->find(g.selected))g.selected.clear();
+        g.pages[5]={}; // Review belongs to the discarded edits.
+    }else{
+        g.pages={};g.selected.clear();g.favoritesOnly=false;
+        if(g.tab>=5)g.tab=0;
+    }
+    g.captions.clear();g.allFields.clear();g.review.clear();g.reviewError.clear();
     activeStory=doc->story;
     g.session=std::move(session);g.doc=std::move(doc);g.file=path;g.demoResource=resource;
     InvalidateRect(ctl(LATEST),nullptr,FALSE);
-    resetFieldBrowser();
-    g.favorites.clear();g.favoritesOnly=false;
+    g.favorites.clear();
     field_favorites::read(activeStory,g.favorites);
-    g.selected.clear();g.editingDirty=false;g.backupDoc.reset();g.backups.clear();g.backupIndex=-1;
-    g.populating=true;setText(g.search,L"");g.changedOnly=false;g.populating=false;
+    g.editingDirty=false;g.restoreArmed=false;g.backupDoc.reset();
+    // On the backup page refreshBackups uses the old selection's path to reload its preview.
+    if(!keepView||g.tab!=6){g.backups.clear();g.backupIndex=-1;}
+    g.populating=true;rawText(g.search,g.tab<5?g.pages[g.tab].query:L"");g.populating=false;
+    g.changedOnly=g.tab<5 && g.pages[g.tab].changedOnly;
     rawText(g.path,documentTitle());rawText(g.meta,campaignLabel(g.doc->story)+L"    /    "+wide(g.doc->version)+L"    /    "+tr(L"回合")+L" "+wide(g.doc->turn)+(g.doc->campaignName.empty()?L"":L"    /    "+wide(g.doc->campaignName)));
-    updateCampaign();if(g.tab>=5)g.tab=0;
+    updateCampaign();
     refresh();
 }
-void loadDocument(const fs::path&p,bool ask){
+void loadDocument(const fs::path&p,bool ask,DocumentLoad mode){
     if(ask&&!discardIfNeeded())return;
     try{
-        loadDocumentBytes(readFile(p),fs::absolute(p),0);
+        loadDocumentBytes(readFile(p),fs::absolute(p),0,mode);
         toast(L"已打开  ·  "+g.file.filename().wstring());
     }catch(const std::exception&e){message(L"无法打开这个存档。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }
@@ -779,7 +786,7 @@ void command(int id,int code){
     switch(id){
     case CLEAR_FIELD_SEARCH:clearSearchField(g.search);break;
     case OPEN:{auto p=pickFile();if(!p.empty())loadDocument(p);break;}case LATEST:chooseSave();break;
-    case RELOAD:if(g.demoResource)loadDemo(g.demoResource);else if(g.doc){auto current=g.file;loadDocument(current);}break;
+    case RELOAD:if(g.demoResource)loadDemo(g.demoResource);else if(g.doc){auto current=g.file;loadDocument(current,true,DocumentLoad::Reload);}break;
     case FOLDER:{auto p=!g.file.empty()?g.file.parent_path():saveFolder();if(fs::exists(p))ShellExecuteW(g.win,L"open",p.c_str(),nullptr,nullptr,SW_SHOWNORMAL);else message(L"默认目录不存在，请手动打开存档。\r\n"+p.wstring());break;}
     case APPLY:if(applyInput())toast(L"已应用，待保存");break;
     case UNDOONE:if(g.session&&!g.selected.empty()){g.session->revertField(g.selected);g.editingDirty=false;refresh();}break;

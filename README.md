@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.22.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.0/SuzerainSaveStudio-0.22.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.22.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.22.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.1/SuzerainSaveStudio-0.22.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.22.1) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
@@ -26,6 +26,7 @@
 
 ## 常用数值和收藏
 
+- **跟踪同一字段**。例如在「高级字段」搜索 `PO`，选中公众支持度。游戏再次写入同一个存档后，按 **Ctrl+R** 即可保留搜索和选中项，直接对照新的分值。
 - **查看当前民意**。载入战役，按 **Ctrl+F8**。如果游戏提供该数值，面板会显示当前战役的民意分值，打开期间会随游戏更新。它是游戏内部的支持度分数。桌面端也可在「高级字段」搜索「民意」或 `PO`，查看存档里的公众支持度。
 - **收藏字段**。选中常用或高级字段，在右侧点“收藏字段”。换同一战役的存档后，到“高级字段”点“只看收藏”，可继续编辑这些数值。索德兰和里奇亚各用一份收藏。
 - **查里奇亚资源**。在高级字段搜索“能源”时，当前库存会排在收入修正项前面。要看每回合的变化，可以搜索“每回合能源”。净变化是存档记下的汇总值，游戏结算时可能重新计算。

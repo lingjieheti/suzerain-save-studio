@@ -1,6 +1,12 @@
-# v0.22.0 Preview — Windows validation
+# v0.22.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.22.0 editor and optional 0.22.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0 and the plugin with .NET 6 against the local Windows Steam player.
+The Windows x64 archive includes the 0.22.1 desktop editor and optional 0.22.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0.
+
+## Reloading a field in 0.22.1
+
+We opened a synthetic Sordland save in the released 0.22.0 Windows executable, searched Advanced for `BaseGame.Public_Opinion` and saw one row with a value of 9. After an external write changed it to 17, clicking Reload removed the search text, displayed 51 rows and selected another field with a value of 8. Entering the query again revealed 17. A player had described reopening a save to compare public opinion across choices. The loss of selection was reproduced in Studio. [Player discussion](https://www.reddit.com/r/suzerain/comments/1qq1buh/the_assembly_always_overturn_my_vetos_for_the/)
+
+On Windows, the 0.22.1 editor retained the query, selected row and keyboard focus while the file on disk changed from −9.5 to 23.25. Reload also retained a manually selected second match. Opening another file in the same campaign cleared the old search and showed the new file's data. We repeated these checks at 1,200 and 800 DIP in each of the four themes using synthetic saves and an isolated test profile.
 
 ## Desktop materials in 0.22.0
 

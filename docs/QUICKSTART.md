@@ -8,11 +8,15 @@
 
 想找人物关系时，打开里奇亚示例的“高级字段”，按 **Ctrl+F**，粘贴 `[\"RiziaDLC.Relations_`。结果会列出维娜、雨果等人的关系字段。
 
+要对照一次决策前后的民意，可先在“高级字段”搜索 `PO` 并选中民意字段。等游戏再次写入同一存档后，按 **Ctrl+R** 或点“重新载入”即可在原来的位置查看新值。有待保存的修改时，先按提示决定是否放弃。
+
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
 在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
 
 覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
+
+使用《The Zille War》v1.0.0 等依赖 Suzerain Modding Kit v2.4 的模组时，先退出游戏，再编辑主存档里的预算等常规数值。模组另把进度放在 `moddingkit/`。修改器的“另存为”和“恢复备份”只处理选中的主 JSON。要分支或回退完整的模组进度，请一起保留同一时刻的主档和对应的模组存档。这个行为已用合成双文件验证，模组战役内的结果尚待实测。[Modding Kit 作者的备份说明](https://github.com/suzerain-modding/suzerain-modding-kit/blob/v2.4/docs/guides/user/back-up-saves.md)
 
 在简体或繁体中文界面，选档器和编辑器的“外观”菜单也能切换字体。自动模式优先使用本机的相应苹方字体，常见 Windows 环境会使用微软雅黑 UI 或微软正黑体 UI。
 
@@ -37,6 +41,10 @@ Open **Support the author** in the save picker or editor sidebar. Scan the appre
 3. From search, press **↓** to enter the results. Select a field with the arrow keys and press **Enter**. For a number, type over the selected value and press **Enter** to stage it. For a yes/no field, focus moves to the current choice. Press **Ctrl+S** to focus the change list. Use **Up / Down** to compare the original and proposed values, then choose **Save to original** or **Save as**. Return to the game's main menu and load the file you just saved.
 
 To find character relationships, open the Rizia sample’s **Advanced** tab, press **Ctrl+F**, and paste `[\"RiziaDLC.Relations_`. The results include the relationship fields for Vina and Hugo.
+
+To follow public opinion between decisions, search **Advanced** for `PO` and select the opinion field. After the game writes the same save again, press **Ctrl+R** or click **Reload** to see its new value in place. The editor asks before discarding unsaved edits.
+
+The Zille War v1.0.0 uses Suzerain Modding Kit v2.4, which stores additional progress under `moddingkit/`. Studio's Save As and Restore handle the selected main JSON. To copy or roll back a complete modded run, keep its main save and matching mod save from the same point in time. We verified the file operations using synthetic saves. [Modding Kit backup guide](https://github.com/suzerain-modding/suzerain-modding-kit/blob/v2.4/docs/guides/user/back-up-saves.md)
 
 To redo a field change, click **Redo** at the bottom of the editor. From the search box, you can also press **↓** to focus the results, then **Ctrl+Y**.
 
