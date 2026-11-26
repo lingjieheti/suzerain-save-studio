@@ -28,36 +28,20 @@ inline int fileIconInset(const State& s){
     return ListView_GetColumnWidth(s.list,0)>=s.scale(186)?s.scale(35):0;
 }
 inline void symbol(const State& s,HDC dc,int id,int x,int y,COLORREF color){
-    HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),color);
-    auto old=SelectObject(dc,pen),brush=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
-    auto line=[&](std::initializer_list<POINT> points){
-        bool start=true;
-        for(auto p:points){if(start)MoveToEx(dc,x+s.scale(p.x),y+s.scale(p.y),nullptr);else LineTo(dc,x+s.scale(p.x),y+s.scale(p.y));start=false;}
-    };
-    auto circle=[&](int l,int t,int r,int b){Ellipse(dc,x+s.scale(l),y+s.scale(t),x+s.scale(r),y+s.scale(b));};
-    switch(id){
-        case FILTER:circle(2,2,12,12);line({{10,10},{16,16}});break;
-        case BROWSE:case ADD_FOLDER:
-            line({{1,14},{1,4},{6,4},{8,6},{16,6},{16,9}});
-            line({{1,14},{4,8},{18,8},{15,15},{1,15}});break;
-        case RESCAN:
-            Arc(dc,x+s.scale(2),y+s.scale(2),x+s.scale(16),y+s.scale(16),x+s.scale(14),y+s.scale(6),x+s.scale(15),y+s.scale(9));
-            line({{11,6},{16,6},{16,1}});break;
-        case DEMO_MAIN:
-            line({{1,6},{9,2},{17,6},{1,6}});line({{4,8},{4,13}});line({{9,8},{9,13}});line({{14,8},{14,13}});line({{2,15},{16,15}});break;
-        case DEMO_RIZIA:
-            line({{1,5},{5,8},{9,3},{13,8},{17,5},{15,13},{3,13},{1,5}});line({{4,16},{14,16}});break;
-        case LIVE_MODE:
-            line({{0,10},{4,10},{7,3},{10,15},{13,8},{17,8}});break;
-        case IDOK:line({{2,9},{15,9}});line({{10,4},{15,9},{10,14}});break;
-        case LIST:
-            line({{3,1},{10,1},{15,6},{15,17},{3,17},{3,1}});
-            line({{10,1},{10,6},{15,6}});line({{6,11},{12,11}});break;
-        default:
-            line({{2,4},{8,4},{10,6},{16,6},{16,15},{2,15},{2,4}});
-            line({{4,2},{10,2},{12,4},{17,4}});break;
+    using icons::Symbol;
+    Symbol icon;
+    switch (id) {
+        case FILTER: icon=Symbol::Search; break;
+        case BROWSE: case ADD_FOLDER: icon=Symbol::Folder; break;
+        case RESCAN: icon=Symbol::Reload; break;
+        case DEMO_MAIN: icon=Symbol::Inventory; break;
+        case DEMO_RIZIA: icon=Symbol::Crown; break;
+        case LIVE_MODE: icon=Symbol::Pulse; break;
+        case IDOK: icon=Symbol::Arrow; break;
+        case LIST: icon=Symbol::Document; break;
+        default: icon=Symbol::Archive; break;
     }
-    SelectObject(dc,brush);SelectObject(dc,old);DeleteObject(pen);
+    icons::draw(dc,icon,x,y,s.scale(18),color);
 }
 inline void focusRing(const State& s,HDC dc,RECT box,COLORREF ink,int diameter){
     const int saved=SaveDC(dc);

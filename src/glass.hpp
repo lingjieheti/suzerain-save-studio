@@ -73,35 +73,37 @@ inline void wash(HDC dc,const RECT& box,COLORREF canvas) {
         SetDCBrushColor(dc,old);
         return;
     }
-    // The crest changes width along the arc, like a sheet curving toward the light.
-    // It is part of the backdrop, so adjacent panes catch different parts of it.
-    constexpr int width=256,height=176;
+    // A broad fold turns toward the toolbar at the upper right. Its reflection
+    // stays in the canvas, so controls refract it in their own coordinates.
+    constexpr int width=320,height=208;
     static std::array<DWORD,width*height> pixels{};
     static COLORREF lastCanvas=CLR_INVALID;
     static int lastTheme=-1;
     if (lastCanvas!=canvas || lastTheme!=Theme::index()) {
         lastCanvas=canvas; lastTheme=Theme::index();
-        constexpr COLORREF lights[][3]={{RGB(217,174,142),RGB(219,191,173),RGB(248,233,206)},
-            {RGB(128,191,169),RGB(146,173,164),RGB(229,241,203)},
-            {RGB(128,195,211),RGB(167,169,220),RGB(215,241,247)},
-            {RGB(49,104,122),RGB(83,80,135),RGB(112,160,178)}};
+        constexpr COLORREF lights[][3]={{RGB(215,173,151),RGB(208,188,175),RGB(252,237,213)},
+            {RGB(124,183,167),RGB(154,178,157),RGB(231,242,217)},
+            {RGB(130,193,206),RGB(164,168,218),RGB(220,245,246)},
+            {RGB(48,102,121),RGB(80,79,127),RGB(132,177,191)}};
         const auto& light=lights[lastTheme];
         const bool dark=Theme::dark();
         for (int x=0;x<width;++x) {
             const double u=double(x)/(width-1);
-            const double crest=.10+.30*u-.54*u*u+.040*std::sin(5.2*u-.45);
-            const double second=.58-.61*u+.08*std::sin(4.8*u);
+            const double crest=.126+.104*std::sin(6.4*u-.76)-.068*u;
+            const double foldWidth=.054+.065*bump((u-.42)/.39);
+            const double turning=bump((u-.76)/.27);
             for (int y=0;y<height;++y) {
                 const double v=double(y)/(height-1);
-                const auto glow=[](double x,double y) { return std::exp(-x*x-y*y); };
-                auto c=mix(canvas,light[0],.67*glow((u+.06)/.51,(v-.12)/.66));
-                c=mix(c,light[1],.70*glow((u-.69)/.46,(v+.08)/.53));
-                c=mix(c,light[2],.34*glow((u-.08)/.7,(v-.85)/.52));
+                auto c=mix(canvas,light[0],.69*bump((u+.04)/.51)*bump((v-.14)/.58));
+                c=mix(c,light[1],.72*bump((u-.79)/.49)*bump((v-.02)/.47));
+                c=mix(c,light[2],.24*bump((u-.08)/.68)*bump((v-.75)/.49));
                 const double d=v-crest;
-                c=mix(c,light[1],.27*bump((d-.061)/.083));
-                c=mix(c,light[2],(dark?.36:.58)*bump((d+.009)/(.023+.039*u)));
-                c=mix(c,dark?light[2]:RGB(255,255,255),.28*bump(d/.012)*bump((u-.31)/.69));
-                c=mix(c,light[2],.23*bump((v-second)/(.043+.042*u))*bump((u-.82)/.46));
+                c=mix(c,light[1],.33*bump((d+.034)/foldWidth));
+                c=mix(c,light[2],(dark?.28:.48)*bump((d-.026)/foldWidth));
+                // Where the fold faces the light its soft shoulder converges
+                // to a thin caustic. The rest of the canvas stays diffuse.
+                c=mix(c,dark?light[2]:RGB(255,255,255),
+                      (.10+.41*turning)*bump(d/(.025-.016*turning)));
                 pixels[y*width+x]=rgbPixel(c);
             }
         }
@@ -186,12 +188,12 @@ inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
     if(!found) {
         Rim& entry=cache[next++%cache.size()];
         const double scale=std::clamp(radius/17.,.8,2.6);
-        const int pad=int(std::ceil(5*scale)),half=pad+radius;
+        const int pad=int(std::ceil(6*scale)),half=pad+radius;
         const int size=2*half+middle;
         if(!entry.image.size(dc,size,size)) { entry.palette=-1; return; }
         entry.radius=radius; entry.pad=pad; entry.palette=Theme::index(); entry.dark=darkTint;
         const COLORREF shadow=mix(Theme::accent,RGB(9,18,29),.78);
-        const COLORREF reflection=mix(Theme::accent,RGB(251,253,255),.77);
+        const COLORREF reflection=mix(Theme::accent,RGB(251,253,255),.72);
         GdiFlush();
         for(int y=0;y<size;++y) for(int x=0;x<size;++x) {
             double nx,ny;
@@ -207,16 +209,20 @@ inline void rim(HDC dc,const RECT& box,int radius,bool darkTint) {
             double a=0,r=0,g=0,b=0;
             if(d>0) {
                 const double below=std::max(0.,ny);
-                pigment(a,r,g,b,shadow,(.025+.14*below)*bump(d/((1.4+1.7*below)*scale)));
+                // A crisp contact shadow under the lip opens into a broad,
+                // softer shadow in the direction opposite the key light.
+                const double side=std::max(0.,.32*nx+.95*ny);
+                pigment(a,r,g,b,shadow,(.018+.105*side)*bump(d/((1.7+2.3*side)*scale)));
+                pigment(a,r,g,b,shadow,.09*below*bump((d/scale-.53)/.74));
             }
             // The fine dark silhouette sits outside the specular lip. Keeping
             // them apart leaves the sides clear where neither light strikes.
             const double depth=-d/scale;
-            pigment(a,r,g,b,shadow,(darkTint?.55:.29)*bump((depth-.02)/.62));
-            pigment(a,r,g,b,shadow,(darkTint?.082:.045)*bump((depth-2.45)/1.14));
-            pigment(a,r,g,b,reflection,(darkTint?.27:.22)*bounce*bump((depth-2.84)/1.58));
-            const double specular=darkTint?.022+.88*sun+.49*bounce:.033+.98*sun+.58*bounce;
-            pigment(a,r,g,b,RGB(255,255,255),specular*bump((depth-1.03)/(darkTint?.61:.68)));
+            pigment(a,r,g,b,shadow,(darkTint?.43:.21)*bump((depth-.02)/.60));
+            pigment(a,r,g,b,shadow,(darkTint?.07:.042)*bump((depth-2.2)/1.04));
+            pigment(a,r,g,b,reflection,(darkTint?.42:.34)*bounce*bump((depth-2.65)/1.38));
+            const double specular=darkTint?.06+.88*sun+.49*bounce:.09+.94*sun+.57*bounce;
+            pigment(a,r,g,b,RGB(255,255,255),specular*bump((depth-.86)/(darkTint?.59:.66)));
             entry.image.pixels[y*size+x]=argb(a,r,g,b);
         }
         found=&entry;
@@ -268,16 +274,49 @@ inline bool paintLens(HDC dc,const RECT& box,int radius,Dib& image) {
     return true;
 }
 
-inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool active=false) {
+// Bend the sample along the normal to the actual rounded silhouette.
+// A capsule end therefore magnifies the backdrop radially; a long straight
+// edge only bends it vertically. The central reading area is undistorted.
+struct LensMap {
+    static constexpr int cols=80,rows=64;
+    int width=0,height=0,radius=0;
+    struct Sample { BYTE x,y; };
+    std::array<Sample,cols*rows> samples{};
+};
+
+inline const LensMap& lensMap(int w,int h,int radius) {
+    constexpr int cols=LensMap::cols,rows=LensMap::rows;
+    static std::array<LensMap,8> maps{};
+    static size_t nextMap=0;
+    auto map=std::find_if(maps.begin(),maps.end(),[&](const auto& m){return m.width==w && m.height==h && m.radius==radius;});
+    if(map==maps.end()) {
+        map=maps.begin()+(nextMap++%maps.size());
+        map->width=w; map->height=h; map->radius=radius;
+        const double dx=double(w)/cols,dy=double(h)/rows;
+        for(int y=0;y<rows;++y) for(int x=0;x<cols;++x) {
+            double nx,ny;
+            const double distance=contour((x+.5)*dx-w*.5,(y+.5)*dy-h*.5,w*.5,h*.5,radius,nx,ny);
+            const double shoulder=std::clamp(1.+distance/(radius*.74),0.,1.);
+            const double bend=.69*radius*shoulder*shoulder;
+            map->samples[y*cols+x]={
+                BYTE(std::clamp(int(x+.5-nx*bend/dx),0,cols-1)),
+                BYTE(std::clamp(int(y+.5-ny*bend/dy),0,rows-1))};
+        }
+    }
+    return *map;
+}
+
+inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool active=false,
+                    Finish finish=effectiveFinish()) {
     const int w=box.right-box.left,h=box.bottom-box.top;
     if(w<2 || h<2) return;
     const int radius=std::clamp(radiusPixels,1,std::min({w/2,h/2,72}));
     const int saved=SaveDC(dc);
     SelectObject(dc,GetStockObject(DC_PEN)); SelectObject(dc,GetStockObject(DC_BRUSH));
     SetDCPenColor(dc,Theme::line); SetDCBrushColor(dc,tint);
-    constexpr int cols=80,rows=64;
+    constexpr int cols=LensMap::cols,rows=LensMap::rows;
     static Dib image;
-    if(!enabled() || !image.size(dc,cols,rows)) {
+    if(!systemAllows || finish==Solid || !image.size(dc,cols,rows)) {
         RoundRect(dc,box.left,box.top,box.right,box.bottom,2*radius,2*radius);
         RestoreDC(dc,saved); return;
     }
@@ -289,23 +328,13 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     std::array<DWORD,cols*rows> backdrop{};
     if(sampled) std::copy_n(image.pixels,cols*rows,backdrop.begin());
     else backdrop.fill(rgbPixel(tint));
-    // The bevel bends nearby colors inward. Limit sampling to the local material
-    // and taper displacement to zero across the flat optical center.
-    auto refract=[](int i,int count,int extent,int radius) {
-        const int edgeDistance=std::min(i,count-1-i);
-        const double thickness=std::max(1.,double(radius)*count/extent);
-        const double falloff=std::max(0.,1.-edgeDistance/(1.7*thickness));
-        const int shift=int(std::min(count*.15,thickness*.61)*falloff*falloff+.5);
-        return std::clamp(i+(i<count/2?shift:-shift),0,count-1);
-    };
-    std::array<int,cols> sx{};
-    for(int x=0;x<cols;++x) sx[x]=refract(x,cols,w,radius);
+    const auto& optics=lensMap(w,h,radius);
     const auto crest=mix(tint,white,darkTint?(active?.07:.14):.68);
     const auto base=mix(tint,Theme::accent,darkTint?.075:.09);
-    const bool frosted=effectiveFinish()==Frosted;
+    const bool frosted=finish==Frosted;
     // A milkier body keeps color from the canvas but attenuates its detail.
     // Preserve the stronger pigment of primary actions in both finishes.
-    const unsigned clearDensity=active?(darkTint?244:202):(darkTint?150:112);
+    const unsigned clearDensity=active?(darkTint?244:202):(darkTint?128:82);
     const unsigned density=frosted?std::max(clearDensity,darkTint?216u:208u):clearDensity;
     const int spread=frosted?3:1;
     // Diffuse the already downsampled backdrop across the shoulder and keep
@@ -315,21 +344,24 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
         return (p&q)+(((p^q)&0x00fefefeu)>>1);
     };
     for(int y=0;y<rows;++y) {
-        const int sy=refract(y,rows,h,radius);
-        const DWORD* scan=backdrop.data()+sy*cols;
-        const DWORD* above=backdrop.data()+std::max(0,sy-spread)*cols;
-        const DWORD* below=backdrop.data()+std::min(rows-1,sy+spread)*cols;
         const double v=double(y)/(rows-1);
         const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
         const auto right=mix(base,crest,.12+.27*v);
         for(int x=0;x<cols;++x) {
-            const int ix=sx[x];
-            const DWORD horizontal=averagePixel(scan[std::max(0,ix-spread)],scan[std::min(cols-1,ix+spread)]);
-            const DWORD vertical=averagePixel(above[ix],below[ix]);
-            const DWORD sample=averagePixel(scan[ix],averagePixel(horizontal,vertical));
+            const auto [sx,sy]=optics.samples[y*cols+x];
+            const DWORD* scan=backdrop.data()+sy*cols;
+            const DWORD horizontal=averagePixel(scan[std::max(0,sx-spread)],scan[std::min(cols-1,sx+spread)]);
+            const DWORD vertical=averagePixel(backdrop[std::max(0,sy-spread)*cols+sx],
+                                              backdrop[std::min(rows-1,sy+spread)*cols+sx]);
+            const DWORD sample=averagePixel(scan[sx],averagePixel(horizontal,vertical));
             const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);
             const auto color=mix(left,right,double(x)/(cols-1));
-            image.pixels[y*cols+x]=rgbPixel(mix(local,color,density/255.));
+            // Increase tint only when the backdrop crosses toward the label
+            // color, keeping quiet or similarly lit backgrounds more visible.
+            const int luma=(GetRValue(local)*3+GetGValue(local)*6+GetBValue(local))/10;
+            const int glare=std::max(0,darkTint?luma-94:162-luma);
+            const double opacity=(density+(255-density)*glare/255.)/255.;
+            image.pixels[y*cols+x]=rgbPixel(mix(local,color,opacity));
         }
     }
     if(!paintLens(dc,box,radius,image)) RoundRect(dc,box.left,box.top,box.right,box.bottom,2*radius,2*radius);
@@ -379,6 +411,7 @@ inline void glint(HDC dc,const RECT& box,int radiusPixels,POINT light,bool press
     const int right=std::min(int(box.right),int(light.x)+reach+1),bottom=std::min(int(box.bottom),int(light.y)+reach+1);
     static Dib patch;
     if(!patch.size(dc,2*reach+1,2*reach+1)) return;
+    const COLORREF reflected=mix(Theme::accent,RGB(255,255,255),Theme::dark()?.76:.63);
     GdiFlush();
     for(int y=top;y<bottom;++y) for(int x=left;x<right;++x) {
         const double dx=x-light.x,dy=y-light.y;
@@ -389,8 +422,15 @@ inline void glint(HDC dc,const RECT& box,int radiusPixels,POINT light,bool press
         // and broadens without whitening the label at the center of the button.
         const double depth=-d/scale;
         const double bevel=std::max(0.,1.-std::abs(depth-(pressed?2.35:1.05))/(pressed?3.1:1.95));
-        const BYTE alpha=BYTE((pressed?171:239)*radial*radial*bevel);
-        patch.pixels[(y-top)*patch.width+x-left]=(DWORD(alpha)*0x01010101u);
+        const double falloff=radial*radial;
+        const double sheen=(pressed?.69:.92)*falloff*bevel;
+        // A small pool of refracted light follows a press into the glass.
+        // Keep the middle nearly clear and clip the glow to the rounded lens.
+        const double pool=(pressed?.13:.045)*falloff*std::clamp(depth,0.,1.);
+        const double body=pool*(1.-sheen);
+        patch.pixels[(y-top)*patch.width+x-left]=argb(255*(body+sheen),
+            GetRValue(reflected)*body+255*sheen,GetGValue(reflected)*body+255*sheen,
+            GetBValue(reflected)*body+255*sheen);
     }
     GdiAlphaBlend(dc,left,top,right-left,bottom-top,patch.dc,0,0,right-left,bottom-top,
                   {AC_SRC_OVER,0,255,AC_SRC_ALPHA});

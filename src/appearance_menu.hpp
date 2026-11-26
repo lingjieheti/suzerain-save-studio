@@ -54,7 +54,21 @@ bool themeMenuMessage(UINT message,WPARAM,LPARAM param) {
         caption.left+=measure(37);
         label=Theme::name(id);
     }else if(item.itemID>=glass::firstFinishCommand){
-        label=glass::finishLabel(static_cast<glass::Finish>(item.itemID-glass::firstFinishCommand));
+        const auto finish=static_cast<glass::Finish>(item.itemID-glass::firstFinishCommand);
+        // The same band under each lens makes their relative transmission visible.
+        // Paint the sample without changing the user's current selection.
+        RECT lens{x,y-measure(8),x+measure(29),y+measure(8)};
+        POINT band[]={{x+measure(6),y+measure(7)}, {x+measure(14),y-measure(7)},
+                      {x+measure(22),y-measure(7)}, {x+measure(14),y+measure(7)}};
+        const int saved=SaveDC(dc);
+        SelectObject(dc,GetStockObject(NULL_PEN));
+        SelectObject(dc,GetStockObject(DC_BRUSH));
+        SetDCBrushColor(dc,Theme::accent);
+        Polygon(dc,band,static_cast<int>(std::size(band)));
+        RestoreDC(dc,saved);
+        glass::surface(dc,lens,Theme::sidebar,measure(8),false,finish);
+        caption.left+=measure(37);
+        label=glass::finishLabel(finish);
     }else{
         label=metrics.fontNames[item.itemID-firstFontCommand].c_str();
     }

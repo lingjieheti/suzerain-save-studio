@@ -136,68 +136,21 @@ void paintWorkspaceChildBackdrop(HDC dc, HWND child) {
 
 // Monochrome navigation symbols also identify pages when the sidebar collapses.
 void navSymbol(HDC dc, int id, int x, int y, COLORREF color) {
-    HPEN pen = CreatePen(PS_SOLID, std::max(1, px(2)), color);
-    auto oldPen = SelectObject(dc, pen);
-    auto oldBrush = SelectObject(dc, GetStockObject(HOLLOW_BRUSH));
-    auto stroke = [&](std::initializer_list<POINT> points) {
-        bool first = true;
-        for (auto p : points) {
-            if (first) MoveToEx(dc, x + px(p.x), y + px(p.y), nullptr);
-            else LineTo(dc, x + px(p.x), y + px(p.y));
-            first = false;
-        }
-    };
-    auto oval = [&](int l,int t,int r,int b) { Ellipse(dc,x+px(l),y+px(t),x+px(r),y+px(b)); };
-    switch (id) {
-        case 0:
-            stroke({{1,16},{18,16}}); stroke({{4,13},{4,9}}); stroke({{9,13},{9,6}}); stroke({{14,13},{14,2}}); break;
-        case 1:
-            stroke({{1,6},{9,2},{17,6},{1,6}}); stroke({{4,8},{4,14}}); stroke({{9,8},{9,14}}); stroke({{14,8},{14,14}}); stroke({{1,16},{17,16}}); break;
-        case 2:
-            oval(4,1,11,8); stroke({{1,16},{2,12},{5,10},{9,10},{12,12},{13,16}}); stroke({{13,3},{15,4},{15,7},{13,8}}); stroke({{14,10},{17,12},{18,16}}); break;
-        case 3:
-            oval(1,1,18,18); oval(6,1,13,18); stroke({{2,9},{17,9}}); break;
-        case 4:
-            stroke({{1,4},{17,4}}); stroke({{1,9},{17,9}}); stroke({{1,14},{17,14}}); stroke({{5,1},{5,7}}); stroke({{13,6},{13,12}}); stroke({{7,11},{7,17}}); break;
-        case 5:
-            stroke({{9,16},{3,16},{3,2},{14,2},{14,8}}); stroke({{5,6},{11,6}}); stroke({{8,12},{11,15},{17,9}}); break;
-        case 6:
-            stroke({{1,2},{17,2},{17,6},{1,6},{1,2}}); stroke({{3,7},{3,16},{15,16},{15,7}}); stroke({{7,10},{12,10}}); break;
-        case 8: {
-            POINT curve[]={{9,16},{7,14},{1,10},{1,6},{1,1},{6,0},{9,5},
-                           {12,0},{17,1},{17,6},{17,10},{11,14},{9,16}};
-            for(auto& point:curve){point.x=x+px(point.x);point.y=y+px(point.y);}
-            PolyBezier(dc,curve,static_cast<DWORD>(std::size(curve)));
-            break;
-        }
-        case RELOAD:
-            Arc(dc,x+px(2),y+px(2),x+px(16),y+px(16),x+px(15),y+px(6),x+px(16),y+px(11));
-            stroke({{11,6},{16,6},{16,1}}); break;
-        case FOLDER:
-            stroke({{1,15},{1,4},{7,4},{9,6},{16,6},{16,15},{1,15}}); break;
-        case OPEN:
-            stroke({{4,15},{2,15},{2,2},{10,2},{14,6},{14,8}});
-            stroke({{10,2},{10,6},{14,6}}); stroke({{7,13},{17,13},{13,9}});
-            stroke({{17,13},{13,17}}); break;
-        case LATEST:
-            stroke({{2,3},{16,3},{16,15},{2,15},{2,3}}); stroke({{6,7},{13,7}});
-            stroke({{6,11},{11,11}}); break;
-        case HISTORY_UNDO:
-        case HISTORY_REDO: {
-            POINT points[]={{16,14},{16,8},{12,6},{4,6}};
-            const bool redo=id==HISTORY_REDO;
-            for(auto& point:points){
-                point.x=x+px(redo?18-point.x:point.x);point.y=y+px(point.y);
-            }
-            PolyBezier(dc,points,4);
-            if(redo)stroke({{10,2},{15,6},{10,10}});
-            else stroke({{8,2},{3,6},{8,10}});
-            break;
-        }
-        default:
-            stroke({{1,3},{5,3},{9,5},{13,3},{17,3},{17,15},{13,15},{9,17},{5,15},{1,15},{1,3}}); stroke({{9,5},{9,17}}); break;
+    using icons::Symbol;
+    static constexpr Symbol navigation[] = {Symbol::Economy, Symbol::Inventory, Symbol::People,
+        Symbol::Globe, Symbol::Sliders, Symbol::Review, Symbol::Archive, Symbol::Book, Symbol::Heart};
+    Symbol symbol;
+    if (id>=0 && id<static_cast<int>(std::size(navigation))) symbol=navigation[id];
+    else switch (id) {
+        case RELOAD: symbol=Symbol::Reload; break;
+        case FOLDER: symbol=Symbol::Folder; break;
+        case OPEN: symbol=Symbol::Open; break;
+        case LATEST: symbol=Symbol::Saves; break;
+        case HISTORY_UNDO: symbol=Symbol::Undo; break;
+        case HISTORY_REDO: symbol=Symbol::Redo; break;
+        default: return;
     }
-    SelectObject(dc, oldPen); SelectObject(dc, oldBrush); DeleteObject(pen);
+    icons::draw(dc,symbol,x,y,px(18),color);
 }
 
 void drawButton(const DRAWITEMSTRUCT* d) {
@@ -246,7 +199,11 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     if(down && !disabled && (grouped || id==APPEARANCE))
         InflateRect(&lens,-px(2),-px(1));
     if(nav && (activeNav || hover || down)) {
-        if(activeNav)
+        if(activeNav && material) {
+            const auto tint=glass::mix(Theme::select,Theme::accent,down?.28:.15);
+            glass::surface(d->hDC,lens,tint,lensRadius);
+            fg=Theme::sideText;
+        } else if(activeNav)
             glass::surface(d->hDC,lens,down?Theme::accentHover:Theme::accent,lensRadius,true);
         else if(material)
             glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,down?44:28);
@@ -280,7 +237,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             typography::width(d->hDC,g.font,textOf(d->hwndItem))>r.right-r.left-px(47);
         int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
         const int glyphY=(r.bottom-px(18))/2;
-        const auto iconInk=activeNav?Theme::onAccent:material?Theme::accentInk:Theme::sideMuted;
+        const auto iconInk=activeNav?fg:material?Theme::accentInk:Theme::sideMuted;
         navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,iconInk);
         if (!compact) {
             tx.left += px(longSupport?27:42); tx.right -= px(5);
@@ -345,7 +302,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
         RECT focus = lens; InflateRect(&focus, -px(3), -px(3));
-        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary||activeNav?Theme::onAccent:Theme::focus);
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary||(activeNav&&!material)?Theme::onAccent:Theme::focus);
         auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
         const int diameter=grouped||id==APPEARANCE?std::max(px(6),2*lensRadius-px(6)):px(12);
         RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,diameter,diameter);

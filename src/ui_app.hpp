@@ -5,13 +5,14 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.22.1";
+constexpr wchar_t APP_VERSION[] = L"0.23.0";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
        FIELD_FAVORITE, FILTER_FAVORITES, CLEAR_FIELD_SEARCH, SUPPORT_AUTHOR };
 #include "appearance.hpp"
 #include "glass.hpp"
+#include "interface_icons.hpp"
 #include "typography.hpp"
 #include "sponsor_text.hpp"
 struct FieldPageState {
@@ -496,7 +497,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.22.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.0 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -926,6 +927,9 @@ bool handleEditorShortcut(WPARAM key, HWND focus){
 
 int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);i18n::loadPreferences();Theme::load();
+    Gdiplus::GdiplusStartupInput graphicsInput;
+    ULONG_PTR graphicsToken{};
+    if (Gdiplus::GdiplusStartup(&graphicsToken, &graphicsInput, nullptr) != Gdiplus::Ok) { CoUninitialize(); return 1; }
     glass::refreshSettings();
     typography::selected=typography::stored();
     INITCOMMONCONTROLSEX ic{sizeof(ic),ICC_WIN95_CLASSES};InitCommonControlsEx(&ic);
@@ -933,7 +937,7 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
     WNDCLASSEXW c{};c.cbSize=sizeof(c);c.style=CS_HREDRAW|CS_VREDRAW;c.lpfnWndProc=windowProc;c.hInstance=inst;c.hCursor=LoadCursor(nullptr,IDC_ARROW);c.lpszClassName=APP_CLASS;c.hIcon=LoadIconW(inst,MAKEINTRESOURCEW(101));c.hIconSm=c.hIcon;RegisterClassExW(&c);
     RECT area{};SystemParametersInfoW(SPI_GETWORKAREA,0,&area,0);UINT dpi=GetDpiForSystem();int width=std::min<int>(MulDiv(1280,dpi,96),area.right-area.left),height=std::min<int>(MulDiv(900,dpi,96),area.bottom-area.top);
     HWND w=CreateWindowExW(WS_EX_ACCEPTFILES,APP_CLASS,APP_TITLE,WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,area.left+(area.right-area.left-width)/2,area.top+(area.bottom-area.top-height)/2,width,height,nullptr,nullptr,inst,nullptr);
-    if(!w)return 1;
+    if(!w){Gdiplus::GdiplusShutdown(graphicsToken);CoUninitialize();return 1;}
     Theme::caption(w);
     ShowWindow(w,show);UpdateWindow(w);
     int argc=0;auto argv=CommandLineToArgvW(GetCommandLineW(),&argc);if(argv&&argc>1){if(std::wstring(argv[1])==L"--licenses"){g.licenseMode=true;navigate(7);}else loadDocument(fs::path(argv[1]),false);}else PostMessageW(w,WM_APP+2,0,0);if(argv)LocalFree(argv);
@@ -942,5 +946,5 @@ int WINAPI wWinMain(HINSTANCE inst,HINSTANCE,PWSTR,int show){
            handleEditorShortcut(msg.wParam,GetFocus()))continue;
         if(!IsDialogMessageW(w,&msg)){TranslateMessage(&msg);DispatchMessageW(&msg);}
     }
-    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);CoUninitialize();return (int)msg.wParam;
+    if(g.rowHeight)ImageList_Destroy(g.rowHeight);for(auto f:{g.font,g.small,g.title,g.large,g.bold,g.mono,g.brand,g.emphasis,g.tableNumber,g.compactNumber})if(f)DeleteObject(f);DeleteObject(g.bg);DeleteObject(g.panel);DeleteObject(g.input);Gdiplus::GdiplusShutdown(graphicsToken);CoUninitialize();return (int)msg.wParam;
 }

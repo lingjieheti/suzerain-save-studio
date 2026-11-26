@@ -12,6 +12,43 @@ void check(bool ok,const char* description){
     if(!ok)throw std::runtime_error(description);
 }
 
+void testInterfaceIcons(){
+    using icons::Symbol;
+    for(const int dpi : {96,144}){
+        const int size=MulDiv(20,dpi,96), margin=4;
+        glass::Dib image;
+        check(image.size(nullptr,size+2*margin,size+2*margin),"Create a 32-bit icon test surface");
+        const auto count=image.width*image.height;
+        for(auto symbol : {Symbol::Economy,Symbol::Inventory,Symbol::People,Symbol::Globe,Symbol::Sliders,
+                           Symbol::Review,Symbol::Archive,Symbol::Book,Symbol::Heart,Symbol::Reload,
+                           Symbol::Folder,Symbol::Open,Symbol::Saves,Symbol::Undo,Symbol::Redo,Symbol::Search,
+                           Symbol::Crown,Symbol::Pulse,Symbol::Arrow,Symbol::Document}){
+            std::fill_n(image.pixels,count,0x00ffffffu);
+            icons::draw(image.dc,symbol,margin,margin,size,RGB(0,0,0));
+            GdiFlush();
+            int dark=0,partial=0,outside=0,upperLeft=0,upperRight=0;
+            for(int y=0;y<image.height;++y)for(int x=0;x<image.width;++x){
+                const int intensity=image.pixels[y*image.width+x]&255;
+                if(intensity==255)continue;
+                if(x<margin || y<margin || x>=margin+size || y>=margin+size)++outside;
+                if(intensity>0 && intensity<255)++partial;
+                if(intensity<96){
+                    ++dark;
+                    if(y<margin+size/4){
+                        if(x<margin+size/2)++upperLeft;else ++upperRight;
+                    }
+                }
+            }
+            if(!dark || !partial || outside)
+                std::cerr<<"Icon "<<static_cast<int>(symbol)<<" at "<<dpi<<" DPI: "<<dark<<" dark, "
+                         <<partial<<" antialiased, "<<outside<<" pixels outside\n";
+            check(dark>0 && partial>0 && outside==0,"Each scaled icon has solid ink and antialiased edges within its bounds");
+            if(symbol==Symbol::Undo)check(upperLeft>0 && upperRight==0,"Undo's upper arrowhead points left");
+            if(symbol==Symbol::Redo)check(upperRight>0 && upperLeft==0,"Redo mirrors the undo arrowhead");
+        }
+    }
+}
+
 void selectRow(const std::string& key){
     const auto row=std::find(g.rows.begin(),g.rows.end(),key);
     check(row!=g.rows.end(),"Requested row is visible");
@@ -1290,6 +1327,11 @@ void testReview(const fs::path& path){
 int main(int argc,char** argv){
     if(argc!=3)return 2;
     try{
+        Gdiplus::GdiplusStartupInput graphicsInput;
+        ULONG_PTR token{};
+        check(Gdiplus::GdiplusStartup(&token,&graphicsInput,nullptr)==Gdiplus::Ok,"Initialize GDI+ for native editor painting");
+        struct GraphicsShutdown { ULONG_PTR token; ~GraphicsShutdown(){Gdiplus::GdiplusShutdown(token);} } graphics{token};
+        testInterfaceIcons();
         INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_WIN95_CLASSES};
         InitCommonControlsEx(&controls);
         g.bg=CreateSolidBrush(Theme::bg);g.panel=CreateSolidBrush(Theme::panel);g.input=CreateSolidBrush(Theme::input);

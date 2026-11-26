@@ -120,10 +120,11 @@ inline Result scan(const std::vector<fs::path>& roots, const Limits& limits = {}
             if (ec) { ++result.errors; ec.clear(); continue; }
             if (detail::linked(entry.path(), status) || inBackupFolder(entry.path())) { ++result.skipped; continue; }
             if (fs::is_directory(status)) {
-                // These are game logs/cache, not campaign folders. Restrict this
-                // exclusion to Suzerain's own directory, never a generic root.
+                // Skip game cache, logs and Modding Kit sidecars during descent.
+                // An explicitly selected root is still scanned.
                 const auto name = detail::folded(entry.path().filename().wstring());
-                if (detail::folded(dir.path.filename().wstring()) == L"suzerain" && (name == L"unity" || name == L"logs")) {
+                if (detail::folded(dir.path.filename().wstring()) == L"suzerain" &&
+                    (name == L"unity" || name == L"logs" || name == L"moddingkit")) {
                     ++result.skipped; continue;
                 }
                 if (dir.depth >= limits.maxDepth) { ++result.skipped; result.truncated = true; continue; }

@@ -71,7 +71,7 @@ Push-Location (Join-Path $rootDir "src")
 try {
     & $resourceCompiler "app.rc" "-O" "coff" "-o" (Join-Path $buildDir "app.res")
     if ($LASTEXITCODE -ne 0) { throw "Resource compilation failed." }
-    & $compiler "main.cpp" (Join-Path $buildDir "app.res") "-std=c++17" "-Os" "-Wall" "-Wextra" "-municode" "-mwindows" "-static" "-s" @extraFlags "-o" (Join-Path $buildDir "SuzerainSaveStudio.exe") "-luser32" "-lkernel32" "-lcomdlg32" "-lcomctl32" "-lshell32" "-lole32" "-luuid" "-lgdi32" "-luxtheme" "-ldwmapi"
+    & $compiler "main.cpp" (Join-Path $buildDir "app.res") "-std=c++17" "-Os" "-Wall" "-Wextra" "-municode" "-mwindows" "-static" "-s" @extraFlags "-o" (Join-Path $buildDir "SuzerainSaveStudio.exe") "-luser32" "-lkernel32" "-lcomdlg32" "-lcomctl32" "-lshell32" "-lole32" "-luuid" "-lgdi32" "-luxtheme" "-ldwmapi" "-lgdiplus"
     if ($LASTEXITCODE -ne 0) { throw "C++ compilation failed." }
     Write-Host "Built ($kind, $target): $buildDir/SuzerainSaveStudio.exe"
 } finally {
