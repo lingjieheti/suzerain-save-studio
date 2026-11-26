@@ -32,6 +32,8 @@ Steam 攻略在人物关系一节让玩家复制 `[\"RiziaDLC.Relations_`，从�
 
 ## 五款工具的公开做法
 
+11 月 25 日发布的《The Zille War》v1.0.0 随包使用 Suzerain Modding Kit v2.4，作者的指南说明部分模组状态会另存。在 Windows 上用合成主档和配套的模组文件试验，修改器原地更新预算只改动对应数值。另存新槽和恢复主档也只操作主 JSON。我们据此补充了[模组存档说明](QUICKSTART.md)，模组内的剧情结果仍待实测。[模组发布脚本](https://github.com/wleeaf/suzerain-the-zille-war/blob/v1.0.0/tools/release/package.sh) · [Modding Kit 存档代码](https://github.com/suzerain-modding/suzerain-modding-kit/blob/v2.4/SuzerainModdingKit/Save/SaveManager.cs)
+
 | 工具 | 与本次决策相关的设计 |
 | --- | --- |
 | yijinyang 的桌面编辑器 | 作者提供搜索和备份，玩家提出可收藏任意键，仓库可见收藏配置。[源码](https://github.com/yijinyang/Suzerain-Save-Editor) · [原始讨论](https://www.reddit.com/r/suzerain/comments/1luxuyg/suzerain_save_editor/) |

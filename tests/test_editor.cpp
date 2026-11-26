@@ -533,6 +533,82 @@ void testBackupRefreshAndRestore(const fs::path& sample){
     fs::remove(target);fs::remove(folder);fs::remove(root);
 }
 
+void testReloadView(){
+    AppearanceTestRegistry registry;
+    const auto root=fs::temp_directory_path()/(L"suzerain-reload-view-"+writeId());
+    const auto target=root/L"Active.json",other=root/L"Other.json",folder=root/L".rizia-backups";
+    fs::create_directories(folder);
+    const std::string score="BaseGame.Public_Opinion";
+    const std::string initial=R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.GovernmentBudget']=3,['BaseGame.Public_Opinion']=9,['BaseGame.OpinionOther']=2}"})";
+    const std::string updated=R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.GovernmentBudget']=8,['BaseGame.Public_Opinion']=17,['BaseGame.OpinionOther']=4}"})";
+    const std::string removed=R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={['BaseGame.GovernmentBudget']=10,['BaseGame.OpinionOther']=7}"})";
+    auto write=[&](const std::string& data){std::ofstream(target,std::ios::binary)<<data;};
+    auto reloadWithAnswer=[&](int answer){
+        // The timer supplies the player's choice to the real discard confirmation.
+        const auto timer=SetTimer(g.win,answer,30,[](HWND,UINT,UINT_PTR button,DWORD){
+            EnumThreadWindows(GetCurrentThreadId(),[](HWND dialog,LPARAM choice)->BOOL{
+                if(GetDlgItem(dialog,IDYES)&&GetDlgItem(dialog,IDNO))EndDialog(dialog,choice);
+                return TRUE;
+            },button);
+        });
+        check(timer!=0,"Schedule the reload confirmation answer");
+        command(RELOAD,0);KillTimer(g.win,timer);
+    };
+    write(initial);loadDocument(target,false);navigate(0);
+    SetWindowTextW(g.search,L"GovernmentBudget");
+    navigate(4);SetWindowTextW(g.search,L"Opinion");selectRow(score);
+    command(FIELD_FAVORITE,0);command(FILTER_FAVORITES,0);
+    SetWindowTextW(g.edit,L"25");
+    write(updated);reloadWithAnswer(IDNO);
+    check(g.editingDirty && textOf(g.edit)==L"25" && g.doc->original==initial,
+          "Cancelling a reload preserves the draft and the old document");
+    reloadWithAnswer(IDYES);
+    check(g.tab==4 && textOf(g.search)==L"Opinion" && g.favoritesOnly &&
+          g.rows==std::vector<std::string>{score} && g.selected==score && textOf(g.edit)==L"17",
+          "Reload shows the new disk value at the selected field with the same query and favorites filter");
+    check(!g.editingDirty && pending().empty() && !g.session->canUndo() && !g.session->canRedo(),
+          "Confirming reload starts clean editing history");
+    write("{");
+    const auto warning=SetTimer(nullptr,0,30,dismissValidationWarning);
+    check(warning!=0,"Schedule dismissal of the invalid save warning");
+    command(RELOAD,0);KillTimer(nullptr,warning);
+    check(g.doc->original==updated && g.selected==score && textOf(g.edit)==L"17" &&
+          g.favoritesOnly && textOf(g.search)==L"Opinion",
+          "An unreadable replacement preserves the loaded document and field view");
+    write(updated);
+    navigate(0);check(textOf(g.search)==L"GovernmentBudget" && textOf(g.edit)==L"8",
+                      "Reload retains the other field pages' searches and reads their new values");
+    navigate(4);SetWindowTextW(g.edit,L"31");command(FILTER_CHANGED,0);
+    reloadWithAnswer(IDYES);
+    check(g.changedOnly && g.rows.empty() && g.selected.empty() && textOf(g.edit).empty() && !IsWindowEnabled(g.edit),
+          "Pending-only remains enabled and displays no stale values after discarding pending changes");
+    command(FILTER_CHANGED,0);write(removed);command(RELOAD,0);
+    check(g.favoritesOnly && textOf(g.search)==L"Opinion" && g.rows.empty() && textOf(g.edit).empty(),
+          "A removed favorite leaves its search empty and clears the inspector");
+    command(FILTER_FAVORITES,0);
+    check(g.selected=="BaseGame.OpinionOther" && textOf(g.edit)==L"7","An available match becomes the selected field");
+    SetWindowTextW(g.edit,L"19");navigate(5);reloadWithAnswer(IDYES);
+    check(g.tab==5 && g.review.empty() && g.rows.empty() && !IsWindowEnabled(ctl(CONFIRM_SAVE)),
+          "Reload stays on Review with a freshly empty change list");
+    const auto older=folder/L"Active.json.20261001-010203-001.bak";
+    const auto newer=folder/L"Active.json.20261001-010203-002.bak";
+    fs::copy_file(target,older);fs::copy_file(target,newer);
+    navigate(6);ListView_SetItemState(g.grid,1,LVIS_SELECTED|LVIS_FOCUSED,LVIS_SELECTED|LVIS_FOCUSED);
+    command(BACKUP_RESTORE,0);check(g.restoreArmed,"Arm the selected backup");
+    command(RELOAD,0);
+    check(g.tab==6 && g.backupIndex==1 && g.backups[1].path==older && g.backupDoc && !g.restoreArmed,
+          "Reload refreshes the selected backup preview and cancels the previous restore confirmation");
+    navigate(7);command(RELOAD,0);check(g.tab==7,"Reload keeps the help page open");
+    const std::string rizia=R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={['RiziaDLC.Resources_Budget']=2}"})";
+    write(rizia);command(RELOAD,0);
+    check(g.tab==0 && textOf(g.search).empty() && g.pages[4].query.empty() && !g.favoritesOnly && !g.changedOnly,
+          "A different story at the same path starts with the normal clean view");
+    navigate(4);SetWindowTextW(g.search,L"Rizia");fs::copy_file(target,other);
+    loadDocument(other);
+    check(textOf(g.search).empty() && g.pages[4].query.empty(),"Opening a different save still clears field search");
+    for(const auto& item:{newer,older,folder,target,other,root})fs::remove(item);
+}
+
 void testChoiceHintsPreference(){
     AppearanceTestRegistry registry;
     check(!live_setup::choiceHintsEnabled(),"Choice previews default to off");
@@ -1224,6 +1300,7 @@ int main(int argc,char** argv){
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testChoiceHintsPreference();
         testBackupRefreshAndRestore(fs::u8path(argv[1]));
+        testReloadView();
         testSaveQueries();
         testPickerSearchWhileScanning(fs::u8path(argv[1]));
         testPickerCurrentSave(fs::u8path(argv[1]));
