@@ -74,8 +74,9 @@ void layout() {
     place(ctl(PATCH_IMPORT),a.right-a.gap-patchW,filtersY,patchW,32);
     place(ctl(BACKUP_REFRESH), a.left, a.toolsY, 96, 32);
     place(ctl(BACKUP_FOLDER), a.left+102, a.toolsY, std::min(165,a.list-102), 32);
-    place(ctl(HELP_USAGE), a.left, a.toolsY, 120, 32);
-    place(ctl(HELP_LICENSES), a.left+126, a.toolsY, 120, 32);
+    const int guideX=a.left+guideSegmentInset, guideY=a.toolsY+guideSegmentInset;
+    place(ctl(HELP_USAGE), guideX, guideY, guideSegmentWidth, 32-2*guideSegmentInset);
+    place(ctl(HELP_LICENSES), guideX+guideSegmentWidth+guideSegmentGap, guideY, guideSegmentWidth, 32-2*guideSegmentInset);
     int listY = review ? a.toolsY : a.listY;
     const int gridInset=a.compactRail?4:7;
     place(g.grid,a.left+gridInset,listY+gridInset,a.list-2*gridInset,a.bottom-listY-2*gridInset);
@@ -368,7 +369,15 @@ void paint() {
                 paintInputFrame(dc,box,g.edit,10);
             }
         }
-    } else workspaceCard(dc,rect(a.left,a.listY,a.content,a.bottom-a.listY),Theme::panel,Theme::line,14);
+    } else {
+        auto panel=rect(a.left,a.listY,a.content,a.bottom-a.listY);
+        const bool focused=GetFocus()==g.helpText;
+        if(focused){
+            workspaceCard(dc,panel,Theme::focus,Theme::focus,14);
+            InflateRect(&panel,-px(2),-px(2));
+        }
+        workspaceCard(dc,panel,Theme::panel,focused?Theme::panel:Theme::line,focused?12:14);
+    }
     const auto statusInk=g.editingDirty||!pending().empty()?Theme::goldDark:Theme::green;
     auto halo=glass::mix(Theme::bg,statusInk,.18);
     workspaceCard(dc,rect(a.left,a.footer+16,12,12),halo,halo,6);

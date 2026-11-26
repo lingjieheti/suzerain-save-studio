@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.1";
+constexpr wchar_t APP_VERSION[] = L"0.23.2";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -502,7 +502,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.1 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.2 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -737,6 +737,15 @@ LRESULT CALLBACK fieldGridProc(HWND grid,UINT message,WPARAM key,LPARAM detail,U
         return result|DLGC_WANTMESSAGE;
     return result;
 }
+LRESULT CALLBACK guideTextProc(HWND control,UINT message,WPARAM key,LPARAM detail,UINT_PTR,DWORD_PTR){
+    auto result=DefSubclassProc(control,message,key,detail);
+    if(message==WM_GETDLGCODE){
+        // The multiline edit otherwise consumes Tab and selects the whole document on entry.
+        result&=~DLGC_HASSETSEL;
+        if(key==VK_TAB)result&=~(DLGC_WANTALLKEYS|DLGC_WANTTAB);
+    }
+    return result;
+}
 void createControls(){
     auto languages=control(L"COMBOBOX",L"",WS_TABSTOP|CBS_DROPDOWNLIST|WS_VSCROLL,LANGUAGE);for(const auto*name:i18n::names)SendMessageW(languages,CB_ADDSTRING,0,(LPARAM)name);SendMessageW(languages,CB_SETCURSEL,i18n::language,0);
     SetWindowSubclass(languages,languageFaceProc,1,0);
@@ -768,7 +777,9 @@ void createControls(){
     button(L"刷新列表",BACKUP_REFRESH);button(L"打开备份目录",BACKUP_FOLDER);button(L"恢复这份备份",BACKUP_RESTORE);button(L"取消恢复",BACKUP_CANCEL);
     button(L"撤销",HISTORY_UNDO);button(L"重做",HISTORY_REDO);button(L"检查修改 →",SAVE);
     button(L"使用指南",HELP_USAGE);button(L"组件许可",HELP_LICENSES);
-    g.helpText=control(L"EDIT",L"",WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL,0);SendMessageW(g.helpText,EM_SETMARGINS,EC_LEFTMARGIN|EC_RIGHTMARGIN,MAKELPARAM(px(6),px(6)));
+    g.helpText=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL,0);
+    SetWindowSubclass(g.helpText,guideTextProc,1,0);
+    SendMessageW(g.helpText,EM_SETMARGINS,EC_LEFTMARGIN|EC_RIGHTMARGIN,MAKELPARAM(px(6),px(6)));
     g.notice=control(L"STATIC",g.noticeText.c_str(),SS_ENDELLIPSIS|SS_NOPREFIX);
     if(Theme::dark())for(HWND h:{g.desc,g.helpText,languages})SetWindowTheme(h,L"DarkMode_Explorer",nullptr);
     enableHints();fonts();layout();refresh();
@@ -835,7 +846,12 @@ void command(int id,int code){
     case BACKUP_REFRESH:refreshBackups();layout();break;
     case BACKUP_FOLDER:if(!g.file.empty()){auto p=g.file.parent_path()/L".rizia-backups";if(fs::exists(p))ShellExecuteW(g.win,L"open",p.c_str(),nullptr,nullptr,SW_SHOWNORMAL);else toast(L"首次保存后将创建备份目录");}break;
     case BACKUP_RESTORE:restoreSelected();break;case BACKUP_CANCEL:g.restoreArmed=false;setText(ctl(BACKUP_RESTORE),L"恢复这份备份");visible(BACKUP_CANCEL,false);toast(L"已取消恢复");break;
-    case HELP_LICENSES:g.licenseMode=true;setHelp();break;case HELP_USAGE:g.licenseMode=false;setHelp();break;
+    case HELP_USAGE:case HELP_LICENSES:
+        g.licenseMode=id==HELP_LICENSES;
+        setHelp();
+        InvalidateRect(ctl(HELP_USAGE),nullptr,FALSE);
+        InvalidateRect(ctl(HELP_LICENSES),nullptr,FALSE);
+        break;
     }
 }
 LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
@@ -861,7 +877,7 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         }
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
-        if(((HWND)lp==g.edit || (HWND)lp==g.search) &&
+        if(((HWND)lp==g.edit || (HWND)lp==g.search || (HWND)lp==g.helpText) &&
            (HIWORD(wp)==EN_SETFOCUS || HIWORD(wp)==EN_KILLFOCUS))
             InvalidateRect(w,nullptr,FALSE);
         // Complete the native button's input callback before rebuilding child controls.

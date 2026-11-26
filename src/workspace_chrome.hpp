@@ -47,6 +47,7 @@ void fill(HDC dc, RECT bounds, COLORREF color) {
 int fileToolbarWidth(const WorkspaceGeometry& a) { return std::min(465,a.content*62/100); }
 int footerHistoryWidth(const WorkspaceGeometry& a) { return a.width<820?58:80; }
 int footerSaveWidth(const WorkspaceGeometry& a) { return a.width<820?107:155; }
+constexpr int guideSegmentWidth=108, guideSegmentGap=2, guideSegmentInset=3;
 
 // Content surfaces use a solid fill. Only controls that float over this
 // workspace use the optical material, so numerals retain a constant backdrop.
@@ -89,7 +90,10 @@ void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& 
     glass::surface(dc,rect(first-3,toolbarY-3,toolbarWidth+6,38),Theme::panel,px(19));
     const int divider=first+localWidth+fileActionGap(FOLDER)/2;
     fill(dc,rect(divider,toolbarY+8,1,16),glass::mix(Theme::line,Theme::sideMuted,.24));
-    if(g.tab!=7) {
+    if(g.tab==7) {
+        const int width=2*(guideSegmentWidth+guideSegmentInset)+guideSegmentGap;
+        glass::surface(dc,rect(a.left,a.toolsY,width,32),Theme::panel,px(16));
+    } else {
         const int width=2*footerHistoryWidth(a)+5+(g.tab==5?0:footerSaveWidth(a)+7);
         glass::surface(dc,rect(end-width-4,a.footer+3,width+8,40),Theme::panel,px(20));
     }
@@ -171,6 +175,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                    (id == SAVE && !g.editingDirty && !pending().empty());
     const bool fileAction=id==FOLDER || id==RELOAD || id==OPEN || id==LATEST;
     const bool history=id==HISTORY_UNDO || id==HISTORY_REDO;
+    const bool guideSegment=id==HELP_USAGE || id==HELP_LICENSES;
+    const bool selectedGuide=guideSegment && (id==HELP_LICENSES)==g.licenseMode;
     bool quiet = fileAction || id==UNDOONE || id==FIELD_FAVORITE || history;
     bool inspector = id==APPLY || id==UNDOONE || id==BOOL_FALSE || id==BOOL_TRUE ||
                      id==SAVEAS || id==CONFIRM_SAVE || id==PATCH_EXPORT || id==REVIEW_REVERT ||
@@ -191,7 +197,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     RECT r = d->rcItem;
     if(inspector)fill(d->hDC,r,Theme::panel);
     else paintWorkspaceChildBackdrop(d->hDC,d->hwndItem);
-    const bool grouped=nav || fileAction || history || id==SAVE;
+    const bool grouped=nav || fileAction || history || id==SAVE || guideSegment;
     const bool material=glass::enabled();
     RECT lens=r;
     if(nav)InflateRect(&lens,-px(1),-px(2));
@@ -209,6 +215,15 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,down?44:28);
         else
             workspaceCard(d->hDC,lens,Theme::sideHover,Theme::sideHover,15);
+    } else if(guideSegment) {
+        if(selectedGuide) {
+            if(material)glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,Theme::dark()?40:49);
+            else workspaceCard(d->hDC,lens,Theme::accent,Theme::accent,13);
+            fg=material?Theme::text:Theme::onAccent;
+        } else if(hover || down) {
+            if(material)glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,down?35:22);
+            else workspaceCard(d->hDC,lens,Theme::hover,Theme::line,13);
+        }
     } else if(grouped) {
         if(material && primary && !disabled) {
             glass::surface(d->hDC,lens,bg,px(16),true);
@@ -283,7 +298,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             tx.left += px(25);
         }
         const auto caption=textOf(d->hwndItem);
-        const auto font=primary?g.emphasis:g.font;
+        const auto font=(primary || selectedGuide)?g.emphasis:g.font;
         if(fileAction || history) {
             const int textWidth=typography::width(d->hDC,font,caption);
             const int groupWidth=px(22)+textWidth;
@@ -302,7 +317,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
     }
     if ((d->itemState & ODS_FOCUS) && !(d->itemState & ODS_NOFOCUSRECT) && !disabled) {
         RECT focus = lens; InflateRect(&focus, -px(3), -px(3));
-        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),primary||(activeNav&&!material)?Theme::onAccent:Theme::focus);
+        const bool onAccent=primary || (!material && (activeNav || selectedGuide));
+        auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),onAccent?Theme::onAccent:Theme::focus);
         auto oldPen=SelectObject(d->hDC,pen);auto oldBrush=SelectObject(d->hDC,GetStockObject(HOLLOW_BRUSH));
         const int diameter=grouped||id==APPEARANCE?std::max(px(6),2*lensRadius-px(6)):px(12);
         RoundRect(d->hDC,focus.left,focus.top,focus.right,focus.bottom,diameter,diameter);
