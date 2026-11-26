@@ -1,6 +1,14 @@
-# v0.23.1 Preview — Windows validation
+# v0.23.2 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.1 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.2 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Guide navigation and keyboard reading in 0.23.2
+
+In the published 0.23.1 editor, a complete 17-stop Tab cycle skipped the text on both Help and Licenses. After focusing the text with the mouse, Page Down advanced the license document by 27, 20 or 12 lines at the three window sizes tested. The previous navigation buttons also had identical faces after focus moved away.
+
+The two pages now share a segmented control. The tint and heavier type identify the current document while the keyboard focus ring follows the reader into its opaque text pane. These choices follow Apple's separation of glass navigation from reading surfaces and Microsoft's guidance on keyboard access and visible focus. [Apple materials](https://developer.apple.com/design/human-interface-guidelines/materials) · [WWDC26 design update](https://developer.apple.com/videos/play/wwdc2026/102/) · [Win32 accessibility](https://learn.microsoft.com/en-us/windows/win32/winauto/accessibility-best-practices)
+
+The 0.23.2 ZIP ran on Windows at 192 DPI. We exercised both pages in four themes at 1,200 × 790, 800 × 620 and 680 × 485 DIP, using the built-in Rizia sample. All 24 combinations allowed forward and reverse Tab traversal. Page Up and Page Down scrolled overflowing text. Typing left the text intact and the change preview stayed empty. The focus ring measured four physical pixels and disappeared on exit. Separate render checks sampled the surface beneath the selected labels in each theme across Clear, Frosted and Solid finishes. The sampled contrast reached 4.5:1 or higher for both labels, including the opaque fallback. [Windows screenshot](docs/images/help-navigation.png)
 
 ## Finding Rizia per-turn totals in 0.23.1
 

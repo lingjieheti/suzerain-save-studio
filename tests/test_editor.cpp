@@ -339,6 +339,47 @@ void testSearchControls(const fs::path& sample) {
     navigate(0);
 }
 
+void testGuideKeyboard() {
+    navigate(7);
+    auto tab=[](bool backwards){
+        BYTE previous[256]{},state[256]{};
+        check(GetKeyboardState(previous)!=0,"Read the test thread's keyboard state");
+        std::copy_n(previous,256,state);
+        state[VK_SHIFT]=backwards?0x80:0;
+        check(SetKeyboardState(state)!=0,"Set the test thread's Tab direction");
+        MSG key{};
+        key.hwnd=GetFocus();key.message=WM_KEYDOWN;key.wParam=VK_TAB;key.lParam=1;
+        const bool consumed=IsDialogMessageW(g.win,&key)!=0;
+        SetKeyboardState(previous);
+        check(consumed,"The editor's dialog loop handles Tab");
+    };
+    for(int page:{HELP_USAGE,HELP_LICENSES}){
+        command(page,BN_CLICKED);
+        SetFocus(ctl(HELP_LICENSES));
+        tab(false);
+        check(GetFocus()==g.helpText && SendMessageW(g.helpText,EM_GETSEL,0,0)==0,
+              "Tab reaches the document at the beginning without selecting all text");
+        const auto content=textOf(g.helpText);
+        check(!content.empty(),"The selected guide or license is present");
+        SendMessageW(g.helpText,WM_CHAR,'x',1);
+        check(textOf(g.helpText)==content,"The document stays read-only during keyboard navigation");
+        if(page==HELP_LICENSES){
+            SendMessageW(g.helpText,WM_KEYDOWN,VK_NEXT,1);
+            check(SendMessageW(g.helpText,EM_GETFIRSTVISIBLELINE,0,0)>0,"Page Down scrolls the license text");
+            SendMessageW(g.helpText,WM_KEYDOWN,VK_PRIOR,1);
+            check(SendMessageW(g.helpText,EM_GETFIRSTVISIBLELINE,0,0)==0,"Page Up returns to the first license line");
+        }
+        tab(false);
+        check(GetFocus()!=nullptr && GetFocus()!=g.helpText,"Tab exits the document");
+        tab(true);
+        check(GetFocus()==g.helpText,"Shift+Tab returns to the document");
+        tab(true);
+        check(GetFocus()==ctl(HELP_LICENSES),"Shift+Tab exits the document to its page controls");
+    }
+    command(HELP_USAGE,BN_CLICKED);
+    navigate(0);
+}
+
 void testFieldActivation(const fs::path& sample) {
     const auto original=readFile(sample);
     const auto modified=fs::last_write_time(sample);
@@ -835,12 +876,72 @@ void testGlassFinishes(){
     glass::systemAllows=originalSystem;
 }
 
+void testGuideSegments(){
+    const int originalTheme=Theme::index(),originalTab=g.tab;
+    const auto originalFinish=glass::preferred;
+    const bool originalSystem=glass::systemAllows,originalLicense=g.licenseMode;
+    navigate(7);
+    RECT bounds{};
+    GetClientRect(ctl(HELP_USAGE),&bounds);
+    glass::Dib image;
+    check(image.size(nullptr,bounds.right,bounds.bottom),"Create a surface the size of a guide segment");
+    auto segmentColor=[&](int id){
+        DRAWITEMSTRUCT item{};
+        item.CtlType=ODT_BUTTON;item.CtlID=id;item.hwndItem=ctl(id);
+        item.itemAction=ODA_DRAWENTIRE;item.hDC=image.dc;item.rcItem=bounds;
+        drawButton(&item);
+        return GetPixel(image.dc,px(10),bounds.bottom/2);
+    };
+    auto labelContrast=[&](int id){
+        const auto ink=GetTextColor(image.dc);
+        const auto button=ctl(id);
+        const auto label=textOf(button);
+        const int halfWidth=typography::width(image.dc,g.emphasis,label)/2;
+        const int centerX=bounds.right/2,centerY=bounds.bottom/2;
+        // Repaint without glyphs to measure the actual glass beneath the caption.
+        rawText(button,L"");segmentColor(id);rawText(button,label);
+        double minimum=21.;
+        for(int y=centerY-px(5);y<=centerY+px(5);y+=std::max(1,px(2)))
+            for(int x=centerX-halfWidth;x<=centerX+halfWidth;x+=std::max(1,px(2)))
+                minimum=std::min(minimum,textContrast(ink,GetPixel(image.dc,x,y)));
+        return minimum;
+    };
+    for(int theme=0;theme<Theme::count;++theme){
+        Theme::use(theme);
+        glass::systemAllows=true;
+        for(auto finish:{glass::Clear,glass::Frosted,glass::Solid}){
+            glass::preferred=finish;
+            for(int id:{HELP_USAGE,HELP_LICENSES}){
+                command(id==HELP_USAGE?HELP_LICENSES:HELP_USAGE,BN_CLICKED);
+                const auto idle=segmentColor(id);
+                command(id,BN_CLICKED);
+                const auto active=segmentColor(id);
+                check(idle!=active,"Switching pages changes each guide segment's visible selection");
+                const auto contrast=labelContrast(id);
+                if(contrast<4.5)std::cerr<<"Guide theme "<<theme<<", finish "<<finish<<", control "<<id
+                                        <<", surface "<<active<<", contrast "<<contrast<<"\n";
+                check(contrast>=4.5,"The selected guide label contrasts with its rendered surface");
+            }
+        }
+        glass::preferred=glass::Clear;
+        glass::systemAllows=false;
+        const auto fallback=segmentColor(HELP_LICENSES);
+        check(fallback==Theme::accent && labelContrast(HELP_LICENSES)>=4.5,
+              "System-suppressed transparency keeps an opaque, legible guide selection");
+    }
+    Theme::use(originalTheme);
+    glass::systemAllows=originalSystem;glass::preferred=originalFinish;
+    command(originalLicense?HELP_LICENSES:HELP_USAGE,BN_CLICKED);
+    navigate(originalTab);
+}
+
 void testAppearance(const fs::path& path){
     AppearanceTestRegistry registry;
     Theme::load();
     check(Theme::index()==2,"A new user starts with Fjord");
     glass::refreshSettings();
     testGlassFinishes();
+    testGuideSegments();
     check(glass::preferred==glass::Clear,"A new profile uses the clear finish by default");
     auto appearanceButton=ctl(APPEARANCE);
     SendMessageW(appearanceButton,WM_MOUSEMOVE,0,MAKELPARAM(5,6));
@@ -1410,6 +1511,7 @@ int main(int argc,char** argv){
         testPickerSearchWhileScanning(fs::u8path(argv[1]));
         testPickerCurrentSave(fs::u8path(argv[1]));
         testSearchControls(fs::u8path(argv[1]));
+        testGuideKeyboard();
         testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));

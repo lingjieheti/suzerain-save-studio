@@ -14,6 +14,8 @@
 
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
+在侧栏打开「使用指南」，可以切换指南和组件许可。用 **Tab** 移到正文，看到焦点边框后，按 **Page Down** 或 **Page Up** 翻页。按 **Tab** 继续，按 **Shift+Tab** 返回上一个控件。
+
 在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。菜单里的三个小样用同一条色带预览效果。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
 
 覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
@@ -51,6 +53,8 @@ To follow public opinion between decisions, search **Advanced** for `PO` and sel
 The Zille War v1.0.0 uses Suzerain Modding Kit v2.4, which stores additional progress under `moddingkit/`. Automatic discovery skips that companion directory when listing main saves. Studio's Save As and Restore handle the selected main JSON. To copy or roll back a complete modded run, keep its main save and matching mod save from the same point in time. We verified the file operations using synthetic saves. [Modding Kit backup guide](https://github.com/suzerain-modding/suzerain-modding-kit/blob/v2.4/docs/guides/user/back-up-saves.md)
 
 To redo a field change, click **Redo** at the bottom of the editor. From the search box, you can also press **↓** to focus the results, then **Ctrl+Y**.
+
+Open **Help** in the sidebar and choose **Help** or **Licenses**. Press **Tab** until the reading area has a focus ring, then use **Page Down** and **Page Up** to read. Press **Tab** to move on or **Shift+Tab** to go back.
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel. Close the panel, point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. Point to another choice and tap Ctrl to see its effects. The setting is off by default and is also available in the editor’s **Live mode** dialog.
 
