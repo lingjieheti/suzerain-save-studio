@@ -13,6 +13,12 @@ inline bool space(wchar_t c) {
     return std::iswspace(c) || c == L'\u00a0' || c == L'\u3000';
 }
 
+inline std::wstring_view trimmed(std::wstring_view value) {
+    while (!value.empty() && space(value.front())) value.remove_prefix(1);
+    while (!value.empty() && space(value.back())) value.remove_suffix(1);
+    return value;
+}
+
 inline std::wstring fold(const std::wstring& text) {
     if (text.empty()) return {};
     const int length = static_cast<int>(text.size());
@@ -54,21 +60,16 @@ struct PastedKey {
 
 // Guides use both complete assignments and open quoted prefixes for families of keys.
 inline PastedKey pastedKey(std::wstring_view query) {
-    auto trim = [](std::wstring_view value) {
-        while (!value.empty() && space(value.front())) value.remove_prefix(1);
-        while (!value.empty() && space(value.back())) value.remove_suffix(1);
-        return value;
-    };
-    query = trim(query);
+    query = trimmed(query);
     const auto equals = query.find(L'=');
     if (equals != query.npos && query.find_first_of(L"=[]\r\n", equals + 1) != query.npos)
         return {};
-    auto key = trim(query.substr(0, equals));
+    auto key = trimmed(query.substr(0, equals));
     bool prefix = false;
     if (!key.empty() && key.front() == L'[') {
         prefix = key.back() != L']';
         if (prefix && equals != query.npos) return {};
-        key = trim(key.substr(1, key.size() - (prefix ? 1 : 2)));
+        key = trimmed(key.substr(1, key.size() - (prefix ? 1 : 2)));
         std::wstring_view quote;
         if (key.substr(0, 2) == L"\\\"") quote = key.substr(0, 2);
         else if (!key.empty() && (key.front() == L'"' || key.front() == L'\'')) quote = key.substr(0, 1);

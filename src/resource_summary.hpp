@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include "field_search.hpp"
 #include "i18n.hpp"
 
 struct RiziaResource {
@@ -11,17 +12,33 @@ struct RiziaResource {
     const char* turnTotal;
     const char* cap;
     const char* modifierPrefix;
+    const wchar_t* turnUnit;
 };
 
 // Stock, calculated totals and HUD limits are separate numbers in the save.
 inline constexpr RiziaResource riziaResources[] = {
     {L"预算", L"当前预算", "RiziaDLC.Resources_Budget", "RiziaDLC.Resources_BudgetModifiersTotal",
-     "RiziaDLC.Rizia_HUDStat_Budget_Max", "RiziaDLC.Budget_Modifier_"},
+     "RiziaDLC.Rizia_HUDStat_Budget_Max", "RiziaDLC.Budget_Modifier_", L"BPT"},
     {L"权威", L"当前权威", "RiziaDLC.Resources_Authority", "RiziaDLC.Resources_AuthorityModifiersTotal",
-     "RiziaDLC.Rizia_HUDStat_Authority_Max", "RiziaDLC.Authority_Modifier_"},
+     "RiziaDLC.Rizia_HUDStat_Authority_Max", "RiziaDLC.Authority_Modifier_", L"APT"},
     {L"能源", L"当前能源", "RiziaDLC.Resources_Energy", "RiziaDLC.Resources_EnergyModifiersTotal",
-     "RiziaDLC.Rizia_HUDStat_Energy_Max", "RiziaDLC.Energy_Modifier_"}
+     "RiziaDLC.Rizia_HUDStat_Energy_Max", "RiziaDLC.Energy_Modifier_", L"EPT"}
 };
+
+// A guide's signed amount describes a contribution; only its unit identifies
+// the saved per-turn total. Never interpret the amount as the field's value.
+inline const char* riziaTurnSearchKey(std::wstring_view query) {
+    if (!query.empty() && (query.front()==L'+' || query.front()==L'-' || query.front()==L'\u2212')) {
+        query.remove_prefix(1);
+        const auto digits=query.find_first_not_of(L"0123456789");
+        if (digits==0 || digits==query.npos) return nullptr;
+        query=field_search::trimmed(query.substr(digits));
+    }
+    if (query.size()!=3) return nullptr;
+    for (const auto& resource:riziaResources)
+        if (_wcsnicmp(query.data(),resource.turnUnit,3)==0) return resource.turnTotal;
+    return nullptr;
+}
 
 inline constexpr char sordlandPublicOpinion[] = "BaseGame.Public_Opinion";
 inline constexpr char riziaPublicOpinion[] = "RiziaDLC.Country_PublicOpinion";

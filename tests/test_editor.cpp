@@ -1129,6 +1129,69 @@ void testResourceSearch(const fs::path& path){
     check(g.doc->render({})==example && pending().empty(), "Resource inspection preserves save bytes and edits");
 }
 
+void testPerTurnGuideSearch(const fs::path& path) {
+    const auto bytes=readFile(path);
+    loadDocumentBytes(bytes,path,0);
+    const std::string energy=riziaResources[2].turnTotal;
+    const std::string perception="RiziaDLC.Country_GlobalPerception";
+    const auto search=[](const wchar_t* query){SetWindowTextW(g.search,query);};
+    for(int tab:{0,4}) {
+        navigate(tab);
+        for(const auto& resource:riziaResources) {
+            search(resource.turnUnit);
+            check(!g.rows.empty() && g.rows.front()==resource.turnTotal &&
+                  std::count(g.rows.begin(),g.rows.end(),resource.turnTotal)==1,
+                  "Each Rizia per-turn abbreviation ranks its saved total first exactly once");
+        }
+        for(const auto& [query,key]:std::initializer_list<std::pair<const wchar_t*,const char*>>{
+                {L"+3Apt",riziaResources[1].turnTotal},{L"+1 Bpt",riziaResources[0].turnTotal},
+                {L"-4Bpt",riziaResources[0].turnTotal},{L"+2Ept",riziaResources[2].turnTotal},
+                {L"\u3000\u221212\u00a0ePt ",riziaResources[2].turnTotal}}) {
+            search(query);
+            check(g.rows==std::vector<std::string>{key} && g.selected==key &&
+                  textOf(g.edit)==wide(g.doc->find(key)->value),
+                  "Signed guide amounts locate the total and leave the editor showing the saved value");
+        }
+        command(FILTER_CHANGED,0);
+        check(g.rows.empty(),"A signed resource query respects pending-only filtering");
+        command(FILTER_CHANGED,0);
+    }
+    search(L" ePt ");
+    check(g.rows.front()==energy && std::find(g.rows.begin(),g.rows.end(),perception)!=g.rows.end(),
+          "Bare EPT keeps the ordinary Perception substring match");
+    const auto favorites=g.favorites;
+    g.favorites={perception};
+    command(FILTER_FAVORITES,0);
+    check(g.rows==std::vector<std::string>{perception},"A bare unit still filters its ranked result by favorites");
+    search(L"+2EPT");
+    check(g.rows.empty(),"A signed unit respects favorites and does not admit unrelated substring results");
+    command(FILTER_FAVORITES,0);
+    g.favorites=favorites;
+    search(L"[\"RiziaDLC.Country_GlobalPerception\"]=3");
+    check(g.rows==std::vector<std::string>{perception},"A pasted field assignment containing EPT still selects the raw key");
+    for(auto query:{L"3Apt",L"+Apt",L"A-PT",L"+3Apt extra",L"+3Apt+1Bpt",L"+3Aptitude"}) {
+        search(query);
+        check(std::find(g.rows.begin(),g.rows.end(),riziaResources[1].turnTotal)==g.rows.end(),
+              "Malformed or partial unit expressions cannot select the authority total");
+    }
+    navigate(1);
+    search(L"+3Apt");
+    check(g.rows.empty(),"The guide shortcut respects the current field category");
+    check(pending().empty() && !g.session->canUndo() && g.doc->render({})==bytes,
+          "Guide shorthand searches preserve save bytes and history");
+
+    loadDocumentBytes(R"({"currentStoryPack":"StoryPack_Rizia","variables":"Variable={[\"RiziaDLC.Country_GlobalPerception\"]=4}"})",{},0);
+    navigate(4);search(L"EPT");
+    check(g.rows==std::vector<std::string>{perception},"A missing per-turn value leaves ordinary bare matches available");
+    search(L"+2EPT");
+    check(g.rows.empty(),"A missing total cannot be manufactured from a signed guide amount");
+    loadDocumentBytes(R"({"currentStoryPack":"StoryPack_Main","variables":"Variable={[\"BaseGame.Adaptation\"]=1,[\"RiziaDLC.Resources_AuthorityModifiersTotal\"]=7}"})",{},0);
+    navigate(4);search(L"APT");
+    check(g.rows==std::vector<std::string>{"BaseGame.Adaptation"},"Rizia unit shortcuts do not apply to a Sordland campaign");
+    search(L"+3Apt");
+    check(g.rows.empty(),"A signed guide amount does not expose a foreign-campaign total");
+}
+
 void testPublicOpinionSearch() {
     i18n::setLanguage(0);
     for (const bool sordland : {true, false}) {
@@ -1352,6 +1415,7 @@ int main(int argc,char** argv){
         testSearch(fs::u8path(argv[1]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
+        testPerTurnGuideSearch(fs::u8path(argv[2]));
         testPublicOpinionSearch();
         testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));

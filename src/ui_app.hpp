@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.0";
+constexpr wchar_t APP_VERSION[] = L"0.23.1";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -366,6 +366,12 @@ void refreshBackups(){
 void appendFieldRows(){
     if(!g.doc)return;
     const auto& query=g.pages[g.tab].query;
+    const auto input=field_search::trimmed(query);
+    const auto turnKey=!isBase() && (g.tab==0 || g.tab==4) ? riziaTurnSearchKey(input) : nullptr;
+    const char* firstKey=turnKey;
+    if (g.tab==4 && input.size()==2 && _wcsnicmp(input.data(),L"PO",2)==0)
+        firstKey=isBase()?sordlandPublicOpinion:riziaPublicOpinion;
+    const auto* first=firstKey?g.doc->find(firstKey):nullptr;
     const auto key=field_search::pastedKey(query);
     const auto terms=key.text.empty()?field_search::terms(query):std::vector<std::wstring>{};
     const auto number=tr(L"数值"), toggle=tr(L"开关");
@@ -376,7 +382,7 @@ void appendFieldRows(){
         if(g.changedOnly&&change==pending().end())return;
         auto& caption=g.captions[field.key];
         if(caption.label.empty())caption.label=label(field.key);
-        if(!terms.empty()){
+        if(!terms.empty() && &field!=first){
             if(caption.searchText.empty()){
                 auto search=caption.label+L"|"+wide(field.key);
                 const auto aliases = resourceSearchAliases(field.key);
@@ -397,6 +403,10 @@ void appendFieldRows(){
         addRow((int)g.rows.size()-1,{(g.favorites.count(field.key)?L"★  ":L"")+caption.label,displayValue(field.value,field.is_bool,i18n::language),
                                     staged,field.is_bool?toggle:number});
     };
+    if(first)append(*first);
+    // A signed guide token locates the total only. Bare units also keep any
+    // normal substring matches such as a longer word containing "ept".
+    if(turnKey && input.size()>3)return;
     if(g.tab==4){
         if(!key.text.empty() && !key.prefix){
             if(const auto* field=g.doc->find(key.text)){append(*field);return;}
@@ -407,12 +417,7 @@ void appendFieldRows(){
         }
         std::set<const rizia::Field*> common;
         if(!terms.empty()){
-            if (_wcsicmp(trim(query).c_str(), L"PO") == 0) {
-                if (const auto* score = g.doc->find(isBase() ? sordlandPublicOpinion : riziaPublicOpinion)) {
-                    common.insert(score);
-                    append(*score);
-                }
-            }
+            if(first)common.insert(first);
             for(const auto& def:currentDefs())if(const auto* field=g.doc->find(def.key)){
                 if(common.insert(field).second)append(*field);
             }
@@ -420,7 +425,7 @@ void appendFieldRows(){
         for(const auto* field:g.allFields)if(!common.count(field))append(*field);
     }else{
         for(const auto& def:currentDefs())if(def.tab==g.tab){
-            if(const auto* field=g.doc->find(def.key))append(*field);
+            if(const auto* field=g.doc->find(def.key);field && field!=first)append(*field);
         }
     }
 }
@@ -497,7 +502,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.1 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
