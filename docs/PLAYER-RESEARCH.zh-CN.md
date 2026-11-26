@@ -20,6 +20,10 @@
 - **从攻略找到那个字段。** 玩家示例包含方括号、引号和等号，有时连着建议设置的数值。0.15.1 把这些符号当成普通搜索词，复制整段找不到政府预算。0.16.0 接受 Lua 写法和存档 JSON 里的转义写法，按完整键定位，示例中的数值只用于搜索上下文。普通关键词仍可查找多个相关项。[Steam 玩家攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3373743028) · [玩家给出的完整赋值示例](https://www.reddit.com/r/suzerain/comments/17t03ed/)
 - **从多个存档中选对一个。** 玩家需要分辨进行中、自动和回合存档，再在游戏中加载对应文件。我们用同战役不同回合的文件检验选择器，并参考了 Apple 对即时筛选和搜索范围的说明。[Steam 存档指南](https://steamcommunity.com/sharedfiles/filedetails/?id=3341333208) · [Apple 搜索设计指南](https://developer.apple.com/design/human-interface-guidelines/searching)
 
+### 用攻略缩写核对每回合收支
+
+11 月 26 日，有玩家在讨论里奇亚政令时用 `+3Apt` 和 `+1Bpt` 描述每回合收益，同时用 `3B` 表示一次性预算成本。其他玩家谈能源和预算时也用 `EPT` 和 `BPT`。0.23.0 的里奇亚示例保存了这三项每回合净变化，但在资源页搜索缩写时都没有结果。0.23.1 可以用缩写或带正负号的整数片段定位对应的存档汇总值。攻略作者对具体政令的收益描述只作为检索用词的依据。[当日玩家原文](https://www.reddit.com/r/suzerain/comments/1y5xmf9/comment/19t7urts3hts3/) · [每回合能源的用法](https://www.reddit.com/r/suzerain/comments/1wbn71k/some_rizia_dlc_suggestions/) · [每回合预算的用法](https://www.reddit.com/r/suzerain/comments/1wju15u/suggestion_about_equal_pay_and_income_tax/)
+
 ### 按攻略前缀找一组字段
 
 Steam 攻略在人物关系一节让玩家复制 `[\"RiziaDLC.Relations_`，从结果中挑选具体人物。Reddit 的玩家回复也沿用了这段写法。0.18.1 能找到完整的键，粘贴这段带左括号的前缀却没有结果。新版按键的开头筛选，在里奇亚示例中可以找到 `Relations_Hugo` 和 `Relations_Vina`。[Steam 攻略](https://steamcommunity.com/sharedfiles/filedetails/?id=3204074586) · [Reddit 玩家回复](https://www.reddit.com/r/suzerain/comments/1hbn4bx/)

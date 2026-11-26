@@ -10,6 +10,8 @@
 
 要对照一次决策前后的民意，可先在“高级字段”搜索 `PO` 并选中民意字段。等游戏再次写入同一存档后，按 **Ctrl+R** 或点“重新载入”即可在原来的位置查看新值。有待保存的修改时，先按提示决定是否放弃。
 
+在里奇亚的“资源与经济”或“高级字段”中，输入 `APT`（每回合权威）、`BPT`（每回合预算）或 `EPT`（每回合能源）。例如攻略里写了 `+3Apt`，把这段文字粘到搜索框，就能对照存档里的每回合权威净变化。搜索只定位字段，游戏结算时可能重新计算这个汇总值。
+
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
 
 在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。菜单里的三个小样用同一条色带预览效果。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
@@ -41,6 +43,8 @@ Open **Support the author** in the save picker or editor sidebar. Scan the appre
 3. From search, press **↓** to enter the results. Select a field with the arrow keys and press **Enter**. For a number, type over the selected value and press **Enter** to stage it. For a yes/no field, focus moves to the current choice. Press **Ctrl+S** to focus the change list. Use **Up / Down** to compare the original and proposed values, then choose **Save to original** or **Save as**. Return to the game's main menu and load the file you just saved.
 
 To find character relationships, open the Rizia sample’s **Advanced** tab, press **Ctrl+F**, and paste `[\"RiziaDLC.Relations_`. The results include the relationship fields for Vina and Hugo.
+
+In Rizia, search Resources or Advanced for `APT` (authority per turn), `BPT` (budget per turn), or `EPT` (energy per turn). Pasting `+3Apt` from a guide finds the saved net authority change. The search leaves the value as recorded in your save. The game may recalculate it at settlement.
 
 To follow public opinion between decisions, search **Advanced** for `PO` and select the opinion field. After the game writes the same save again, press **Ctrl+R** or click **Reload** to see its new value in place. The editor asks before discarding unsaved edits.
 

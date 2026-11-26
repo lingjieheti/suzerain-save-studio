@@ -1,6 +1,12 @@
-# v0.23.0 Preview — Windows validation
+# v0.23.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.0 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.1 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Finding Rizia per-turn totals in 0.23.1
+
+In the 0.23.0 Windows editor, the built-in Rizia sample returned no results for APT, BPT or EPT on the resource page. Advanced returned one unrelated substring match for EPT. Searching for the full names located the stored authority, budget and energy net changes of +7, +6 and +8. These are the `Resources_AuthorityModifiersTotal`, `Resources_BudgetModifiersTotal` and `Resources_EnergyModifiersTotal` fields. [Field records](docs/FIELD-EVIDENCE.md)
+
+We extracted the 0.23.1 release ZIP and tested 256 searches in the built-in Rizia and Sordland examples across four themes and window widths of 800 and 1,200 DIP. In 128 keyboard checks we entered the results, selected the first row and opened its value for editing. Signed guide entries located the saved totals of 7, 6 and 8. Advanced still offered the existing GlobalPerception substring result below the energy total for bare EPT. Opening the change preview showed zero staged edits after the searches. This was a Windows desktop test with synthetic data. It did not simulate a decree or a turn settlement.
 
 ## Desktop appearance and save discovery in 0.23.0
 
