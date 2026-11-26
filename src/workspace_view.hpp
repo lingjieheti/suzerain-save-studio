@@ -362,10 +362,7 @@ void paint() {
         }
         if(g.tab<5) {
             paintInputFrame(dc,rect(a.left,a.toolsY,searchWidth(a),32),g.search,10);
-            auto pen=CreatePen(PS_SOLID,std::max(1,px(2)),Theme::dim);auto old=SelectObject(dc,pen);auto ob=SelectObject(dc,GetStockObject(HOLLOW_BRUSH));
-            Ellipse(dc,px(a.left+9),px(a.toolsY+9),px(a.left+19),px(a.toolsY+19));
-            MoveToEx(dc,px(a.left+17),px(a.toolsY+17),nullptr);LineTo(dc,px(a.left+22),px(a.toolsY+22));
-            SelectObject(dc,ob);SelectObject(dc,old);DeleteObject(pen);
+            icons::draw(dc,icons::Symbol::Search,px(a.left+7),px(a.toolsY+8),px(18),Theme::dim);
             if(IsWindowVisible(g.edit)) {
                 RECT box{};GetWindowRect(g.edit,&box);MapWindowPoints(nullptr,g.win,(POINT*)&box,2);InflateRect(&box,px(8),px(4));
                 paintInputFrame(dc,box,g.edit,10);

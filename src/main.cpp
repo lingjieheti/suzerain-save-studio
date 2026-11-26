@@ -19,6 +19,7 @@
 #include <commdlg.h>
 #include <shellapi.h>
 #include <shlobj.h>
+#include <gdiplus.h>
 #include <tlhelp32.h>
 #include <filesystem>
 #include <algorithm>

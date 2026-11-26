@@ -73,6 +73,26 @@ int main() {
         write(root / "Custom" / "Unity" / "save.json", valid);
         write(root / "Custom" / "Logs" / "save.json", valid);
         check(rizia::discovery::scan({root / "Custom"}).saves.size() == 2, "Generic roots retain folders named Unity and Logs");
+        const auto gameDir = root / "Suzerain";
+        const auto modDir = gameDir / "ModdingKit";
+        const std::string sidecar = R"({"Variables":{"ZilleWar.Branch":true}})";
+        write(modDir / "real.json", sidecar);
+        write(modDir / "active.json", sidecar);
+        fs::last_write_time(gameDir / "real.json", now - std::chrono::hours(1));
+        limits = {}; limits.maxCandidates = 1;
+        const auto modded = rizia::discovery::scan({gameDir}, limits);
+        check(modded.candidates == 1 && modded.errors == 0 && !modded.truncated && modded.saves.size() == 1 &&
+              fs::equivalent(modded.saves.front().path, gameDir / "real.json"),
+              "Newer Modding Kit sidecars do not displace their main save or trigger an unreadable-file warning");
+        write(gameDir / "broken.json", "{broken}");
+        check(rizia::discovery::scan({gameDir}).errors == 1, "Malformed main saves are still reported alongside mod data");
+        write(modDir / "manual-copy.json", valid);
+        const auto explicitModRoot = rizia::discovery::scan({gameDir, modDir});
+        check(explicitModRoot.saves.size() == 2 && explicitModRoot.errors == 3,
+              "An explicitly selected mod folder is scanned even when its parent is another root");
+        write(root / "Custom" / "moddingkit" / "save.json", valid);
+        check(rizia::discovery::scan({root / "Custom"}).saves.size() == 3,
+              "A custom library can store ordinary saves in a folder named moddingkit");
         auto mainSave = valid;
         mainSave.replace(mainSave.find("StoryPack_Rizia"), std::string("StoryPack_Rizia").size(), "StoryPack_Main");
         mainSave.replace(mainSave.find("RiziaDLC.Resources_Budget"), std::string("RiziaDLC.Resources_Budget").size(), "BaseGame.GovernmentBudget");

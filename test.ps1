@@ -20,7 +20,7 @@ foreach ($suite in $suites) {
         # These suites include the application entry point and need its common-controls v6 manifest.
         $flags += Join-Path $sourceRoot "build\app.res"
     }
-    $libraries = @("-luser32", "-lkernel32", "-lcomdlg32", "-lcomctl32", "-lshell32", "-lole32", "-luuid", "-lgdi32", "-luxtheme", "-ldwmapi")
+    $libraries = @("-luser32", "-lkernel32", "-lcomdlg32", "-lcomctl32", "-lshell32", "-lole32", "-luuid", "-lgdi32", "-luxtheme", "-ldwmapi", "-lgdiplus")
     & $Compiler $sourceFile @flags "-o" $binary @libraries
     if ($LASTEXITCODE -ne 0) { throw "$suite compilation failed" }
     $suiteArgs = @()

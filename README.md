@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.22.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.22.1/SuzerainSaveStudio-0.22.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.22.1) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.23.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.0/SuzerainSaveStudio-0.23.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.0) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
@@ -43,7 +43,9 @@
 
 打开里奇亚存档后，可以在同一行比较预算、权威和能源。大字是现有库存，旁边的小字显示每回合变化与上限。游戏内的 Ctrl+F8 面板使用游戏自带字体显示中文和英文。
 
-默认配色是 **雾蓝**。侧栏和文件工具栏会映出背景的颜色。沿按钮边缘移动鼠标，反光会跟随指针，按下时向内收。数值和修改预览使用实色底，长时间对照也清楚。选档器和编辑器的 **外观** 菜单提供 **雾蓝、暖纸、林间、午夜** 四套配色，每套配色都可以再选择一种材质。**通透**能看见背后的色彩，**柔雾**让工具栏和侧栏的底色更均匀，**纯色**适合偏爱实色界面的玩家。关闭 Windows 动画效果后，桌面端保留静态玻璃。开启高对比度或关闭系统透明效果时，桌面端使用实色。
+默认配色是 **雾蓝**。打开 **外观**，可以先看同一道色带透过三种材质的效果，再决定用哪一种。[查看外观菜单](docs/images/appearance-menu.png)
+
+工具栏的圆角会扭曲背后的光带，侧栏用带色的玻璃标出当前分类。沿按钮边缘移动鼠标，反光会跟随指针，按下时向内收。数值和修改预览使用实色底，长时间对照也清楚。选档器和编辑器的 **外观** 菜单提供 **雾蓝、暖纸、林间、午夜** 四套配色，每套配色都可以再选择一种材质。**通透**能看见背后的色彩，**柔雾**让工具栏和侧栏的底色更均匀，**纯色**适合偏爱实色界面的玩家。关闭 Windows 动画效果后，桌面端保留静态玻璃。开启高对比度或关闭系统透明效果时，桌面端使用实色。
 
 ## 功能
 

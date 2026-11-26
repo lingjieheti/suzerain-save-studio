@@ -1,6 +1,14 @@
-# v0.22.1 Preview — Windows validation
+# v0.23.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.22.1 desktop editor and optional 0.22.0 in-game plugin. The editor was built with MinGW-w64 GCC 13.2.0.
+The Windows x64 archive includes the 0.23.0 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Desktop appearance and save discovery in 0.23.0
+
+The toolbar bends the application's backdrop perpendicular to the local edge, including around the curved ends. Local brightness influences the tint, while the numerical table retains an opaque background. The sidebar uses a tinted selection, and the icons in the picker and editor share the same stroke weight. In Appearance, three samples render the same colored stripe with the three actual finishes. These choices follow Apple's guidance on limiting glass to navigation and controls, its guidance on icon weight and its 2026 refinements to diffusion, edge contrast and highlights. [Materials](https://developer.apple.com/design/human-interface-guidelines/materials) · [Icons](https://developer.apple.com/design/human-interface-guidelines/icons) · [WWDC26 design update](https://developer.apple.com/videos/play/wwdc2026/102/)
+
+On Windows, we compared wide and compact layouts in all four themes and all three finishes. With reduced motion the glass reflection stays still. When Windows suppresses transparency, the renderer uses the opaque surface. The pictured campaigns are built-in examples or synthetic saves. The three menu samples were compared in Chinese and English, in light and dark themes, with each finish selected in turn. All 20 navigation and file glyphs were checked at 96 and 144 DPI for visible antialiased strokes within their bounds.
+
+The 0.22.1 picker showed an unreadable-file warning after three valid Modding Kit companion files were added beside otherwise unchanged main saves. With 1,001 synthetic main saves and 1,002 recent companions the old scanner listed 998 main saves and counted 1,002 errors. The updated scanner listed the configured maximum of 1,000 main saves with zero errors. This test covered the Kit's file layout. In-game mod compatibility has not been verified. [Modding Kit v2.4 save implementation](https://github.com/suzerain-modding/suzerain-modding-kit/blob/v2.4/SuzerainModdingKit/Save/SaveManager.cs)
 
 ## Reloading a field in 0.22.1
 
