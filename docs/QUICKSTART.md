@@ -6,7 +6,7 @@
 2. 使用自己的存档时，先在游戏里保存并退出。可在选档窗口输入“里奇亚 自动 第3回合”，也可输入“修改时间”列的日期或时分，例如 `18:45`。选中后核对文件名。编辑时按 **Ctrl+L** 重开选档器，会按完整路径选中当前文件；当前文件不在结果中时，选中最近修改的匹配项。在索德兰的“经济”或“高级字段”中，搜 `GB` 找政府预算，搜 `PW` 找私人资产。也可以粘贴攻略里的字段赋值来查找，例如 `["BaseGame.GovernmentBudget"]=20`。搜索只定位字段。
 3. 搜到字段后，按 **↓** 进入结果列表，用方向键选中一项，再按 **Enter**。数字会全选，可以直接输入新值并按 **Enter** 加入待保存项。对于“是／否”字段，焦点会落在当前选项。按 **Ctrl+S** 进入待修改列表，用 **↑ / ↓** 逐项对照原值和新值，核对完再选择“保存到原档”或“另存为”。回到游戏主菜单，手动读取刚才保存的文件。
 
-要从旧备份单独取出一份存档，可按 **Ctrl+O**，在文件类型选“所有文件”，打开 `.rizia-backups` 中的 `.bak`。按 **Ctrl+S** 进入修改预览，点“另存为”，选备份目录外的位置。待保存项为零时，副本会保留打开时的全部原始字节。
+要取出旧进度，可按 **Ctrl+O** 直接选择 Suzerain 的 `.bak` 备份，也可以把它拖到编辑器里。按 **Ctrl+S** 进入修改预览，再点“另存为”。例如，打开 `autosave.json.bak` 时，默认副本名为 `autosave.recovered.json`。已移到其他文件夹的备份也可以这样打开。没有修改数值时，输出的 JSON 与备份逐字节相同。
 
 想找人物关系时，打开里奇亚示例的“高级字段”，按 **Ctrl+F**，粘贴 `[\"RiziaDLC.Relations_`。结果会列出维娜、雨果等人的关系字段。
 
@@ -50,7 +50,7 @@ Open **Support the author** in the save picker or editor sidebar. Scan the appre
 2. To edit your own campaign, save and quit the game first. Try `Rizia auto turn 3` in the picker. To find a save by its local modification time, enter a date or a time such as `18:45` from the **Modified** column. Check the file name before opening. Press **Ctrl+L** while editing to reopen the picker with the current file selected by its full path. If it is absent, the newest matching result is selected. In Sordland’s **Economy** or **Advanced** tab, search for `GB` to find government budget or `PW` to find personal wealth. You can also paste a guide entry such as `["BaseGame.GovernmentBudget"]=20` to locate the field.
 3. From search, press **↓** to enter the results. Select a field with the arrow keys and press **Enter**. For a number, type over the selected value and press **Enter** to stage it. For a yes/no field, focus moves to the current choice. Press **Ctrl+S** to focus the change list. Use **Up / Down** to compare the original and proposed values, then choose **Save to original** or **Save as**. Return to the game's main menu and load the file you just saved.
 
-To make a separate copy of an earlier save, press **Ctrl+O**, select **All files** and open the `.bak` inside `.rizia-backups`. Press **Ctrl+S**, choose **Save as**, and save outside the backup directory. With no pending edits, the copy preserves the exact bytes of the backup you opened.
+To recover an earlier save, press **Ctrl+O** and select its `.bak` file, or drag the backup into the editor. Press **Ctrl+S** and choose **Save as**. For example, `autosave.json.bak` suggests `autosave.recovered.json`. This also works with backups moved to another folder. With no edits, the JSON copy contains the exact bytes of the backup.
 
 To find character relationships, open the Rizia sample’s **Advanced** tab, press **Ctrl+F**, and paste `[\"RiziaDLC.Relations_`. The results include the relationship fields for Vina and Hugo.
 

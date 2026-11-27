@@ -155,7 +155,7 @@ void layout() {
     bool empty=!help && (backup?g.backups.empty():g.rows.empty()); visible(g.empty,empty);
     if (empty) {
         bool emptyFavorites=g.tab==4&&g.favoritesOnly&&!g.changedOnly&&g.pages[4].query.empty();
-        setText(g.empty,!g.doc?L"选择存档，或拖入 JSON 文件":backup?L"暂无备份":review?L"暂无修改":
+        setText(g.empty,!g.doc?L"请拖入 Suzerain 的 .json 存档或 .bak 备份。":backup?L"暂无备份":review?L"暂无修改":
                 emptyFavorites?L"当前存档没有已收藏的字段。关闭筛选后可选择字段收藏。":L"无匹配项目");
     }
     if (!help) {
