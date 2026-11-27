@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.5";
+constexpr wchar_t APP_VERSION[] = L"0.23.6";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -219,7 +219,7 @@ void updateStatus(){
     EnableWindow(ctl(UNDOALL),!pending().empty());
     EnableWindow(ctl(HISTORY_UNDO),g.session&&(g.session->canUndo()||g.editingDirty));
     EnableWindow(ctl(HISTORY_REDO),g.session&&g.session->canRedo()&&!g.editingDirty);
-    EnableWindow(ctl(BACKUP_RESTORE),g.backupDoc!=nullptr);EnableWindow(ctl(BACKUP_FOLDER),loaded&&!g.demoResource);
+    EnableWindow(ctl(BACKUP_RESTORE),g.backupDoc && g.backupCopyTarget.empty());EnableWindow(ctl(BACKUP_FOLDER),loaded&&!g.demoResource);
     setText(ctl(NAV_BASE+5),L"修改预览"+(!g.previewCount?L"":L"  "+std::to_wstring(g.previewCount)));
     SetWindowTextW(g.win,((any?L"* ":L"")+std::wstring(APP_TITLE)+L"").c_str());
     InvalidateRect(ctl(APPLY),nullptr,FALSE);InvalidateRect(ctl(SAVE),nullptr,FALSE);
@@ -343,7 +343,8 @@ void selectBackup(int index){
             if(doc->story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");g.backupDoc=std::move(doc);
             setText(g.name,L"备份详情");setText(g.oldValue,fileTimeText(g.backups[index].path,g.backups[index].timestamp));
             auto bv=[](const char*k){auto*f=g.backupDoc->find(k);return f?wide(f->value):L"—";};
-            std::wstring s=L"将恢复到当前打开的存档。\r\n恢复前会再次备份当前文件。\r\n\r\n回合  "+wide(g.backupDoc->turn)+L"   /   "+wide(g.backupDoc->version);
+            std::wstring s=g.backupCopyTarget.empty()?L"将恢复到当前打开的存档。\r\n恢复前会再次备份当前文件。":L"请将备份另存为独立的 .json 存档。";
+            s+=L"\r\n\r\n回合  "+wide(g.backupDoc->turn)+L"   /   "+wide(g.backupDoc->version);
             for(const std::string& k:(isBase()?std::vector<std::string>{"BaseGame.GovernmentBudget","BaseGame.PersonalWealth","BaseGame.Economy"}:std::vector<std::string>{"RiziaDLC.Resources_Budget","RiziaDLC.Resources_Authority","RiziaDLC.Resources_Energy"})){s+=L"\r\n"+label(k)+L"    "+wide(g.doc->find(k)?g.doc->find(k)->value:"—")+L"  →  "+bv(k.c_str());}
             if(g.backupDoc->campaignName!=g.doc->campaignName)s+=L"\r\n\r\n注意：战役名称与当前存档不同。";
             s+=L"\r\n\r\n"+g.backups[index].path.filename().wstring();setText(g.desc,s);
@@ -461,7 +462,7 @@ void showReviewSelection(){
     if(g.selected.empty())setText(g.oldValue,L"");
     else rawText(g.oldValue,label(g.selected));
     std::wstring targetText;
-    if(!g.backupCopyTarget.empty())targetText=tr(L"请在备份目录外另存一份存档。");
+    if(!g.backupCopyTarget.empty())targetText=tr(L"请将备份另存为独立的 .json 存档。");
     else if(g.demoResource)targetText=tr(L"示例只能另存为新文件。");
     else targetText=tr(L"目标：")+L"\r\n"+(g.doc?g.file.wstring():tr(L"未打开"))+L"\r\n\r\n"+tr(L"保存前自动备份。");
     if(!g.reviewError.empty())rawText(g.desc,g.reviewError+L"\r\n\r\n"+targetText);
@@ -514,7 +515,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.5 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.6 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -538,12 +539,16 @@ std::wstring documentTitle(){
     return g.demoResource?tr(L"内置练习示例")+L"  /  "+campaignLabel(g.doc->story):g.file.wstring();
 }
 fs::path suggestedBackupCopy(const fs::path& path){
-    if(path.empty()||!isBackupDestination(path))return {};
+    if(path.empty()||(lower(path.extension().wstring())!=L".bak"&&!isBackupDestination(path)))return {};
     auto folder=fs::absolute(path).lexically_normal().parent_path();
     while(folder.has_relative_path()&&isBackupDestination(folder))folder=folder.parent_path();
     fs::path source=save_backup::identify(path).source;
-    if(source.empty())source=path.filename();
-    return folder/(source.stem().wstring()+L".recovered.json");
+    if(source.empty())source=path.stem();
+    else if(lower(source.extension().wstring())==L".json")source=source.stem();
+    return folder/(source.wstring()+L".recovered.json");
+}
+bool validRecoveryDestination(const fs::path& destination,const fs::path& source){
+    return lower(destination.extension().wstring())==L".json" && !samePath(destination,source);
 }
 void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resource,DocumentLoad mode=DocumentLoad::Open){
     auto doc=std::make_unique<rizia::Document>(rizia::Document::parse(bytes));
@@ -603,7 +608,9 @@ fs::path pickFile(bool save=false,int kind=0,HWND owner=nullptr){
         else initial.clear();
     }
     OPENFILENAMEW o{};o.lStructSize=sizeof(o);o.hwndOwner=owner?owner:g.win;o.lpstrFile=buffer.data();o.nMaxFile=(DWORD)buffer.size();
-    o.lpstrFilter=kind==1?L"Suzerain patch (*.txt)\0*.txt\0All files\0*.*\0\0":L"Suzerain save (*.json)\0*.json\0All files\0*.*\0\0";
+    if(kind==1)o.lpstrFilter=L"Suzerain patch (*.txt)\0*.txt\0All files\0*.*\0\0";
+    else if(save)o.lpstrFilter=L"Suzerain save (*.json)\0*.json\0All files\0*.*\0\0";
+    else o.lpstrFilter=L"Suzerain (*.json; *.bak)\0*.json;*.bak\0All files\0*.*\0\0";
     auto dialogTitle=tr(kind==1?(save?L"导出修改方案":L"导入修改方案"):(save?L"另存为…":L"选择存档"));o.lpstrTitle=dialogTitle.c_str();
     o.lpstrInitialDir=initial.c_str();o.lpstrDefExt=save?(kind==1?L"txt":L"json"):nullptr;o.Flags=OFN_EXPLORER|OFN_NOCHANGEDIR|OFN_PATHMUSTEXIST|(save?OFN_OVERWRITEPROMPT:OFN_FILEMUSTEXIST);
     BOOL ok=save?GetSaveFileNameW(&o):GetOpenFileNameW(&o);return ok?fs::path(buffer.data()):fs::path();
@@ -629,10 +636,12 @@ void saveDocument(bool as){
     if(!g.doc||!applyInput(false))return;
     if(g.tab!=5){navigate(5);return;}
     try{
-        if(!as&&!g.backupCopyTarget.empty()){toast(L"请在备份目录外另存一份存档。");return;}
+        if(!as&&!g.backupCopyTarget.empty()){toast(L"请将备份另存为独立的 .json 存档。");return;}
         auto changes=preparedChanges();
         if(changes.empty()&&g.backupCopyTarget.empty()){toast(L"没有需要保存的修改");return;}
         fs::path dest=(as||g.demoResource)?pickFile(true):g.file;if(dest.empty())return;
+        if(!g.backupCopyTarget.empty()&&!validRecoveryDestination(dest,g.file))
+            throw WinFailure(tr(L"请将备份另存为独立的 .json 存档。"));
         if(g.demoResource){
             auto bytes=g.doc->render(changes);
             atomicSave(dest,bytes,nullptr);
@@ -654,7 +663,7 @@ void saveDocument(bool as){
     }catch(const std::exception&e){message(L"保存没有完成。\r\n\r\n"+wide(e.what()),MB_OK|MB_ICONERROR);}
 }
 void restoreSelected(){
-    if(!g.doc||!g.backupDoc||g.backupIndex<0)return;
+    if(!g.doc||!g.backupDoc||g.backupIndex<0||!g.backupCopyTarget.empty())return;
     if(!g.restoreArmed){if(!discardIfNeeded())return;g.restoreArmed=true;setText(ctl(BACKUP_RESTORE),L"确认恢复并备份当前档");visible(BACKUP_CANCEL,true);
         toast(L"再次确认后，将用选中备份替换当前文件；当前版本仍会另做备份。");InvalidateRect(g.win,nullptr,FALSE);return;}
     try{auto data=readFile(g.backups[g.backupIndex].path);if(data!=g.backupDoc->original)throw WinFailure(L"这份备份在预览后发生了变化。请刷新列表，重新确认后再恢复。");auto d=rizia::Document::parse(data);if(d.story!=g.doc->story)throw WinFailure(L"Campaign mismatch.");
@@ -917,7 +926,18 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         command(LOWORD(wp),HIWORD(wp));return 0;
     case WM_APP+1:command(LOWORD(wp),HIWORD(wp));return 0;
     case WM_APP+2:chooseSave();return 0;
-    case WM_DROPFILES:{HDROP drop=(HDROP)wp;wchar_t path[32768]{};if(DragQueryFileW(drop,0,path,32768)){fs::path p(path);if(lower(p.extension().wstring())==L".json")loadDocument(p);else message(L"Drop a Suzerain JSON save here.");}DragFinish(drop);return 0;}
+    case WM_DROPFILES:{
+        HDROP drop=reinterpret_cast<HDROP>(wp);wchar_t path[32768]{};
+        const auto length=DragQueryFileW(drop,0,path,32768);
+        DragFinish(drop);
+        if(length){
+            const fs::path file(path);
+            const auto extension=lower(file.extension().wstring());
+            if(extension==L".json"||extension==L".bak")loadDocument(file);
+            else message(L"请拖入 Suzerain 的 .json 存档或 .bak 备份。");
+        }
+        return 0;
+    }
     case WM_NOTIFY:{auto*n=(NMHDR*)lp;
         if(n->hwndFrom==workspaceTips&&n->code==TTN_GETDISPINFOW){
             static std::wstring caption;caption=textOf(reinterpret_cast<HWND>(n->idFrom));

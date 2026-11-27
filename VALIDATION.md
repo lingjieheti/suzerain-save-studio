@@ -1,6 +1,14 @@
-# v0.23.5 Preview — Windows validation
+# v0.23.6 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.5 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.6 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Opening backup files in 0.23.6
+
+On Windows, the published 0.23.5 editor's Open dialog showed only the JSON file in a test folder containing a save, a Studio backup and an unrelated text file. Switching the filter to All files revealed the backup. After opening a backup moved out of the managed directory, Save As was disabled until we edited a field, at which point Save to original also became available. Recovery requires an existing, readable save or backup. [Earlier player discussion of lost progress](https://www.reddit.com/r/suzerain/comments/1xqgwdh/loaded_turn_6_save_took_me_back_to_start_of_the/)
+
+In the 0.23.6 ZIP executable, the Windows Open dialog listed the JSON and the backup by default and hid the unrelated text file. We selected the timestamped backup, pressed Ctrl+S, and used Space to open Save As. Entering `Recovered` produced a byte-identical `Recovered.json`. A second test opened a moved `Palace.BAK`, staged a budget change, and wrote an edited JSON copy. Both source backups kept their original bytes and modification times. Patch import and export continued to select text files. The checks used synthetic campaigns and did not load the recovered saves in the game.
+
+We repeated Ctrl+S with an unedited, moved `Archive.Chapter.03.BAK` in four themes at 1,200 × 790, 800 × 620 and 680 × 485 DIP. In all 12 cases Save As received visible keyboard focus, both button captions fit and Save to original stayed disabled. The backup's bytes and modification time were preserved. These theme checks used the final Windows application source with an isolated preferences key. Native tests also exercised a shell file drop, a JSON hard link to the open backup and the backup-management Restore command.
 
 ## File toolbar and glass edges in 0.23.5
 

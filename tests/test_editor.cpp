@@ -3,6 +3,7 @@
 #define wWinMain UnusedEditorGuiEntry
 #include "../src/main.cpp"
 #undef wWinMain
+#include <cstring>
 #include <iostream>
 
 namespace {
@@ -669,7 +670,7 @@ void testBackupSaveAs(){
     check(g.review.empty() && IsWindowEnabled(ctl(SAVEAS)) && !IsWindowEnabled(ctl(CONFIRM_SAVE)) &&
           !IsWindowEnabled(ctl(PATCH_EXPORT)),"A pristine backup permits Save As with no patch or overwrite action");
     check(GetFocus()==ctl(SAVEAS),"An empty backup preview focuses the available Save As action");
-    check(textOf(g.desc)==tr(L"请在备份目录外另存一份存档。"),"The preview directs backup readers to Save As");
+    check(textOf(g.desc)==tr(L"请将备份另存为独立的 .json 存档。"),"The preview directs backup readers to a separate JSON save");
     RECT saveAs{},overwrite{};
     GetWindowRect(ctl(SAVEAS),&saveAs);GetWindowRect(ctl(CONFIRM_SAVE),&overwrite);
     check(saveAs.bottom<=overwrite.top,"Save As occupies the primary position for an open backup");
@@ -688,6 +689,36 @@ void testBackupSaveAs(){
     check(GetFocus()==ctl(NAV_BASE+5),"An unchanged regular save retains normal empty-preview focus");
     check(suggestedBackupCopy(archive/L"run.json.before.war.bak")==root/L"run.recovered.json",
           "Manually labeled backups use the original save name");
+    const auto moved=root/L"Chapter.03.BAK";
+    fs::copy_file(backup,moved);
+    const auto name=moved.wstring();
+    const auto bytes=(name.size()+2)*sizeof(wchar_t);
+    HGLOBAL drop=GlobalAlloc(GHND,sizeof(DROPFILES)+bytes);
+    check(drop!=nullptr,"Allocate a real shell drop with space for the double terminator");
+    auto* files=static_cast<DROPFILES*>(GlobalLock(drop));
+    files->pFiles=sizeof(DROPFILES);files->fWide=TRUE;
+    std::memcpy(reinterpret_cast<BYTE*>(files)+files->pFiles,name.data(),name.size()*sizeof(wchar_t));
+    GlobalUnlock(drop);
+    SendMessageW(g.win,WM_DROPFILES,reinterpret_cast<WPARAM>(drop),0);
+    navigate(5);
+    check(g.file==moved && g.backupCopyTarget==root/L"Chapter.03.recovered.json" &&
+          IsWindowEnabled(ctl(SAVEAS)) && !IsWindowEnabled(ctl(CONFIRM_SAVE)) && GetFocus()==ctl(SAVEAS),
+          "Dropping a moved uppercase backup retains the dotted name and permits immediate Save As");
+    check(!validRecoveryDestination(moved,moved) && !validRecoveryDestination(root/L"other.bak",moved) &&
+          validRecoveryDestination(copy,moved),"A recovery copy allows an independent existing JSON and refuses BAK destinations");
+    const auto alias=root/L"backup-alias.json";
+    std::error_code linkError;fs::create_hard_link(moved,alias,linkError);
+    if(!linkError){
+        check(!validRecoveryDestination(alias,moved),"A JSON hard link to the opened backup cannot be its recovery destination");
+        fs::remove(alias);
+    }
+    const auto oldBackup=archive/(moved.filename().wstring()+L".20261127-010203-004.bak");
+    fs::copy_file(moved,oldBackup);navigate(6);
+    check(g.backupDoc && !IsWindowEnabled(ctl(BACKUP_RESTORE)),
+          "An old snapshot for the moved BAK remains readable without enabling restore over the BAK");
+    command(BACKUP_RESTORE,BN_CLICKED);
+    check(!g.restoreArmed && readFile(moved)==original,"A protected backup cannot be armed for in-place restore");
+    fs::remove(oldBackup);fs::remove(moved);
     fs::remove(backup);fs::remove(copy);fs::remove(nested);fs::remove(archive);fs::remove(root);
 }
 
