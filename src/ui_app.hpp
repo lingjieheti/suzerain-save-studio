@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.4";
+constexpr wchar_t APP_VERSION[] = L"0.23.5";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -376,7 +376,7 @@ void appendFieldRows(){
     const auto key=field_search::pastedKey(query);
     const auto terms=key.text.empty()?field_search::terms(query):std::vector<std::wstring>{};
     const auto number=tr(L"数值"), toggle=tr(L"开关");
-    auto append=[&](const rizia::Field& field){
+    auto append=[&](const rizia::Field& field,std::wstring_view epaQualifier={}){
         if(!key.text.empty() && !key.matches(field.key))return;
         if(g.tab==4&&g.favoritesOnly&&!g.favorites.count(field.key))return;
         const auto change=pending().find(field.key);
@@ -397,7 +397,7 @@ void appendFieldRows(){
                 }
                 caption.searchText=field_search::fold(search);
             }
-            if(!field_search::matches(caption.searchText,terms))return;
+            if(!field_search::matches(caption.searchText,terms,epaQualifier))return;
         }
         const auto staged=change==pending().end()?L"—":displayValue(change->second,field.is_bool,i18n::language);
         g.rows.push_back(field.key);
@@ -419,6 +419,14 @@ void appendFieldRows(){
         std::set<const rizia::Field*> common;
         if(!terms.empty()){
             if(first)common.insert(first);
+            if(isBase() && std::find(terms.begin(),terms.end(),L"epa")!=terms.end()){
+                for(const auto& option:field_search::sordlandEpaFields){
+                    if(const auto* field=g.doc->find(option.key)){
+                        common.insert(field);
+                        append(*field,option.qualifier);
+                    }
+                }
+            }
             for(const auto& def:currentDefs())if(const auto* field=g.doc->find(def.key)){
                 if(common.insert(field).second)append(*field);
             }
@@ -506,7 +514,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.4 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.5 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }

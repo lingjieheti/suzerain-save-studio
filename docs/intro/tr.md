@@ -4,9 +4,11 @@
 
 Eskiden *Suzerain* oynarken bir şeyi değiştirmek istediğimde çoğunlukla kayıt dosyasını düzenlerdim. Her değişiklikte kaydı iki kez yüklemem gerekiyordu. Bu işten sıkılınca bu aracı yaptım. Kayıt dosyalarınızı düzenleyebilir, oyun sırasında da kaynak miktarlarını doğrudan değiştirebilirsiniz. Seçim önizlemesini açtıktan sonra imleci bir seçeneğin üzerine getirip Ctrl tuşuna kısaca basarak o seçimin bilinen doğrudan etkilerini görebilirsiniz. Araçta birkaç küçük özellik daha var. [Önerilerinizi duymak isterim.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Windows 10/11 x64 için 0.23.4 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)**
+**[Windows 10/11 x64 için 0.23.5 önizleme sürümünü indir (ZIP)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.5/SuzerainSaveStudio-0.23.5-Live-Preview-win-x64.zip)**
 
 Kayıt seçim ekranında veya düzenleyicide **Görünüm** menüsünü açın. Dört renk temasının her birinde **Şeffaf**, **Buzlu** veya **Opak** görünümü seçebilirsiniz.
+
+Araç çubuğunun solundan geçerli kaydı yeniden yükleyebilir veya klasörünü açabilirsiniz. Başka bir kayda geçmek için sağdaki düğmeleri kullanın. [Araç çubuğunun eski ve yeni görünümü](../images/file-toolbar.png)
 
 Oyunun sunduğu durumlarda **Ctrl+F8** ile mevcut seferin kamuoyu puanını görebilirsiniz. Kayıt düzenleyicisinde bu değeri `PO` yazarak arayabilirsiniz.
 

@@ -90,8 +90,32 @@ inline PastedKey pastedKey(std::wstring_view query) {
     return {utf8(key), prefix};
 }
 
-inline bool matches(const std::wstring& index, const std::vector<std::wstring>& terms) {
+struct EpaField {
+    const char* key;
+    std::wstring_view qualifier;
+};
+
+inline constexpr EpaField sordlandEpaFields[] = {
+    {"BaseGame.Policy_Economy_EnergyProtectionAct_10Percent", L"10"},
+    {"BaseGame.Policy_Economy_EnergyProtectionAct_49Percent", L"49"},
+    {"BaseGame.Policy_Economy_EnergyProtectionAct_Default", L"default"},
+    {"BaseGame.Policy_Economy_EnergyProtectionAct_Removed", L"repeal"},
+    {"BaseGame.Turn03_Admin_EnergyProtectionAct_10Percent", L"10"},
+    {"BaseGame.Turn03_Admin_EnergyProtectionAct_49Percent", L"49"},
+    {"BaseGame.Turn03_Admin_EnergyProtectionAct_Keep20Percent", L"20"},
+    {"BaseGame.Turn03_Admin_EnergyProtectionAct_Removed", L"repeal"},
+};
+
+inline bool matches(const std::wstring& index, const std::vector<std::wstring>& terms,
+                    std::wstring_view epaQualifier = {}) {
     return std::all_of(terms.begin(), terms.end(), [&](const std::wstring& term) {
+        if (!epaQualifier.empty()) {
+            if (term == L"epa" || term == epaQualifier) return true;
+            std::wstring_view share = term;
+            if (!share.empty() && (share.back() == L'%' || share.back() == L'\uff05')) share.remove_suffix(1);
+            if (!share.empty() && share.find_first_not_of(L"0123456789") == share.npos)
+                return share == epaQualifier;
+        }
         return index.find(term) != std::wstring::npos;
     });
 }

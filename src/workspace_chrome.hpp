@@ -44,7 +44,9 @@ void fill(HDC dc, RECT bounds, COLORREF color) {
     DeleteObject(brush);
 }
 
-int fileToolbarWidth(const WorkspaceGeometry& a) { return std::min(465,a.content*62/100); }
+// The extra eight DIPs belong to the gap between capsules so all four
+// commands retain their original width at every window size.
+int fileToolbarWidth(const WorkspaceGeometry& a) { return std::min(465,a.content*62/100)+8; }
 int footerHistoryWidth(const WorkspaceGeometry& a) { return a.width<820?58:80; }
 int footerSaveWidth(const WorkspaceGeometry& a) { return a.width<820?107:155; }
 constexpr int guideSegmentWidth=108, guideSegmentGap=2, guideSegmentInset=3;
@@ -59,10 +61,14 @@ void workspaceCard(HDC dc,RECT box,COLORREF face,COLORREF edge,int radius) {
     RestoreDC(dc,saved);
 }
 
-// The separator between the two file commands and the two open commands
-// shares the same spacing as the child controls.
-int fileActionSlot(int width) { return (width-18)/10; }
-int fileActionGap(int id) { return id==FOLDER?14:2; }
+// Buttons in the same capsule share a surface. The wider gap after Folder
+// leaves room for both rounded ends and a strip of exposed canvas.
+constexpr int fileButtonGap=2, fileGroupGap=22;
+std::array<int,4> fileActionWidths(int width) {
+    const int usable=width-fileGroupGap-2*fileButtonGap,unit=usable/10;
+    return {2*unit,2*unit,3*unit,usable-7*unit};
+}
+int fileActionGap(int id) { return id==FOLDER?fileGroupGap:fileButtonGap; }
 
 void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& a) {
     glass::wash(dc,client,Theme::bg);
@@ -86,10 +92,11 @@ void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& 
     const int toolbarWidth=fileToolbarWidth(a);
     const int toolbarY=a.shortScreen?7:14;
     const int first=end-toolbarWidth;
-    const int localWidth=4*fileActionSlot(toolbarWidth)+2;
-    glass::surface(dc,rect(first-3,toolbarY-3,toolbarWidth+6,38),Theme::panel,px(19));
-    const int divider=first+localWidth+fileActionGap(FOLDER)/2;
-    fill(dc,rect(divider,toolbarY+8,1,16),glass::mix(Theme::line,Theme::sideMuted,.24));
+    const auto widths=fileActionWidths(toolbarWidth);
+    const int localWidth=widths[0]+widths[1]+fileButtonGap;
+    const int openStart=first+localWidth+fileGroupGap;
+    glass::surface(dc,rect(first-3,toolbarY-3,localWidth+6,38),Theme::panel,px(19));
+    glass::surface(dc,rect(openStart-3,toolbarY-3,end-openStart+6,38),Theme::panel,px(19));
     if(g.tab==7) {
         const int width=2*(guideSegmentWidth+guideSegmentInset)+guideSegmentGap;
         glass::surface(dc,rect(a.left,a.toolsY,width,32),Theme::panel,px(16));

@@ -27,13 +27,13 @@ void layout() {
     bool edit = g.tab < 5, review = g.tab == 5, backup = g.tab == 6, help = g.tab == 7;
     g.gridTop = a.listY; g.tableW = a.list; g.rightX = a.right;
     const int toolbarEnd = a.left + a.content;
-    int toolsWidth = fileToolbarWidth(a);
-    int slot = fileActionSlot(toolsWidth);
+    const int toolsWidth = fileToolbarWidth(a);
+    const auto widths = fileActionWidths(toolsWidth);
     int tx = toolbarEnd - toolsWidth;
-    for (auto item : {std::pair<int,int>{RELOAD,2}, {FOLDER,2}, {OPEN,3}, {LATEST,3}}) {
-        int bw = item.first == LATEST ? toolbarEnd - tx : slot * item.second;
-        place(ctl(item.first), tx, a.shortScreen ? 7 : 14, bw, 32);
-        tx += bw + fileActionGap(item.first);
+    constexpr int fileActions[]={RELOAD,FOLDER,OPEN,LATEST};
+    for (size_t i=0;i<widths.size();++i) {
+        place(ctl(fileActions[i]), tx, a.shortScreen ? 7 : 14, widths[i], 32);
+        tx += widths[i] + fileActionGap(fileActions[i]);
     }
     int themeWidth=116;
     if(!a.compactRail) {
