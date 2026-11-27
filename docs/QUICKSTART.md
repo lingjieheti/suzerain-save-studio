@@ -12,6 +12,8 @@
 
 要对照一次决策前后的民意，可先在“高级字段”搜索 `PO` 并选中民意字段。等游戏再次写入同一存档后，按 **Ctrl+R** 或点“重新载入”即可在原来的位置查看新值。有待保存的修改时，先按提示决定是否放弃。
 
+在索德兰的「高级字段」搜索 `EPA`，可找到这份存档中的能源保护法政策与第三回合决策记录。输入 `EPA 49%` 可查看键名标明 49% 的记录，输入 `EPA repeal` 可查看标记为废除的记录。右侧说明会显示选中项的原始字段名。
+
 在里奇亚的“资源与经济”或“高级字段”中，输入 `APT`（每回合权威）、`BPT`（每回合预算）或 `EPT`（每回合能源）。例如攻略里写了 `+3Apt`，把这段文字粘到搜索框，就能对照存档里的每回合权威净变化。搜索只定位字段，游戏结算时可能重新计算这个汇总值。
 
 要重做刚撤销的字段修改，可以点窗口底部的“重做”。如果光标还在搜索框，也可以先按 **↓** 进入结果列表，再按 **Ctrl+Y**。
@@ -51,6 +53,8 @@ Open **Support the author** in the save picker or editor sidebar. Scan the appre
 To make a separate copy of an earlier save, press **Ctrl+O**, select **All files** and open the `.bak` inside `.rizia-backups`. Press **Ctrl+S**, choose **Save as**, and save outside the backup directory. With no pending edits, the copy preserves the exact bytes of the backup you opened.
 
 To find character relationships, open the Rizia sample’s **Advanced** tab, press **Ctrl+F**, and paste `[\"RiziaDLC.Relations_`. The results include the relationship fields for Vina and Hugo.
+
+In a Sordland save, search **Advanced** for `EPA` to find its Energy Protection Act policy and turn-three decision fields. Try `EPA 49%` for records explicitly marked 49 percent, or `EPA repeal` for removal flags. Select a row to see its original field name in the description.
 
 In Rizia, search Resources or Advanced for `APT` (authority per turn), `BPT` (budget per turn), or `EPT` (energy per turn). Pasting `+3Apt` from a guide finds the saved net authority change. The search leaves the value as recorded in your save. The game may recalculate it at settlement.
 

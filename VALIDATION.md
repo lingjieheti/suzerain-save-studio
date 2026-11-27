@@ -1,6 +1,18 @@
-# v0.23.4 Preview — Windows validation
+# v0.23.5 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.4 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.5 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## File toolbar and glass edges in 0.23.5
+
+Reload and Folder now share one surface. Open and the save picker share another. The canvas shows through a 16 DIP gap between the groups. Fractional backdrop sampling lets a band of color bend around either rounded end without snapping to whole texture samples. The editor keeps its table and numeric fields on opaque surfaces. Apple's adoption guide illustrates grouping toolbar buttons by task, and WWDC26 describes balancing diffusion, highlights and edge contrast. [Apple adoption guide](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass) · [WWDC26 design update](https://developer.apple.com/videos/play/wwdc2026/102/)
+
+We compared the 0.23.4 and 0.23.5 ZIP executables on Windows at 192 DPI. In the wide Chinese layout the new toolbar fits all four icons and labels. Reload reopened the synthetic save and the Open dialog could be canceled with no pending changes. All four commands remain in the keyboard focus order at 1,200 × 790, 800 × 620 and 680 × 485 DIP. We also compared the localized toolbar in all eleven languages at those sizes using isolated preferences. All 132 buttons kept their previous widths. Native rendering checks compare the gap with the actual canvas and verify that buttons within each group share a continuous surface in every palette, including the solid fallback. [Toolbar comparison](docs/images/file-toolbar.png) · [Rizia sample window](docs/images/rizia-workspace.png)
+
+## Finding the Energy Protection Act in 0.23.5
+
+Players use EPA as shorthand for the Energy Protection Act when discussing percentage limits and repeal. In the published 0.23.4 editor we opened a synthetic Sordland save with 1,480 Advanced fields. Searching `EnergyProtectionAct` returned eight policy and turn-three keys. Searching `EPA` returned nine other matches and missed all eight. Searching `EPA 49%` returned zero. [Player discussion of the choices](https://www.reddit.com/r/suzerain/comments/1thsq9t/what_do_you_do_for_gasom_investment_epa/) · [Player guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3019936015)
+
+In the updated editor, the same search returned 17 entries. The eight policy and turn entries appeared first, followed by the nine existing text matches. `EPA 49%` and `49 EPA` each found the two explicit 49-percent fields. `EPA 20%` found only the turn record marked Keep20Percent. The policy marked Default was separately discoverable using `EPA default`. The Rizia search stayed scoped to its campaign. These checks used synthetic saves and examined stored flags.
 
 ## Keyboard access to field details in 0.23.4
 

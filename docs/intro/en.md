@@ -4,9 +4,11 @@
 
 I used to edit my *Suzerain* saves by hand. Loading the same save twice every time got old, so I made this tool for myself. You can edit a save file or adjust resources while you play. With choice previews turned on, hover over a choice and tap **Ctrl** to see its known direct effects. I’ve added a few other little features along the way. [I’d love to hear your suggestions.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.4)
+**[Download the Windows 10/11 x64 preview](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.5/SuzerainSaveStudio-0.23.5-Live-Preview-win-x64.zip)** · [Release notes and checksum](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.5)
 
 In the save picker or editor, open **Appearance** and choose **Clear**, **Frosted** or **Solid** for any of the four color themes.
+
+Use the left toolbar group to reload the current save or open its folder. Use the right group to switch saves. [Compare the Windows toolbars](../images/file-toolbar.png)
 
 Press **Ctrl+F8** to check the current campaign’s internal public opinion score when available. Search for `PO` in the desktop editor’s Advanced tab to find the saved score.
 

@@ -4,9 +4,11 @@
 
 我以前玩《Suzerain》主要靠改存檔，每次都要讀兩次檔，覺得有點麻煩，就給自己做了這個修改器。現在既可以改存檔，也可以直接在遊戲裡調整資源。開啟選項預覽後，把滑鼠移到選項上，輕按一下 **Ctrl** 就能看到已知的直接效果。我還順手做了幾個小功能，歡迎大家[提提建議](https://github.com/lingjieheti/suzerain-save-studio/issues)～
 
-[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)
+[下載 Windows 10 / 11 x64 預覽版](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.5/SuzerainSaveStudio-0.23.5-Live-Preview-win-x64.zip)
 
 選檔視窗和編輯器都可以從「外觀」選擇「通透」「柔霧」或「純色」，四套配色都適用。
+
+工具列左側可重新載入目前的存檔或開啟資料夾，右側用來切換存檔。[查看新舊工具列實拍](../images/file-toolbar.png)
 
 載入戰役後按 **Ctrl+F8**，即可查看遊戲提供的民意分值。在桌面編輯器搜尋「民意」或 `PO`，也能找到存檔裡的公眾支持度。
 

@@ -10,9 +10,11 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.23.4 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.4) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.23.5 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.5/SuzerainSaveStudio-0.23.5-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.5) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
+
+编辑器右上角有两组玻璃按钮。左边的「重新载入」和「文件夹」操作当前存档，右边的「手动打开」和「选择存档」用来换档。两组之间露出背景光带，圆角边缘会轻轻折射背景色。[查看新旧工具栏实拍](docs/images/file-toolbar.png)
 
 [三种材质实拍对比](docs/images/glass-finishes.png) · [按钮反光动图](docs/images/glass-hover.gif) · [四套配色与宽窄窗口](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
 
@@ -29,6 +31,7 @@
 - **跟踪同一字段**。例如在「高级字段」搜索 `PO`，选中公众支持度。游戏再次写入同一个存档后，按 **Ctrl+R** 即可保留搜索和选中项，直接对照新的分值。
 - **查看当前民意**。载入战役，按 **Ctrl+F8**。如果游戏提供该数值，面板会显示当前战役的民意分值，打开期间会随游戏更新。它是游戏内部的支持度分数。桌面端也可在「高级字段」搜索「民意」或 `PO`，查看存档里的公众支持度。
 - **收藏字段**。选中常用或高级字段，在右侧点“收藏字段”。换同一战役的存档后，到“高级字段”点“只看收藏”，可继续编辑这些数值。索德兰和里奇亚各用一份收藏。
+- **查索德兰能源保护法**。在「高级字段」搜索 `EPA`，可对照存档中的政策和第三回合决策记录。想看 49% 的选项，直接搜 `EPA 49%`。
 - **查里奇亚资源**。在高级字段搜索“能源”时，当前库存会排在收入修正项前面。在「资源与经济」或「高级字段」搜索 `APT`、`BPT`、`EPT`，可分别找到权威、预算、能源的每回合净变化。也可以直接粘贴攻略里的 `+3Apt`。例如里奇亚示例会显示它自己存下的权威净变化 **+7**。净变化是存档记下的汇总值，游戏结算时可能重新计算。
 - **选择前查看结果**。按 **Ctrl+F8**，开启「按 Ctrl 查看选项结果」，再关掉面板。将鼠标指向选项，轻按一下左或右 **Ctrl**，就能看到「私人资产 +2」这样的变化。再按一次或移开鼠标，小窗就会收起。换一个选项后可再次按 Ctrl 查看。此功能默认关闭，剧情结果尚不明确时会显示「暂无可确认的直接效果」。[查看游戏内提示实拍](docs/images/choice-preview.jpg)
 - **在游戏里微调**。按 **Ctrl+F8**，选中资源后可点 **−5、−1、+1、+5**，看清目标值再预览和确认。如果操作期间游戏已更新该资源，请按面板提示重新核对。

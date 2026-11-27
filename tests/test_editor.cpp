@@ -921,6 +921,19 @@ void testTypography(const fs::path& path) {
 }
 
 void testGlassFinishes(){
+    std::array<DWORD,glass::LensMap::cols*glass::LensMap::rows> backdrop{};
+    const int stride=glass::LensMap::cols;
+    backdrop[1]=0x00ff0000;backdrop[stride]=0x0000ff00;backdrop[stride+1]=0x000000ff;
+    check(glass::sampleBackdrop(backdrop,{128,128})==0x00404040,
+          "A half-texel bend combines all four backdrop colors without color-channel carry");
+    backdrop.back()=0x00708fce;
+    check(glass::sampleBackdrop(backdrop,{(glass::LensMap::cols-1)*256,(glass::LensMap::rows-1)*256})==backdrop.back(),
+          "The final backdrop texel is preserved at the sampling boundary");
+    const auto& optics=glass::lensMap(192,38,19);
+    const auto end=optics.samples[(glass::LensMap::rows/3)*stride+2];
+    const auto centerPoint=optics.samples[(glass::LensMap::rows/2)*stride+stride/2];
+    check(((end.x|end.y)&255)!=0 && centerPoint.x==stride/2*256 && centerPoint.y==glass::LensMap::rows/2*256,
+          "The rounded shoulder retains subpixel refraction while the reading area stays undistorted");
     const int originalTheme=Theme::index();
     const auto originalFinish=glass::preferred;
     const bool originalSystem=glass::systemAllows;
@@ -954,6 +967,82 @@ void testGlassFinishes(){
     Theme::use(originalTheme);
     glass::preferred=originalFinish;
     glass::systemAllows=originalSystem;
+}
+
+void testFileToolbarGroups(){
+    const int originalTheme=Theme::index();
+    const auto originalFinish=glass::preferred;
+    const bool originalSystem=glass::systemAllows;
+    RECT original{};GetWindowRect(g.win,&original);
+    const auto buttonBounds=[](int id){
+        RECT box{};GetWindowRect(ctl(id),&box);
+        MapWindowPoints(nullptr,g.win,reinterpret_cast<POINT*>(&box),2);
+        return box;
+    };
+    for(int width:{680,830,1200}){
+        SetWindowPos(g.win,nullptr,0,0,px(width),px(width==680?485:730),SWP_NOMOVE|SWP_NOZORDER);
+        layout();
+        const auto reload=buttonBounds(RELOAD),folder=buttonBounds(FOLDER);
+        const auto open=buttonBounds(OPEN),latest=buttonBounds(LATEST);
+        const auto geometry=workspaceGeometry();
+        const int previousWidth=std::min(465,geometry.content*62/100);
+        const int previousUnit=(previousWidth-18)/10;
+        const std::array<int,4> previousWidths={2*previousUnit,2*previousUnit,3*previousUnit,previousWidth-18-7*previousUnit};
+        const std::array<RECT,4> buttons={reload,folder,open,latest};
+        for(size_t i=0;i<buttons.size();++i)
+            check(buttons[i].right-buttons[i].left==px(previousWidths[i]),
+                  "Every file command retains its original width at minimum, compact and standard window sizes");
+        check(reload.left==px(geometry.left+geometry.content-previousWidth-8) &&
+              std::abs(latest.right-px(geometry.left+geometry.content))<=1,
+              "The additional room for the glass gap comes entirely from widening the toolbar to the left");
+        if(width==1200){
+            const int previousLanguage=i18n::language;
+            i18n::setLanguage(0);fonts();
+            const auto dc=GetDC(g.win);
+            for(int id:std::initializer_list<int>{RELOAD,FOLDER,OPEN,LATEST}){
+                const auto button=ctl(id);
+                const auto bounds=buttonBounds(id);
+                const auto caption=tr(uiText.at(button));
+                const auto font=id==LATEST && !g.doc?g.emphasis:g.font;
+                check(px(22)+typography::width(dc,font,caption)+px(10)<=bounds.right-bounds.left,
+                      "At normal Chinese window width every file command fits its icon and complete caption");
+            }
+            ReleaseDC(g.win,dc);
+            i18n::setLanguage(previousLanguage);fonts();
+        }
+        const int separator=(folder.right+open.left)/2,centerY=(open.top+open.bottom)/2;
+        const int localJoin=(reload.right+folder.left)/2,openJoin=(open.right+latest.left)/2;
+        check(open.left-folder.right>folder.left-reload.right+px(12) &&
+              open.left-folder.right>latest.left-open.right+px(12),
+              "Actual file command positions give the two related pairs distinct spacing");
+        RECT client{};GetClientRect(g.win,&client);
+        glass::Dib canvas,toolbar;
+        check(canvas.size(nullptr,client.right,client.bottom) && toolbar.size(nullptr,client.right,client.bottom),
+              "Create matching toolbar and unadorned workspace surfaces");
+        for(int theme=0;theme<Theme::count;++theme){
+            Theme::use(theme);
+            for(int mode=0;mode<4;++mode){
+                glass::systemAllows=mode!=3;
+                glass::preferred=mode==1?glass::Frosted:mode==2?glass::Solid:glass::Clear;
+                glass::wash(canvas.dc,client,Theme::bg);
+                drawWorkspaceBackdrop(toolbar.dc,client,workspaceGeometry());
+                const auto isCanvas=[&](int x,int y){return GetPixel(canvas.dc,x,y)==GetPixel(toolbar.dc,x,y);};
+                bool exposed=true;
+                for(int y=centerY-px(10);y<=centerY+px(10);++y)
+                    for(int x=separator-px(1);x<=separator+px(1);++x)
+                        exposed=exposed && isCanvas(x,y);
+                check(exposed,"Real canvas stays visible through the gap in every theme and transparency mode");
+                for(int join:{localJoin,openJoin}){
+                    int painted=0;
+                    for(int y=centerY-px(8);y<=centerY+px(8);++y)painted+=!isCanvas(join,y);
+                    check(painted>=px(4),"Adjacent commands within each group share one continuous material");
+                }
+            }
+        }
+    }
+    Theme::use(originalTheme);glass::preferred=originalFinish;glass::systemAllows=originalSystem;
+    SetWindowPos(g.win,nullptr,0,0,original.right-original.left,original.bottom-original.top,SWP_NOMOVE|SWP_NOZORDER);
+    layout();
 }
 
 void testGuideSegments(){
@@ -1021,6 +1110,7 @@ void testAppearance(const fs::path& path){
     check(Theme::index()==2,"A new user starts with Fjord");
     glass::refreshSettings();
     testGlassFinishes();
+    testFileToolbarGroups();
     testGuideSegments();
     check(glass::preferred==glass::Clear,"A new profile uses the clear finish by default");
     auto appearanceButton=ctl(APPEARANCE);
@@ -1373,6 +1463,72 @@ void testPerTurnGuideSearch(const fs::path& path) {
     check(g.rows.empty(),"A signed guide amount does not expose a foreign-campaign total");
 }
 
+void testEpaGuideSearch(const fs::path& mainFixture) {
+    i18n::setLanguage(0);
+    const auto bytes=readFile(mainFixture);
+    loadDocumentBytes(bytes,mainFixture,0);
+    navigate(4);
+    const auto search=[](const wchar_t* query){SetWindowTextW(g.search,query);};
+    const std::string policy="BaseGame.Policy_Economy_EnergyProtectionAct_";
+    const std::string turn="BaseGame.Turn03_Admin_EnergyProtectionAct_";
+    const std::string promise="BaseGame.Relations_Ewald_PromiseNotHarsherEPA";
+    const std::vector<std::string> family={policy+"10Percent",policy+"49Percent",policy+"Default",policy+"Removed",
+                                          turn+"10Percent",turn+"49Percent",turn+"Keep20Percent",turn+"Removed"};
+    const auto hasFamily=[&]{
+        return std::any_of(family.begin(),family.end(),[](const auto& key){
+            return std::find(g.rows.begin(),g.rows.end(),key)!=g.rows.end();
+        });
+    };
+    search(L" ePa ");
+    check(g.rows.size()>=family.size() && std::equal(family.begin(),family.end(),g.rows.begin()) &&
+          std::set<std::string>(g.rows.begin(),g.rows.end()).size()==g.rows.size(),
+          "EPA ranks each saved policy and turn field once before ordinary matches");
+    check(std::find(g.rows.begin(),g.rows.end(),promise)!=g.rows.end() &&
+          std::find(g.rows.begin(),g.rows.end(),"BaseGame.Enable_Preparations")!=g.rows.end(),
+          "EPA preserves the promise key and existing substring matches");
+    for(const auto& [query,expected]:std::vector<std::pair<const wchar_t*,std::vector<std::string>>>{
+            {L"EPA 10",{policy+"10Percent",turn+"10Percent"}},{L"EPA 10%",{policy+"10Percent",turn+"10Percent"}},
+            {L"EPA 49%",{policy+"49Percent",turn+"49Percent"}},{L"49\uFF05\u3000epa",{policy+"49Percent",turn+"49Percent"}},
+            {L"20% EPA",{turn+"Keep20Percent"}},{L"EPA default",{policy+"Default"}},
+            {L"EPA repeal",{policy+"Removed",turn+"Removed"}},{L"EPA removed",{policy+"Removed",turn+"Removed"}}}) {
+        search(query);
+        check(g.rows==expected,"Qualified EPA searches match only the corresponding saved choices");
+    }
+    for(const auto query:{L"EPA 9%",L"EPA 3",L"EPA 100%",L"EPA 49% repeal",L"Episode",L"Energy EPAx"}) {
+        search(query);
+        check(!hasFamily(),"Partial percentages, turn numbers, conflicting choices and longer tokens do not gain an EPA alias");
+    }
+    search(L"EnergyProtectionAct");
+    check(g.rows==family,"The full saved field family is still searchable in normal order");
+    search(L"[\"BaseGame.Turn03_Admin_EnergyProtectionAct_49Percent\"]=true");
+    check(g.rows==std::vector<std::string>{turn+"49Percent"},"Pasting a single EPA assignment still selects its exact key");
+    const auto oldFavorites=g.favorites;
+    g.favorites={promise,policy+"49Percent"};
+    search(L"EPA");
+    command(FILTER_FAVORITES,0);
+    check(g.rows==std::vector<std::string>{policy+"49Percent",promise},"EPA favorites include the ranked field and the literal result");
+    command(FILTER_FAVORITES,0);
+    g.favorites=oldFavorites;
+    command(FILTER_CHANGED,0);
+    check(g.rows.empty(),"EPA respects the pending-only view");
+    command(FILTER_CHANGED,0);
+    navigate(0);search(L"EPA");
+    check(!hasFamily(),"EPA does not expose advanced policies on the resources tab");
+    check(pending().empty() && !g.session->canUndo() && g.doc->render({})==bytes,"EPA searches preserve source bytes and edit history");
+
+    const std::string variables=R"(","variables":"Variable={[\"BaseGame.Policy_Economy_EnergyProtectionAct_Removed\"]=true,[\"BaseGame.Relations_Ewald_PromiseNotHarsherEPA\"]=false,[\"RiziaDLC.Pales_Rizia_PreparationsUnification\"]=false}"})";
+    for(const bool sordland:{true,false}) {
+        const auto story=sordland?"StoryPack_Main":"StoryPack_Rizia";
+        loadDocumentBytes(std::string(R"({"currentStoryPack":")")+story+variables,{},0);
+        navigate(4);search(L"EPA");
+        const std::vector<std::string> expected=sordland?std::vector<std::string>{policy+"Removed",promise}:
+                                                 std::vector<std::string>{"RiziaDLC.Pales_Rizia_PreparationsUnification"};
+        check(g.rows==expected,"Aliases only rank fields present in Sordland, retaining raw matches in mixed campaign data");
+        search(L"EPA 49%");
+        check(g.rows.empty(),"Missing EPA fields cannot be created by a percentage query");
+    }
+}
+
 void testPublicOpinionSearch() {
     i18n::setLanguage(0);
     for (const bool sordland : {true, false}) {
@@ -1600,6 +1756,7 @@ int main(int argc,char** argv){
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
         testPerTurnGuideSearch(fs::u8path(argv[2]));
+        testEpaGuideSearch(fs::u8path(argv[1]).parent_path()/"fixture_all_main.json");
         testPublicOpinionSearch();
         testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));

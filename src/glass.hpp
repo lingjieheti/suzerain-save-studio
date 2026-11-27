@@ -280,9 +280,28 @@ inline bool paintLens(HDC dc,const RECT& box,int radius,Dib& image) {
 struct LensMap {
     static constexpr int cols=80,rows=64;
     int width=0,height=0,radius=0;
-    struct Sample { BYTE x,y; };
+    // Backdrop coordinates in 1/256 of a texel. A rounded end can bend a
+    // gradient by less than one texel across several adjacent pixels.
+    struct Sample { unsigned short x,y; };
     std::array<Sample,cols*rows> samples{};
 };
+
+inline DWORD sampleBackdrop(const std::array<DWORD,LensMap::cols*LensMap::rows>& pixels,
+                            LensMap::Sample point) {
+    const int x=point.x>>8,y=point.y>>8;
+    const int right=std::min(x+1,LensMap::cols-1),bottom=std::min(y+1,LensMap::rows-1);
+    const unsigned fx=point.x&255,fy=point.y&255;
+    const DWORD *top=pixels.data()+y*LensMap::cols,*lower=pixels.data()+bottom*LensMap::cols;
+    if((fx|fy)==0) return top[x];
+    // Calculate each channel independently and round once at the output.
+    auto channel=[&](unsigned shift) {
+        auto horizontal=[&](const DWORD* row) {
+            return ((row[x]>>shift)&255)*(256-fx)+((row[right]>>shift)&255)*fx;
+        };
+        return (horizontal(top)*(256-fy)+horizontal(lower)*fy+32768)>>16;
+    };
+    return (channel(16)<<16)|(channel(8)<<8)|channel(0);
+}
 
 inline const LensMap& lensMap(int w,int h,int radius) {
     constexpr int cols=LensMap::cols,rows=LensMap::rows;
@@ -299,8 +318,8 @@ inline const LensMap& lensMap(int w,int h,int radius) {
             const double shoulder=std::clamp(1.+distance/(radius*.74),0.,1.);
             const double bend=.69*radius*shoulder*shoulder;
             map->samples[y*cols+x]={
-                BYTE(std::clamp(int(x+.5-nx*bend/dx),0,cols-1)),
-                BYTE(std::clamp(int(y+.5-ny*bend/dy),0,rows-1))};
+                static_cast<unsigned short>(std::lround(256*std::clamp(x-nx*bend/dx,0.,double(cols-1)))),
+                static_cast<unsigned short>(std::lround(256*std::clamp(y-ny*bend/dy,0.,double(rows-1))))};
         }
     }
     return *map;
@@ -343,17 +362,24 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     auto averagePixel=[](DWORD p,DWORD q) {
         return (p&q)+(((p^q)&0x00fefefeu)>>1);
     };
+    // Diffuse first so fractional lens coordinates can interpolate their
+    // four neighbors without repeatedly filtering the same source pixels.
+    std::array<DWORD,cols*rows> diffuse{};
+    for(int y=0;y<rows;++y) {
+        const auto* row=backdrop.data()+y*cols;
+        const auto* above=backdrop.data()+std::max(0,y-spread)*cols;
+        const auto* below=backdrop.data()+std::min(rows-1,y+spread)*cols;
+        for(int x=0;x<cols;++x) {
+            const auto horizontal=averagePixel(row[std::max(0,x-spread)],row[std::min(cols-1,x+spread)]);
+            diffuse[y*cols+x]=averagePixel(row[x],averagePixel(horizontal,averagePixel(above[x],below[x])));
+        }
+    }
     for(int y=0;y<rows;++y) {
         const double v=double(y)/(rows-1);
         const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
         const auto right=mix(base,crest,.12+.27*v);
         for(int x=0;x<cols;++x) {
-            const auto [sx,sy]=optics.samples[y*cols+x];
-            const DWORD* scan=backdrop.data()+sy*cols;
-            const DWORD horizontal=averagePixel(scan[std::max(0,sx-spread)],scan[std::min(cols-1,sx+spread)]);
-            const DWORD vertical=averagePixel(backdrop[std::max(0,sy-spread)*cols+sx],
-                                              backdrop[std::min(rows-1,sy+spread)*cols+sx]);
-            const DWORD sample=averagePixel(scan[sx],averagePixel(horizontal,vertical));
+            const DWORD sample=sampleBackdrop(diffuse,optics.samples[y*cols+x]);
             const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);
             const auto color=mix(left,right,double(x)/(cols-1));
             // Increase tint only when the backdrop crosses toward the label

@@ -4,9 +4,11 @@
 
 Antes, quando queria mudar alguma coisa nas minhas partidas de *Suzerain*, eu quase sempre mexia no arquivo de save. A cada mudança, tinha que carregar a partida duas vezes. Cansei disso e fiz este editor. Com ele, dá para editar os saves e ajustar os recursos durante o jogo. Depois de ativar a prévia das escolhas, passe o cursor sobre uma opção e dê um toque na tecla Ctrl para ver os efeitos diretos conhecidos daquela escolha. O editor também tem outros pequenos recursos. [Se tiver alguma sugestão, vou gostar de ouvir.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Baixar a versão preliminar 0.23.4 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)**
+**[Baixar a versão preliminar 0.23.5 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.5/SuzerainSaveStudio-0.23.5-Live-Preview-win-x64.zip)**
 
 Na janela de seleção de saves ou no editor, abra **Aparência**. Você pode combinar qualquer um dos quatro temas de cor com o acabamento **Transparente**, **Fosco** ou **Opaco**.
+
+O grupo à esquerda permite recarregar o save atual ou abrir a pasta dele. O grupo à direita serve para trocar de save. [Compare as barras de ferramentas](../images/file-toolbar.png)
 
 Pressione **Ctrl+F8** para consultar a pontuação interna de opinião pública da campanha, quando disponível. No editor de arquivos salvos, pesquise `PO` para encontrar esse valor.
 
