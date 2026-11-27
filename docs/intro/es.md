@@ -4,7 +4,7 @@
 
 Antes, para cambiar algo en mis partidas de *Suzerain*, casi siempre editaba el archivo de guardado. Tenía que cargar la partida dos veces con cada cambio. Me cansé de hacerlo y creé este editor. Te permite editar partidas guardadas y ajustar recursos directamente en el juego. Si activas la vista previa de las decisiones, basta con pasar el cursor sobre una opción y pulsar brevemente Ctrl para ver los efectos directos que se conocen de esa elección. También hay algunas funciones más. [Si tienes alguna sugerencia, me encantará leerla.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Descargar la versión preliminar 0.23.3 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.3/SuzerainSaveStudio-0.23.3-Live-Preview-win-x64.zip)**
+**[Descargar la versión preliminar 0.23.4 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)**
 
 En el selector de partidas o en el editor, abre **Apariencia**. Puedes combinar cualquiera de los cuatro temas de color con el acabado **Claro**, **Esmerilado** u **Opaco**.
 

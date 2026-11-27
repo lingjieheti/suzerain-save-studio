@@ -57,6 +57,13 @@ void selectRow(const std::string& key){
     check(g.selected==key,"Native row selection reaches the editor");
 }
 
+bool hostedClipboardAvailable(){
+    // Only the disposable GitHub-hosted Windows VM owns a test clipboard.
+    const char* environment=std::getenv("RUNNER_ENVIRONMENT");
+    const char* actions=std::getenv("GITHUB_ACTIONS");
+    return environment && std::string(environment)=="github-hosted" && actions && std::string(actions)=="true";
+}
+
 void testSponsorDialog() {
     using sponsor_text::Key;
     const int originalLanguage=i18n::language;
@@ -166,11 +173,7 @@ void testSponsorDialog() {
         LRESULT last=SendMessageW(address,EM_POSFROMCHAR,GetWindowTextLengthW(address)-1,0);
         check(last!=-1 && LOWORD(last)<addressBounds.right && HIWORD(last)<addressBounds.bottom,
               "The final character of the compact receiving address stays in view");
-        // Only the disposable GitHub-hosted Windows VM owns a test clipboard.
-        const char* environment=std::getenv("RUNNER_ENVIRONMENT");
-        const char* actions=std::getenv("GITHUB_ACTIONS");
-        if(language==0 && environment && std::string(environment)=="github-hosted" &&
-           actions && std::string(actions)=="true") {
+        if(language==0 && hostedClipboardAvailable()) {
             SendMessageW(control(sponsor::Action),BM_CLICK,0,0);
             check(textOf(control(sponsor::Action))==sponsor_text::get(Key::Copied) && OpenClipboard(dialog),
                   "Copy address writes to the hosted runner clipboard");
@@ -339,24 +342,25 @@ void testSearchControls(const fs::path& sample) {
     navigate(0);
 }
 
+void dialogTab(bool backwards){
+    BYTE previous[256]{},state[256]{};
+    check(GetKeyboardState(previous)!=0,"Read the test thread's keyboard state");
+    std::copy_n(previous,256,state);
+    state[VK_SHIFT]=backwards?0x80:0;
+    check(SetKeyboardState(state)!=0,"Set the test thread's Tab direction");
+    MSG key{};
+    key.hwnd=GetFocus();key.message=WM_KEYDOWN;key.wParam=VK_TAB;key.lParam=1;
+    const bool consumed=IsDialogMessageW(g.win,&key)!=0;
+    SetKeyboardState(previous);
+    check(consumed,"The editor's dialog loop handles Tab");
+}
+
 void testGuideKeyboard() {
     navigate(7);
-    auto tab=[](bool backwards){
-        BYTE previous[256]{},state[256]{};
-        check(GetKeyboardState(previous)!=0,"Read the test thread's keyboard state");
-        std::copy_n(previous,256,state);
-        state[VK_SHIFT]=backwards?0x80:0;
-        check(SetKeyboardState(state)!=0,"Set the test thread's Tab direction");
-        MSG key{};
-        key.hwnd=GetFocus();key.message=WM_KEYDOWN;key.wParam=VK_TAB;key.lParam=1;
-        const bool consumed=IsDialogMessageW(g.win,&key)!=0;
-        SetKeyboardState(previous);
-        check(consumed,"The editor's dialog loop handles Tab");
-    };
     for(int page:{HELP_USAGE,HELP_LICENSES}){
         command(page,BN_CLICKED);
         SetFocus(ctl(HELP_LICENSES));
-        tab(false);
+        dialogTab(false);
         check(GetFocus()==g.helpText && SendMessageW(g.helpText,EM_GETSEL,0,0)==0,
               "Tab reaches the document at the beginning without selecting all text");
         const auto content=textOf(g.helpText);
@@ -369,15 +373,52 @@ void testGuideKeyboard() {
             SendMessageW(g.helpText,WM_KEYDOWN,VK_PRIOR,1);
             check(SendMessageW(g.helpText,EM_GETFIRSTVISIBLELINE,0,0)==0,"Page Up returns to the first license line");
         }
-        tab(false);
+        dialogTab(false);
         check(GetFocus()!=nullptr && GetFocus()!=g.helpText,"Tab exits the document");
-        tab(true);
+        dialogTab(true);
         check(GetFocus()==g.helpText,"Shift+Tab returns to the document");
-        tab(true);
+        dialogTab(true);
         check(GetFocus()==ctl(HELP_LICENSES),"Shift+Tab exits the document to its page controls");
     }
     command(HELP_USAGE,BN_CLICKED);
     navigate(0);
+}
+
+void testFieldDetailKeyboard(const fs::path& sample) {
+    const auto original=readFile(sample);
+    loadDocumentBytes(original,sample,0);
+    for(int page:{0,4}){
+        navigate(page);
+        const std::string field="BaseGame.GovernmentBudget";
+        selectRow(field);
+        const auto detail=textOf(g.desc);
+        check(detail.size()>=5,"The selected field has a description to read");
+        SetFocus(g.grid);
+        dialogTab(false);
+        check(GetFocus()==g.desc && SendMessageW(g.desc,EM_GETSEL,0,0)==0,
+              "Tab reaches the description without automatically selecting it");
+        SendMessageW(g.desc,EM_SETSEL,1,5);
+        if(page==4 && hostedClipboardAvailable()){
+            SendMessageW(g.desc,WM_COPY,0,0);
+            check(OpenClipboard(g.win)!=0,"Open the hosted Windows clipboard after copying field details");
+            auto data=GetClipboardData(CF_UNICODETEXT);
+            auto copied=data?static_cast<const wchar_t*>(GlobalLock(data)):nullptr;
+            const bool correct=copied && detail.substr(1,4)==copied;
+            if(copied)GlobalUnlock(data);
+            CloseClipboard();
+            check(correct,"Native copying includes just the selected portion of the description");
+        }
+        dialogTab(false);
+        check(GetFocus()==ctl(FIELD_FAVORITE),"Tab leaves the description for the favorite button");
+        dialogTab(true);
+        check(GetFocus()==g.desc && SendMessageW(g.desc,EM_GETSEL,0,0)==MAKELONG(1,5),
+              "Shift+Tab returns to the existing text selection");
+        SendMessageW(g.desc,WM_CHAR,'x',1);
+        dialogTab(true);
+        check(GetFocus()==g.grid && textOf(g.desc)==detail && g.selected==field && pending().empty(),
+              "Returning to the list preserves the read-only text, selected field and clean preview");
+    }
+    check(readFile(sample)==original,"Navigating descriptions leaves the sample file intact");
 }
 
 void testFieldActivation(const fs::path& sample) {
@@ -1552,6 +1593,7 @@ int main(int argc,char** argv){
         testPickerCurrentSave(fs::u8path(argv[1]));
         testSearchControls(fs::u8path(argv[1]));
         testGuideKeyboard();
+        testFieldDetailKeyboard(fs::u8path(argv[1]));
         testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));

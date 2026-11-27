@@ -4,7 +4,7 @@
 
 以前は『Suzerain』のセーブデータを直接編集していました。そのたびに同じセーブを2回読み込むのが面倒で、自分用に作ったのがこのツールです。セーブデータを編集したり、プレイ中に資源の数値を変えたりできます。プレビューを有効にして選択肢にカーソルを合わせ、**Ctrl** を一度押すと、判明している直接の効果を確認できます。ほかにも小さな機能をいくつか加えました。[こんな機能がほしい、というご意見もぜひお寄せください。](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.3/SuzerainSaveStudio-0.23.3-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 プレビュー版をダウンロード](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.4/SuzerainSaveStudio-0.23.4-Live-Preview-win-x64.zip)
 
 セーブ選択画面やエディターの「外観」で、4 種類の配色それぞれに「クリア」「すりガラス」「単色」のいずれかを組み合わせられます。
 

@@ -18,6 +18,8 @@
 
 在侧栏打开「使用指南」，可以切换指南和组件许可。用 **Tab** 移到正文，看到焦点边框后，按 **Page Down** 或 **Page Up** 翻页。按 **Tab** 继续，按 **Shift+Tab** 返回上一个控件。
 
+在字段列表里选中一项，按 **Tab** 可阅读右侧说明。需要复制其中一段时，按住 **Shift** 并用方向键选中文字，再按 **Ctrl+C**。按 **Tab** 移到下一项，或按 **Shift+Tab** 返回列表。
+
 在选档器或编辑器点“外观”，先选雾蓝、暖纸、林间或午夜，再选材质。菜单里的三个小样用同一条色带预览效果。“通透”能看到控件背后的色彩，“柔雾”让导航和工具栏更柔和，“纯色”使用不透明底色。两种玻璃材质都支持指针反光。想让反光静止，可以关闭 Windows 动画效果。
 
 覆盖存档时，工具会在同目录的 `.rizia-backups` 中保存原版，可在编辑器的备份页恢复。
@@ -59,6 +61,8 @@ The Zille War v1.0.0 uses Suzerain Modding Kit v2.4, which stores additional pro
 To redo a field change, click **Redo** at the bottom of the editor. From the search box, you can also press **↓** to focus the results, then **Ctrl+Y**.
 
 Open **Help** in the sidebar and choose **Help** or **Licenses**. Press **Tab** until the reading area has a focus ring, then use **Page Down** and **Page Up** to read. Press **Tab** to move on or **Shift+Tab** to go back.
+
+Select a row in the field list and press **Tab** to read its description. Hold **Shift** and use the arrow keys to select the text you want, then press **Ctrl+C** to copy it. Press **Tab** to move on or **Shift+Tab** to return to the list.
 
 To check a choice before selecting it, enable **Preview choices with Ctrl** in the **Ctrl+F8** panel. Close the panel, point to a choice and tap either Ctrl key. Tap Ctrl again or move away to hide the tooltip. Point to another choice and tap Ctrl to see its effects. The setting is off by default and is also available in the editor’s **Live mode** dialog.
 

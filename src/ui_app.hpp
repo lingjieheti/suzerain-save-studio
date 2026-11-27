@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.3";
+constexpr wchar_t APP_VERSION[] = L"0.23.4";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -506,7 +506,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.3 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.4 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -760,7 +760,7 @@ LRESULT CALLBACK fieldGridProc(HWND grid,UINT message,WPARAM key,LPARAM detail,U
         return result|DLGC_WANTMESSAGE;
     return result;
 }
-LRESULT CALLBACK guideTextProc(HWND control,UINT message,WPARAM key,LPARAM detail,UINT_PTR,DWORD_PTR){
+LRESULT CALLBACK readOnlyTextProc(HWND control,UINT message,WPARAM key,LPARAM detail,UINT_PTR,DWORD_PTR){
     auto result=DefSubclassProc(control,message,key,detail);
     if(message==WM_GETDLGCODE){
         // The multiline edit otherwise consumes Tab and selects the whole document on entry.
@@ -792,6 +792,7 @@ void createControls(){
     g.name=control(L"STATIC",L"选择一个项目",SS_NOPREFIX);g.oldValue=control(L"STATIC",L"",SS_ENDELLIPSIS|SS_NOPREFIX);g.valueLabel=control(L"STATIC",L"新值",0);g.desc=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL);
     button(L"收藏字段",FIELD_FAVORITE);
     SetWindowSubclass(g.desc,detailProc,1,0);
+    SetWindowSubclass(g.desc,readOnlyTextProc,1,0);
     g.edit=control(L"EDIT",L"",WS_TABSTOP|ES_AUTOHSCROLL,EDITVALUE);SendMessageW(g.edit,EM_SETLIMITTEXT,80,0);SetWindowSubclass(g.edit,editProc,1,0);
     button(L"false / 否",BOOL_FALSE);button(L"true / 是",BOOL_TRUE);button(L"应用修改",APPLY);button(L"还原该项",UNDOONE);button(L"复制字段名",COPY_KEY);button(L"Export CSV",EXPORT_CSV);
     button(L"资源设为 99",PRESET99);button(L"资源设为 999",PRESET999);button(L"自动同步资源上限",AUTOCAP);
@@ -801,7 +802,7 @@ void createControls(){
     button(L"撤销",HISTORY_UNDO);button(L"重做",HISTORY_REDO);button(L"检查修改 →",SAVE);
     button(L"使用指南",HELP_USAGE);button(L"组件许可",HELP_LICENSES);
     g.helpText=control(L"EDIT",L"",WS_TABSTOP|WS_VSCROLL|ES_MULTILINE|ES_READONLY|ES_AUTOVSCROLL,0);
-    SetWindowSubclass(g.helpText,guideTextProc,1,0);
+    SetWindowSubclass(g.helpText,readOnlyTextProc,1,0);
     SendMessageW(g.helpText,EM_SETMARGINS,EC_LEFTMARGIN|EC_RIGHTMARGIN,MAKELPARAM(px(6),px(6)));
     g.notice=control(L"STATIC",g.noticeText.c_str(),SS_ENDELLIPSIS|SS_NOPREFIX);
     if(Theme::dark())for(HWND h:{g.desc,g.helpText,languages})SetWindowTheme(h,L"DarkMode_Explorer",nullptr);
@@ -900,7 +901,7 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
         }
         bool edit=h==g.search||h==g.edit;bool panel=h==g.name||h==g.oldValue||h==g.desc||h==g.valueLabel||h==g.helpText||h==g.empty;SetBkColor(dc,edit?Theme::input:panel?Theme::panel:Theme::bg);return (LRESULT)(edit?g.input:panel?g.panel:g.bg);}
     case WM_COMMAND:
-        if(((HWND)lp==g.edit || (HWND)lp==g.search || (HWND)lp==g.helpText) &&
+        if(((HWND)lp==g.edit || (HWND)lp==g.search || (HWND)lp==g.helpText || (HWND)lp==g.desc) &&
            (HIWORD(wp)==EN_SETFOCUS || HIWORD(wp)==EN_KILLFOCUS))
             InvalidateRect(w,nullptr,FALSE);
         // Complete the native button's input callback before rebuilding child controls.
