@@ -110,14 +110,16 @@ void layout() {
     } else if (review) {
         // A computed row can refer to its resource. Its caption is supplied by the review model.
         y += 24;
-        place(ctl(CONFIRM_SAVE),rx,y,rw,33); y+=39;
+        int primarySave=CONFIRM_SAVE,secondarySave=SAVEAS;
+        if(!g.backupCopyTarget.empty())std::swap(primarySave,secondarySave);
+        place(ctl(primarySave),rx,y,rw,33); y+=39;
         if (a.bottom-y>=205) {
-            for (int id : std::initializer_list<int>{SAVEAS,PATCH_EXPORT,REVIEW_REVERT,UNDOALL}) {
+            for (int id : std::initializer_list<int>{secondarySave,PATCH_EXPORT,REVIEW_REVERT,UNDOALL}) {
                 place(ctl(id),rx,y,rw,30); y+=35;
             }
         } else {
             int half=(rw-6)/2;
-            place(ctl(SAVEAS),rx,y,half,30); place(ctl(PATCH_EXPORT),rx+half+6,y,rw-half-6,30); y+=36;
+            place(ctl(secondarySave),rx,y,half,30); place(ctl(PATCH_EXPORT),rx+half+6,y,rw-half-6,30); y+=36;
             place(ctl(REVIEW_REVERT),rx,y,half,30); place(ctl(UNDOALL),rx+half+6,y,rw-half-6,30); y+=38;
         }
     } else if (backup) {
