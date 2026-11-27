@@ -1,6 +1,14 @@
-# v0.23.3 Preview — Windows validation
+# v0.23.4 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.3 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.4 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Keyboard access to field details in 0.23.4
+
+In the 0.23.3 release ZIP, pressing Tab from the field list selected the entire description. Both Tab and Shift+Tab then left focus in the description. We reproduced this on Economy and Advanced with a synthetic Rizia campaign at 1,200 × 790 and 680 × 485 DIP. Help uses a separate reading pane.
+
+We launched the 0.23.4 ZIP executable in a real Windows window at 192 DPI. Fifteen checks covered Economy, two Advanced fields, Review and Backups at three window sizes. A two-character selection survived moving focus out and back. Page Down scrolled overflowing text and Page Up returned to the beginning. Reading and selecting text left the synthetic save intact.
+
+The same Windows application entry point ran with isolated theme preferences at 1,200 × 790, 800 × 620 and 680 × 485 DIP. All four themes passed the five scenarios at each size. The focus ring measured four physical pixels at 192 DPI and cleared on exit. The screenshot shows the Fjord theme with a partial selection in a Rizia budget description. [Windows screenshot](docs/images/field-description-focus.png)
 
 ## Copying a backup in 0.23.3
 

@@ -294,6 +294,12 @@ void paintInputFrame(HDC dc,RECT box,HWND input,int radius) {
     }
 }
 
+void paintReadingFocus(HDC dc,RECT box,int radius) {
+    workspaceCard(dc,box,Theme::focus,Theme::focus,radius);
+    InflateRect(&box,-px(2),-px(2));
+    workspaceCard(dc,box,Theme::panel,Theme::panel,radius-2);
+}
+
 void paintArchiveIcon(HDC dc,int x,int y,int pixels) {
     struct IconCache {
         HICON icon{};
@@ -363,6 +369,10 @@ void paint() {
             RECT divider{notes.left,notes.top-px(7),notes.right,notes.top-px(7)+1};
             fill(dc,divider,Theme::line);
         }
+        if(GetFocus()==g.desc){
+            InflateRect(&notes,px(4),px(4));
+            paintReadingFocus(dc,notes,6);
+        }
         if(g.tab<5) {
             paintInputFrame(dc,rect(a.left,a.toolsY,searchWidth(a),32),g.search,10);
             icons::draw(dc,icons::Symbol::Search,px(a.left+7),px(a.toolsY+8),px(18),Theme::dim);
@@ -372,13 +382,9 @@ void paint() {
             }
         }
     } else {
-        auto panel=rect(a.left,a.listY,a.content,a.bottom-a.listY);
-        const bool focused=GetFocus()==g.helpText;
-        if(focused){
-            workspaceCard(dc,panel,Theme::focus,Theme::focus,14);
-            InflateRect(&panel,-px(2),-px(2));
-        }
-        workspaceCard(dc,panel,Theme::panel,focused?Theme::panel:Theme::line,focused?12:14);
+        const auto panel=rect(a.left,a.listY,a.content,a.bottom-a.listY);
+        if(GetFocus()==g.helpText)paintReadingFocus(dc,panel,14);
+        else workspaceCard(dc,panel,Theme::panel,Theme::line,14);
     }
     const auto statusInk=g.editingDirty||!pending().empty()?Theme::goldDark:Theme::green;
     auto halo=glass::mix(Theme::bg,statusInk,.18);
