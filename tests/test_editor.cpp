@@ -611,6 +611,45 @@ void testBackupRefreshAndRestore(const fs::path& sample){
     fs::remove(target);fs::remove(folder);fs::remove(root);
 }
 
+void testBackupSaveAs(){
+    const auto root=fs::temp_directory_path()/(L"suzerain-backup-copy-"+writeId());
+    const auto archive=root/L".RIZIA-BACKUPS",nested=archive/L"older";
+    fs::create_directories(nested);
+    const auto backup=nested/(L"Chapter.2.json.20261127-010203-004."+writeId()+L".bak");
+    const auto copy=root/L"Chapter.2.recovered.json";
+    const std::string original=std::string("\xEF\xBB\xBF")+"{\r\n"+
+        R"("currentStoryPack":"StoryPack_Rizia","variables":"Variable={['RiziaDLC.Resources_Budget']=5,['RiziaDLC.Rizia_HUDStat_Budget_Max']=20}")"+"\r\n}\r\n";
+    std::ofstream(backup,std::ios::binary)<<original;
+    loadDocument(backup,false);
+    SendMessageW(g.win,WM_CHANGEUISTATE,MAKEWPARAM(UIS_SET,UISF_HIDEFOCUS),0);
+    check(handleEditorShortcut('S',GetFocus()) && !(SendMessageW(ctl(SAVEAS),WM_QUERYUISTATE,0,0)&UISF_HIDEFOCUS),
+          "Ctrl+S reveals keyboard focus when opening the backup preview after pointer input");
+    check(g.file==backup && g.backupCopyTarget==copy,"Suggest a new JSON beside the outer backup directory using the original slot name");
+    check(g.review.empty() && IsWindowEnabled(ctl(SAVEAS)) && !IsWindowEnabled(ctl(CONFIRM_SAVE)) &&
+          !IsWindowEnabled(ctl(PATCH_EXPORT)),"A pristine backup permits Save As with no patch or overwrite action");
+    check(GetFocus()==ctl(SAVEAS),"An empty backup preview focuses the available Save As action");
+    check(textOf(g.desc)==tr(L"请在备份目录外另存一份存档。"),"The preview directs backup readers to Save As");
+    RECT saveAs{},overwrite{};
+    GetWindowRect(ctl(SAVEAS),&saveAs);GetWindowRect(ctl(CONFIRM_SAVE),&overwrite);
+    check(saveAs.bottom<=overwrite.top,"Save As occupies the primary position for an open backup");
+    command(CONFIRM_SAVE,BN_CLICKED);
+    check(!fs::exists(copy) && readFile(backup)==original,"The overwrite command cannot write through a protected source");
+    atomicSave(copy,g.doc->render(preparedChanges()),nullptr);
+    check(readFile(copy)==original && readFile(backup)==original,"An unchanged recovery copy retains the BOM, CRLFs and original bytes");
+    const std::string budget="RiziaDLC.Resources_Budget", cap="RiziaDLC.Rizia_HUDStat_Budget_Max";
+    g.session->applyBatch({{budget,"15"}});refresh();
+    check(IsWindowEnabled(ctl(SAVEAS)) && !IsWindowEnabled(ctl(CONFIRM_SAVE)) && IsWindowEnabled(ctl(PATCH_EXPORT)),
+          "An edited recovery point permits a copy or patch and still protects its source");
+    g.session->applyBatch({{cap,"2"}});refresh();
+    check(!g.reviewError.empty() && !IsWindowEnabled(ctl(SAVEAS)),"An invalid cap cannot be saved from a backup");
+    loadDocument(copy,false);navigate(5);
+    check(g.backupCopyTarget.empty() && !IsWindowEnabled(ctl(SAVEAS)),"Opening the recovered file restores normal save controls");
+    check(GetFocus()==ctl(NAV_BASE+5),"An unchanged regular save retains normal empty-preview focus");
+    check(suggestedBackupCopy(archive/L"run.json.before.war.bak")==root/L"run.recovered.json",
+          "Manually labeled backups use the original save name");
+    fs::remove(backup);fs::remove(copy);fs::remove(nested);fs::remove(archive);fs::remove(root);
+}
+
 void testReloadView(){
     AppearanceTestRegistry registry;
     const auto root=fs::temp_directory_path()/(L"suzerain-reload-view-"+writeId());
@@ -1506,6 +1545,7 @@ int main(int argc,char** argv){
         check(window!=nullptr&&g.grid,"Create hidden editor");
         testChoiceHintsPreference();
         testBackupRefreshAndRestore(fs::u8path(argv[1]));
+        testBackupSaveAs();
         testReloadView();
         testSaveQueries();
         testPickerSearchWhileScanning(fs::u8path(argv[1]));

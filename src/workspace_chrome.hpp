@@ -170,8 +170,8 @@ void drawButton(const DRAWITEMSTRUCT* d) {
                   (id == FILTER_FAVORITES && g.favoritesOnly) ||
                   (id == FIELD_FAVORITE && g.favorites.count(g.selected));
     const bool emphasizeApply=g.editingDirty;
-    bool primary = (id == LATEST && !g.doc) || (id == APPLY && emphasizeApply) || (id == CONFIRM_SAVE && !g.demoResource) ||
-                   (id == SAVEAS && g.demoResource) || id == BACKUP_RESTORE ||
+    const bool primarySave=(g.demoResource||!g.backupCopyTarget.empty())?id==SAVEAS:id==CONFIRM_SAVE;
+    bool primary = (id == LATEST && !g.doc) || (id == APPLY && emphasizeApply) || primarySave || id == BACKUP_RESTORE ||
                    (id == SAVE && !g.editingDirty && !pending().empty());
     const bool fileAction=id==FOLDER || id==RELOAD || id==OPEN || id==LATEST;
     const bool history=id==HISTORY_UNDO || id==HISTORY_REDO;

@@ -1,6 +1,16 @@
-# v0.23.2 Preview — Windows validation
+# v0.23.3 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.2 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.3 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Copying a backup in 0.23.3
+
+We opened a synthetic Rizia backup directly in the published 0.23.2 Windows editor. Its empty change preview disabled Save As. Staging six changes enabled both Save As and Save to original, although the writer rejects destinations in the backup directory.
+
+We opened a synthetic Sordland backup in the 0.23.3 ZIP on Windows. Ctrl+S focused Save As and Space opened the system dialog. After cancellation, accepting the suggested `autosave.recovered.json` name produced a byte-identical copy outside the backup folder. Windows chose the isolated test Desktop as its starting location. After changing budget from 10 to 17, canceling preserved the pending edit. A subsequent Save As wrote 17 to the chosen file. The original backup retained its initial bytes throughout. For a regular save, both write buttons were disabled before editing and enabled after a valid change.
+
+For appearance checks, we launched the same Windows application entry point with a temporary settings key. In each of four themes at 1,200 × 790, 800 × 620 and 680 × 485 DIP, Save As was fully visible and received keyboard focus on Ctrl+S. Switching focus away changed four physical pixels at the sampled edge at 192 DPI. The original-file button remained disabled. File-dialog and output-byte checks above used the executable extracted directly from the ZIP.
+
+The native editor suite also checked a nested backup directory and a filename with multiple dots. Recovery preserved a UTF-8 byte-order mark and CRLF line endings. An invalid resource limit still blocked saving. These checks used synthetic files. Game loading of the recovered JSON has not been verified.
 
 ## Guide navigation and keyboard reading in 0.23.2
 

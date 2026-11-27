@@ -4,7 +4,7 @@
 
 Avant, pour changer quelque chose dans mes parties de *Suzerain*, je passais surtout par les fichiers de sauvegarde. Il fallait charger la partie deux fois à chaque modification. J’ai fini par en avoir assez et j’ai créé cet éditeur. Il permet de modifier une sauvegarde ou d’ajuster les ressources en cours de partie. Une fois l’aperçu des choix activé, survolez une option et appuyez brièvement sur Ctrl pour voir ses effets directs connus. Vous y trouverez aussi quelques autres petites fonctionnalités. [Vos suggestions sont les bienvenues.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Télécharger la version préliminaire 0.23.2 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.2/SuzerainSaveStudio-0.23.2-Live-Preview-win-x64.zip)**
+**[Télécharger la version préliminaire 0.23.3 pour Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.3/SuzerainSaveStudio-0.23.3-Live-Preview-win-x64.zip)**
 
 Dans la fenêtre de sélection des sauvegardes ou dans l’éditeur, ouvrez **Apparence**. Chacun des quatre thèmes propose les finitions **Clair**, **Dépoli** et **Opaque**.
 

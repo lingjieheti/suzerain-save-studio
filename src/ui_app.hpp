@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.23.2";
+constexpr wchar_t APP_VERSION[] = L"0.23.3";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -28,7 +28,7 @@ struct App {
     HBRUSH bg{},panel{},input{}; HIMAGELIST rowHeight{};
     UINT dpi=96; int tab=0; bool populating=false,editingDirty=false,autoCap=true,changedOnly=false,restoreArmed=false;
     bool boolValue=false,licenseMode=false; int gridTop=350,tableW=0,rightX=0; std::wstring noticeText=L"未打开存档";
-    fs::path file; int demoResource=0; std::unique_ptr<rizia::Document> doc; std::unique_ptr<rizia::EditSession> session;
+    fs::path file,backupCopyTarget; int demoResource=0; std::unique_ptr<rizia::Document> doc; std::unique_ptr<rizia::EditSession> session;
     std::vector<std::string> rows; std::string selected;
     std::array<FieldPageState,6> pages;
     std::map<std::string,FieldCaption> captions;
@@ -211,10 +211,11 @@ void syncAppearance() {
 void updateStatus(){
     bool loaded=bool(g.doc),any=!pending().empty()||g.editingDirty;
     for(int id:std::initializer_list<int>{PRESET99,PRESET999,SAVE,PATCH_IMPORT,AUTOCAP,RELOAD})EnableWindow(ctl(id),loaded);
-    const bool canWrite=loaded&&!g.review.empty()&&g.reviewError.empty()&&g.tab==5;
-    EnableWindow(ctl(CONFIRM_SAVE),canWrite&&!g.demoResource);
-    EnableWindow(ctl(SAVEAS),canWrite);
-    EnableWindow(ctl(PATCH_EXPORT),canWrite);
+    const bool validReview=loaded&&g.tab==5&&g.reviewError.empty();
+    const bool changed=validReview&&!g.review.empty();
+    EnableWindow(ctl(CONFIRM_SAVE),changed&&!g.demoResource&&g.backupCopyTarget.empty());
+    EnableWindow(ctl(SAVEAS),changed||(validReview&&!g.backupCopyTarget.empty()));
+    EnableWindow(ctl(PATCH_EXPORT),changed);
     EnableWindow(ctl(UNDOALL),!pending().empty());
     EnableWindow(ctl(HISTORY_UNDO),g.session&&(g.session->canUndo()||g.editingDirty));
     EnableWindow(ctl(HISTORY_REDO),g.session&&g.session->canRedo()&&!g.editingDirty);
@@ -451,7 +452,10 @@ void showReviewSelection(){
     setText(g.name,g.review.empty()?L"没有待保存项":std::to_wstring(g.review.size())+L" 项即将保存");
     if(g.selected.empty())setText(g.oldValue,L"");
     else rawText(g.oldValue,label(g.selected));
-    const auto targetText=g.demoResource?tr(L"示例只能另存为新文件。"):tr(L"目标：")+L"\r\n"+(g.doc?g.file.wstring():tr(L"未打开"))+L"\r\n\r\n"+tr(L"保存前自动备份。");
+    std::wstring targetText;
+    if(!g.backupCopyTarget.empty())targetText=tr(L"请在备份目录外另存一份存档。");
+    else if(g.demoResource)targetText=tr(L"示例只能另存为新文件。");
+    else targetText=tr(L"目标：")+L"\r\n"+(g.doc?g.file.wstring():tr(L"未打开"))+L"\r\n\r\n"+tr(L"保存前自动备份。");
     if(!g.reviewError.empty())rawText(g.desc,g.reviewError+L"\r\n\r\n"+targetText);
     else if(linked)rawText(g.desc,tr(L"此上限随库存自动调整。撤回关联库存可取消这两项修改。")+L"\r\n\r\n"+targetText);
     else rawText(g.desc,targetText);
@@ -502,7 +506,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.23.2 Preview · Windows 10 / 11 x64\r\n"
+        L"0.23.3 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -516,15 +520,28 @@ void navigate(int tab){
     }
     if(tab==7)setHelp();
     refresh();
-    if(tab==5)SetFocus(g.rows.empty()?ctl(NAV_BASE+5):g.grid);
+    if(tab==5){
+        HWND focus=g.rows.empty()?ctl(NAV_BASE+5):g.grid;
+        if(g.rows.empty()&&!g.backupCopyTarget.empty()&&IsWindowEnabled(ctl(SAVEAS)))focus=ctl(SAVEAS);
+        SetFocus(focus);
+    }
 }
 std::wstring documentTitle(){
     return g.demoResource?tr(L"内置练习示例")+L"  /  "+campaignLabel(g.doc->story):g.file.wstring();
+}
+fs::path suggestedBackupCopy(const fs::path& path){
+    if(path.empty()||!isBackupDestination(path))return {};
+    auto folder=fs::absolute(path).lexically_normal().parent_path();
+    while(folder.has_relative_path()&&isBackupDestination(folder))folder=folder.parent_path();
+    fs::path source=save_backup::identify(path).source;
+    if(source.empty())source=path.filename();
+    return folder/(source.stem().wstring()+L".recovered.json");
 }
 void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resource,DocumentLoad mode=DocumentLoad::Open){
     auto doc=std::make_unique<rizia::Document>(rizia::Document::parse(bytes));
     if(!rizia::isSupportedStory(doc->story))throw WinFailure(L"Unsupported campaign.");
     auto session=std::make_unique<rizia::EditSession>(*doc);
+    const auto backupCopy=suggestedBackupCopy(path);
     const bool keepView=mode==DocumentLoad::Reload && g.doc && doc->story==g.doc->story && samePath(path,g.file);
     if(keepView){
         for(auto& page:g.pages){
@@ -538,7 +555,7 @@ void loadDocumentBytes(const std::string& bytes,const fs::path& path,int resourc
     }
     g.captions.clear();g.allFields.clear();g.review.clear();g.reviewError.clear();
     activeStory=doc->story;
-    g.session=std::move(session);g.doc=std::move(doc);g.file=path;g.demoResource=resource;
+    g.session=std::move(session);g.doc=std::move(doc);g.file=path;g.backupCopyTarget=backupCopy;g.demoResource=resource;
     InvalidateRect(ctl(LATEST),nullptr,FALSE);
     g.favorites.clear();
     field_favorites::read(activeStory,g.favorites);
@@ -566,8 +583,12 @@ void loadDemo(int resource){
 fs::path pickFile(bool save=false,int kind=0,HWND owner=nullptr){
     std::vector<wchar_t> buffer(32768,0);std::wstring initialName;
     if(save)initialName=kind==1?L"Suzerain-custom.patch.txt":(g.demoResource?(isBase()?L"Sordland-demo.json":L"Rizia-demo.json"):g.doc?g.file.stem().wstring()+L".edited.json":L"Suzerain.edited.json");
-    if(!initialName.empty())std::copy(initialName.begin(),initialName.end(),buffer.begin());
     fs::path initial=!g.file.empty()?g.file.parent_path():saveFolder();
+    if(save&&kind==0&&!g.backupCopyTarget.empty()){
+        initial=g.backupCopyTarget.parent_path();
+        initialName=g.backupCopyTarget.wstring();
+    }
+    if(initialName.size()<buffer.size())std::copy(initialName.begin(),initialName.end(),buffer.begin());
     if(save&&g.demoResource){
         PWSTR documents=nullptr;
         if(SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Documents,0,nullptr,&documents))){initial=documents;CoTaskMemFree(documents);}
@@ -575,7 +596,7 @@ fs::path pickFile(bool save=false,int kind=0,HWND owner=nullptr){
     }
     OPENFILENAMEW o{};o.lStructSize=sizeof(o);o.hwndOwner=owner?owner:g.win;o.lpstrFile=buffer.data();o.nMaxFile=(DWORD)buffer.size();
     o.lpstrFilter=kind==1?L"Suzerain patch (*.txt)\0*.txt\0All files\0*.*\0\0":L"Suzerain save (*.json)\0*.json\0All files\0*.*\0\0";
-    auto dialogTitle=tr(kind==1?(save?L"导出修改方案":L"导入修改方案"):(save?L"另存修改后的存档":L"选择存档"));o.lpstrTitle=dialogTitle.c_str();
+    auto dialogTitle=tr(kind==1?(save?L"导出修改方案":L"导入修改方案"):(save?L"另存为…":L"选择存档"));o.lpstrTitle=dialogTitle.c_str();
     o.lpstrInitialDir=initial.c_str();o.lpstrDefExt=save?(kind==1?L"txt":L"json"):nullptr;o.Flags=OFN_EXPLORER|OFN_NOCHANGEDIR|OFN_PATHMUSTEXIST|(save?OFN_OVERWRITEPROMPT:OFN_FILEMUSTEXIST);
     BOOL ok=save?GetSaveFileNameW(&o):GetOpenFileNameW(&o);return ok?fs::path(buffer.data()):fs::path();
 }
@@ -600,7 +621,9 @@ void saveDocument(bool as){
     if(!g.doc||!applyInput(false))return;
     if(g.tab!=5){navigate(5);return;}
     try{
-        auto changes=preparedChanges();if(changes.empty()){toast(L"没有需要保存的修改");return;}
+        if(!as&&!g.backupCopyTarget.empty()){toast(L"请在备份目录外另存一份存档。");return;}
+        auto changes=preparedChanges();
+        if(changes.empty()&&g.backupCopyTarget.empty()){toast(L"没有需要保存的修改");return;}
         fs::path dest=(as||g.demoResource)?pickFile(true):g.file;if(dest.empty())return;
         if(g.demoResource){
             auto bytes=g.doc->render(changes);
@@ -929,7 +952,10 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
 bool handleEditorShortcut(WPARAM key, HWND focus){
     switch(key){
     case 'O': command(OPEN,0); return true;
-    case 'S': navigate(5); return true;
+    case 'S':
+        SendMessageW(g.win,WM_CHANGEUISTATE,MAKEWPARAM(UIS_CLEAR,UISF_HIDEFOCUS),0);
+        navigate(5);
+        return true;
     case 'L': command(LATEST,0); return true;
     case 'R': command(RELOAD,0); return true;
     case 'F':
