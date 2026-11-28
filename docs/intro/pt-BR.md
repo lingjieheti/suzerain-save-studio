@@ -4,7 +4,7 @@
 
 Antes, quando queria mudar alguma coisa nas minhas partidas de *Suzerain*, eu quase sempre mexia no arquivo de save. A cada mudança, tinha que carregar a partida duas vezes. Cansei disso e fiz este editor. Com ele, dá para editar os saves e ajustar os recursos durante o jogo. Depois de ativar a prévia das escolhas, passe o cursor sobre uma opção e dê um toque na tecla Ctrl para ver os efeitos diretos conhecidos daquela escolha. O editor também tem outros pequenos recursos. [Se tiver alguma sugestão, vou gostar de ouvir.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-**[Baixar a versão preliminar 0.24.0 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.24.0/SuzerainSaveStudio-0.24.0-Live-Preview-win-x64.zip)**
+**[Baixar a versão preliminar 0.24.1 para Windows 10/11 (x64)](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.24.1/SuzerainSaveStudio-0.24.1-Live-Preview-win-x64.zip)**
 
 Na janela de seleção de saves ou no editor, abra **Aparência**. Você pode combinar qualquer um dos quatro temas de cor com o acabamento **Transparente**, **Fosco** ou **Opaco**.
 
@@ -15,6 +15,8 @@ Pressione **Ctrl+F8** para consultar a pontuação interna de opinião pública 
 Ative a prévia das escolhas no painel **Ctrl+F8** e feche o painel. Posicione o cursor sobre uma opção e pressione e solte a tecla **Ctrl** da esquerda ou da direita para ver os efeitos. Pressione a tecla novamente ou afaste o cursor para fechar a prévia. Para comparar outra opção, posicione o cursor sobre ela e pressione Ctrl. O recurso vem desativado. Algumas consequências dependem do desenrolar da história.
 
 ## Editar uma partida salva
+
+Na busca de campos, você pode digitar sem acentos. Nos exemplos de Sordland e Rizia, `orcamento` encontra os três campos de orçamento. Para localizar o patrimônio pessoal em Sordland, digite `patrimonio pessoal`. Na seleção de saves, essa busca também funciona com nomes de campanhas e arquivos.
 
 1. Extraia o ZIP e abra `SuzerainSaveStudio.exe`. Você pode experimentar o editor com um dos dois exemplos incluídos.
 2. Para editar sua própria partida, salve o progresso e feche o jogo. Abra o arquivo no editor, procure o campo que deseja alterar e digite o novo valor. Você pode marcar como favoritos os campos que consulta com frequência.

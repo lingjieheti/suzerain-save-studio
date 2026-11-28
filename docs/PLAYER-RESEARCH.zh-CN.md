@@ -4,6 +4,10 @@
 
 ## 玩家的操作遇到了什么问题
 
+### 用普通键盘搜索葡语字段
+
+Steam 上的巴西葡语翻译作者介绍了本体和里奇亚的翻译，玩家回复希望能用母语游玩。我们据此用葡语测试修改器。在 0.24.0 的两个内置示例里，输入 `Orçamento` 都有三项结果，输入 `Orcamento` 都是零项。这组数字来自修改器的 Windows 实测。Windows 游戏库工具 Playnite 的搜索也允许逐词忽略重音差异。0.24.1 在桌面搜索中支持常见拉丁字母的带重音、无重音和分解写法。[Steam 玩家讨论](https://steamcommunity.com/app/1207650/discussions/0/570427687922889350/) · [Playnite 搜索源码](https://github.com/JosefNemec/Playnite/blob/8c08a305d68e287e71984ea691239212a6046cf7/source/Playnite/ViewModels/SearchViewModel.cs#L703-L709)
+
 11 月 25 日，同一位 Steam 玩家在两帖中提到，希望随时了解公众支持、党内派系占比和经济走势。另一位 Reddit 玩家描述过在做决定前后重新打开存档、对照民意的做法。索德兰和里奇亚都已有可识别的总民意字段，0.22.0 将这个分数加到 Ctrl+F8 面板供只读查看，也补上了桌面搜索「民意」的入口。党内席位占比与民调百分比需要其他数据。[Steam 玩家首帖](https://steamcommunity.com/app/1207650/discussions/0/570429913810610042/) · [同一玩家的补充](https://steamcommunity.com/app/1207650/discussions/0/570429913810674831/) · [Reddit 玩家讨论](https://www.reddit.com/r/suzerain/comments/1qq1buh/the_assembly_always_overturn_my_vetos_for_the/)
 
 | 玩家要做的事 | 玩家实际遇到的问题 | 本次改动 |

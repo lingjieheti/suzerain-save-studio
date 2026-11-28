@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.24.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.24.0/SuzerainSaveStudio-0.24.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.24.0) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.24.1 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.24.1/SuzerainSaveStudio-0.24.1-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.24.1) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
@@ -56,7 +56,7 @@
 | --- | --- |
 | 索德兰本体 | 51 项常用字段，涵盖经济、政治、人物、外交与军事。预算与私人资产均有 +5 快捷操作。 |
 | 里奇亚 DLC | 63 项常用字段，涵盖资源、军备、家族与外交。可将库存设为 99 或 999，预览中可核对联动上限。 |
-| 找字段 | 常用页与高级页支持多词检索、结果计数和待保存筛选。可用中文释义或原始键搜索。中文词库覆盖已检查的 4,097 个高级字段。 |
+| 找字段 | 常用页与高级页支持多词检索、结果计数和待保存筛选。可搜中文释义、原始键或本地化字段名，例如葡语界面输入 `orcamento` 就能找到 `Orçamento`。中文词库覆盖已检查的 4,097 个高级字段。 |
 | 修改与复用 | 在预览中逐项撤回。字段 CSV 的 `Original` 列保留存档原值，`Current` 列反映修改预览，包括自动调高的里齐亚资源上限。也可导入或导出绑定当前战役的修改方案。 |
 | 保存与恢复 | 覆盖与恢复前都会备份当前文件。按 **Ctrl+O** 或把 Suzerain 的 `.bak` 备份拖入编辑器，再按 **Ctrl+S** 选择「另存为」，即可取出 JSON 副本。已移到其他文件夹的备份也适用。 |
 | 界面与语言 | 窄窗口切换为图标导航，支持高 DPI 和 11 种界面语言。部分较长说明及少见报错使用英文。 |

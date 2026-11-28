@@ -1,6 +1,14 @@
-# v0.24.0 Preview — Windows validation
+# v0.24.1 Preview — Windows validation
 
-The Windows x64 archive includes the 0.24.0 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.24.1 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Finding localized fields and saves in 0.24.1
+
+We downloaded the public 0.24.0 Windows ZIP and opened both built-in campaign samples. In Portuguese, the regular and Advanced field pages each showed three rows for `Orçamento` and zero for `Orcamento`. Pasting the same word with a separate combining cedilla also produced zero. In the Sordland example, omitting the circumflex in `Patrimônio pessoal` hid the personal wealth field.
+
+The new search accepts all three budget spellings and preserves the row order. We checked Portuguese, German, French and Spanish labels using native Windows controls. In the picker, `arvore acucar` located a synthetic file named `ManualSave_Árvore.json` in the campaign `Revolução de Açúcar`. A mismatched turn still excluded it. Searching preserved the source files and timestamps. Wrapped guide assignments continued to require the original game key. The bundled game plugin is byte-identical to 0.24.0.
+
+The Portuguese budget-cap title exposed a separate layout issue at 800 × 620 DIP and 192 DPI. The old title box was 50 physical pixels high, but the selected font needed 92 to draw both lines of `Orçamento: máximo exibido`. In the release executable, moving down the search results with the keyboard gave the title the required 92 pixels and kept the original value and editing controls below it. [Compare the Windows title captures](docs/images/portuguese-field-title.png)
 
 ## Floating navigation and the save picker in 0.24.0
 

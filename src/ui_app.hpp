@@ -5,7 +5,7 @@
 #include "field_favorites.hpp"
 #include "save_backup.hpp"
 // Native UI. File bytes and history are handled by the independent core modules.
-constexpr wchar_t APP_VERSION[] = L"0.24.0";
+constexpr wchar_t APP_VERSION[] = L"0.24.1";
 enum { NAV_BASE=200, HISTORY_UNDO=220, HISTORY_REDO, CONFIRM_SAVE, PATCH_IMPORT,
        PATCH_EXPORT, BOOL_FALSE, BOOL_TRUE, COPY_KEY, BACKUP_REFRESH, BACKUP_FOLDER,
        BACKUP_RESTORE, BACKUP_CANCEL, HELP_LICENSES, HELP_USAGE, RELOAD, LANGUAGE, EXPORT_CSV, REVIEW_REVERT, APPEARANCE,
@@ -528,7 +528,7 @@ void setHelp(){
         L"Ctrl+S  修改预览     Ctrl+F  搜索字段\r\n"
         L"Ctrl+R  重新载入     Ctrl+Z / Y  撤销 / 重做\r\n"
         L"Enter  应用输入\r\n\r\n"
-        L"0.24.0 Preview · Windows 10 / 11 x64\r\n"
+        L"0.24.1 Preview · Windows 10 / 11 x64\r\n"
         L"未完成游戏读档验证。";
     std::wstring crlf;for(wchar_t c:s){if(c==L'\n'&&(crlf.empty()||crlf.back()!=L'\r'))crlf+=L'\r';crlf+=c;}setText(g.helpText,crlf);SendMessageW(g.helpText,EM_SETSEL,0,0);SendMessageW(g.helpText,EM_SCROLLCARET,0,0);
 }
@@ -983,7 +983,11 @@ LRESULT CALLBACK windowProc(HWND w,UINT m,WPARAM wp,LPARAM lp){
             if(g.tab<=5){
                 g.selected=selected>=0&&selected<(int)g.rows.size()?g.rows[selected]:"";
                 if(!g.selected.empty())g.pages[g.tab].preferred=g.selected;
-                if(g.tab<5)showSelected();else showReviewSelection();
+                if(g.tab<5){
+                    showSelected();
+                    RECT title{};GetClientRect(g.name,&title);
+                    if(title.bottom!=px(fieldTitleHeight(workspaceGeometry())))layout();
+                }else showReviewSelection();
             }
             return 0;
         }
