@@ -21,6 +21,23 @@ int searchWidth(const WorkspaceGeometry& a) {
 }
 int inspectorPad(const WorkspaceGeometry& a) { return a.inspector < 218 ? 9 : 18; }
 
+int fieldTitleHeight(const WorkspaceGeometry& a) {
+    const int minimum=a.shortScreen?25:34;
+    const int width=a.inspector-2*inspectorPad(a)-9;
+    RECT text{0,0,px(width),0};
+    const auto title=textOf(g.name);
+    auto dc=GetDC(g.name);
+    auto old=SelectObject(dc,g.bold);
+    DrawTextW(dc,title.c_str(),static_cast<int>(title.size()),&text,DT_CALCRECT|DT_WORDBREAK|DT_NOPREFIX|DT_EXPANDTABS);
+    SelectObject(dc,old);ReleaseDC(g.name,dc);
+    const int needed=(text.bottom*96+g.dpi-1)/g.dpi;
+    // Reserve the original-value row, input, actions and a readable strip
+    // of scrollable notes. Very long raw field names also have a tooltip.
+    const int below=3+(a.shortScreen?27:34)+20+42+(a.shortScreen?40:47)+(g.tab==4?37:0)+(a.shortScreen?0:9);
+    const int room=a.bottom-a.toolsY-(a.shortScreen?12:19)-below-(a.shortScreen?10:16)-32;
+    return std::clamp(needed,minimum,std::max(minimum,room));
+}
+
 void layout() {
     if (!g.grid) return;
     auto a = workspaceGeometry();
@@ -85,7 +102,7 @@ void layout() {
 
     const int pad = inspectorPad(a), rx = a.right+pad, rw = a.inspector-2*pad;
     int y = a.toolsY+(a.shortScreen?12:19);
-    int nameH = edit ? (a.inspector<235?47:a.shortScreen?25:34) : (a.shortScreen ? 32 : 43);
+    const int nameH = edit ? fieldTitleHeight(a) : (a.shortScreen ? 32 : 43);
     place(g.name,rx+9,y,rw-9,nameH);
     y += nameH + 3;
     int favoriteW=std::clamp(rw/2,70,100);

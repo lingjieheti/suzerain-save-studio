@@ -249,6 +249,15 @@ void testSaveQueries() {
         check(!kind && save_picker::saveSubtitle(kind,L"Palace")==L"Palace" &&
               save_picker::saveSubtitle(kind,L"").empty(),"Custom save filenames preserve their original subtitle");
     }
+    i18n::setLanguage(8);
+    snapshot.campaignName=u8"São João";
+    snapshot.path=L"Autosave_Palácio.json";
+    check(matches(L"sao PALACIO joa\u0303o") && !matches(L"sao palacio turn 3"),
+          "Accentless and decomposed words match across a Portuguese campaign and filename, with exact turn filtering");
+    snapshot.campaignName=u8"Май ガイド";
+    check(matches(L"Май ガイド") && !matches(L"Маи") && !matches(L"カイド"),
+          "Latin accent handling keeps Cyrillic breve and Japanese voicing distinct");
+    i18n::setLanguage(language);
 }
 
 void beginPickerScan(save_picker::State& picker) {
@@ -1357,6 +1366,56 @@ void testSearch(const fs::path& path){
     i18n::setLanguage(0);
 }
 
+void testPortugueseFieldSearch(const fs::path& mainPath,const fs::path& riziaPath){
+    const int previousLanguage=i18n::language;
+    i18n::setLanguage(8);fonts();
+    for(const auto& path:{mainPath,riziaPath}){
+        loadDocumentBytes(readFile(path),path,0);
+        for(int page:{0,4}){
+            navigate(page);
+            SetWindowTextW(g.search,L"Orçamento");
+            const auto budgetRows=g.rows;
+            check(budgetRows.size()==3,"The Portuguese budget label finds three fields in each sample");
+            for(const auto* query:{L"ORCAMENTO",L"Orc\u0327amento"}){
+                SetWindowTextW(g.search,query);
+                check(g.rows==budgetRows,"Budget rows retain their order with unaccented or decomposed Portuguese spelling");
+            }
+            SetWindowTextW(g.search,isBase()?L"pessoal Patrimonio":L"ma\u0301ximo orcamento");
+            const std::string expected=isBase()?"BaseGame.PersonalWealth":"RiziaDLC.Rizia_HUDStat_Budget_Max";
+            check(g.rows==std::vector<std::string>{expected},"A reordered Portuguese query selects the requested field");
+        }
+        if(isBase()){
+            const auto bounds=[](HWND h){RECT r{};GetWindowRect(h,&r);return r;};
+            const RECT window=bounds(g.win);
+            SetWindowTextW(g.search,L"Orcamento");
+            for(const auto size:{SIZE{800,620},SIZE{680,485}}){
+                SetWindowPos(g.win,nullptr,0,0,px(size.cx),px(size.cy),SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+                selectRow("BaseGame.GovernmentBudget");
+                const auto shortTitle=bounds(g.name);
+                selectRow("BaseGame.Sordland_HUDStat_GovernmentBudget_Max");
+                const auto longTitle=bounds(g.name);
+                RECT text{0,0,longTitle.right-longTitle.left,0};
+                auto dc=GetDC(g.name);
+                auto old=SelectObject(dc,g.bold);
+                DrawTextW(dc,L"Orçamento: máximo exibido",-1,&text,DT_WORDBREAK|DT_NOPREFIX|DT_CALCRECT);
+                SelectObject(dc,old);ReleaseDC(g.name,dc);
+                check(textOf(g.name)==L"Orçamento: máximo exibido" && text.bottom<=longTitle.bottom-longTitle.top &&
+                      longTitle.bottom<=bounds(g.oldValue).top,"The selected Portuguese title wraps in full above the original value");
+                check(bounds(ctl(APPLY)).bottom<=bounds(ctl(COPY_KEY)).top &&
+                      bounds(ctl(COPY_KEY)).bottom<=bounds(g.desc).top && bounds(g.desc).bottom<=bounds(g.notice).top,
+                      "Wrapping a title leaves the field actions and notes above the status bar");
+                selectRow("BaseGame.GovernmentBudget");
+                check(bounds(g.name).bottom==shortTitle.bottom,"Returning to a shorter field restores its inspector spacing");
+            }
+            SetWindowPos(g.win,nullptr,0,0,window.right-window.left,window.bottom-window.top,SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE);
+            SetWindowTextW(g.search,L"[\"BaseGame.GovérnmentBudget\"]=12");
+            check(g.rows.empty(),"Accents in a pasted assignment do not alias another raw key");
+        }
+        check(pending().empty() && !g.session->canUndo(),"Searching localized fields leaves the edit history empty");
+    }
+    i18n::setLanguage(previousLanguage);fonts();
+}
+
 void testGuidePrefixSearch(const fs::path& path){
     const auto bytes=readFile(path);
     loadDocumentBytes(bytes,path,0);
@@ -1846,6 +1905,7 @@ int main(int argc,char** argv){
         testFieldActivation(fs::u8path(argv[1]));
         testHistoryShortcuts(fs::u8path(argv[1]));
         testSearch(fs::u8path(argv[1]));
+        testPortugueseFieldSearch(fs::u8path(argv[1]),fs::u8path(argv[2]));
         testGuidePrefixSearch(fs::u8path(argv[2]));
         testResourceSearch(fs::u8path(argv[2]));
         testPerTurnGuideSearch(fs::u8path(argv[2]));

@@ -19,6 +19,17 @@ inline std::wstring_view trimmed(std::wstring_view value) {
     return value;
 }
 
+inline wchar_t latinSearchBase(wchar_t letter) {
+    // Only decompose Latin letters. Kana voicing, Cyrillic letters such as й,
+    // and unrelated characters must retain their original search distinctions.
+    const bool latin = (letter >= 0x00c0 && letter <= 0x024f) ||
+                       (letter >= 0x1e00 && letter <= 0x1eff);
+    if (!latin) return letter;
+    wchar_t parts[4];
+    const int count = FoldStringW(MAP_COMPOSITE, &letter, 1, parts, 4);
+    return count > 1 && parts[0] >= L'a' && parts[0] <= L'z' ? parts[0] : letter;
+}
+
 inline std::wstring fold(const std::wstring& text) {
     if (text.empty()) return {};
     const int length = static_cast<int>(text.size());
@@ -28,9 +39,17 @@ inline std::wstring fold(const std::wstring& text) {
     if (!size || !LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE,
                                 text.data(), length, result.data(), size, nullptr, nullptr, 0))
         result = text;
-    result.erase(std::remove_if(result.begin(), result.end(), [](wchar_t c) {
-        return space(c) || c == L'_' || c == L'·' || c == L'-';
-    }), result.end());
+    size_t kept = 0;
+    bool afterLatinBase = false;
+    for (wchar_t c : result) {
+        // Pasted text can carry the same accent as a separate combining mark.
+        if (afterLatinBase && c >= 0x0300 && c <= 0x036f) continue;
+        c = latinSearchBase(c);
+        afterLatinBase = c >= L'a' && c <= L'z';
+        if (!space(c) && c != L'_' && c != L'·' && c != L'-')
+            result[kept++] = c;
+    }
+    result.resize(kept);
     return result;
 }
 
