@@ -10,7 +10,7 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.23.6 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.6/SuzerainSaveStudio-0.23.6-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.6) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.23.7 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.7/SuzerainSaveStudio-0.23.7-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.7) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 

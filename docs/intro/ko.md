@@ -4,7 +4,7 @@
 
 예전에는 《Suzerain》을 할 때 주로 저장 파일을 직접 고쳤어요. 그때마다 같은 파일을 두 번씩 불러오는 게 번거로워서 제가 쓰려고 이 도구를 만들었습니다. 저장 파일을 편집할 수도 있고, 게임을 하면서 바로 자원 수치를 바꿀 수도 있어요. 선택지 미리보기를 켜고 선택지에 마우스를 올린 뒤 **Ctrl** 키를 한 번 누르면 지금까지 확인된 직접 효과를 볼 수 있습니다. 쓰면서 작은 기능도 몇 가지 더했어요. [이런 기능이 있으면 좋겠다는 의견도 편하게 남겨 주세요.](https://github.com/lingjieheti/suzerain-save-studio/issues)
 
-[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.6/SuzerainSaveStudio-0.23.6-Live-Preview-win-x64.zip)
+[Windows 10 / 11 x64 미리 보기 버전 다운로드](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.7/SuzerainSaveStudio-0.23.7-Live-Preview-win-x64.zip)
 
 저장 파일 선택 창이나 편집기의 **테마** 메뉴에서 네 가지 색상 테마에 **투명**, **반투명**, **단색** 중 하나를 조합할 수 있습니다.
 

@@ -1683,6 +1683,56 @@ void testReviewCsv(const fs::path& riziaPath,const fs::path& mainPath){
     i18n::setLanguage(originalLanguage);
 }
 
+void testPatchImport(const fs::path& sample){
+    const auto original=readFile(sample);
+    loadDocumentBytes(original,sample,0);
+    navigate(4);
+    const std::string header="# SuzerainPatch 1 StoryPack_Main\n";
+    const std::string budget="BaseGame.GovernmentBudget",wealth="BaseGame.PersonalWealth";
+    SetWindowTextW(g.search,L"GB");
+    selectRow(budget);SetFocus(ctl(PATCH_IMPORT));
+    for(const auto& patch:{header,header+budget+"=10"}){
+        importPatch(patch);
+        check(g.tab==4 && g.selected==budget && textOf(g.search)==L"GB" &&
+              GetFocus()==ctl(PATCH_IMPORT) && g.noticeText==L"方案未改变当前数值",
+              "An unchanged or header-only patch preserves the field, filter and keyboard focus");
+        check(pending().empty() && !g.session->canUndo(),"An unchanged patch creates no history");
+    }
+
+    importPatch(header+wealth+"=9");
+    check(g.tab==5 && g.review.size()==1 && g.review.at(wealth)=="9" && GetFocus()==g.grid &&
+          g.noticeText==L"方案已导入，待保存","An effective import opens the populated review");
+    navigate(4);
+    importPatch(header+wealth+"=9");
+    check(g.tab==4 && pending().at(wealth)=="9" && g.noticeText==L"方案未改变当前数值",
+          "Reapplying a staged value keeps existing edits and the Advanced page");
+    importPatch(header+wealth+"=5");
+    check(g.tab==5 && pending().empty() && g.review.empty() && !IsWindowEnabled(ctl(CONFIRM_SAVE)) &&
+          g.noticeText==L"已恢复原值，无需保存","Restoring the last staged field reports the saved values");
+    command(HISTORY_UNDO,0);
+    check(pending().at(wealth)=="9" && g.session->canRedo(),"Restoring saved values remains undoable");
+    navigate(4);SetFocus(ctl(PATCH_IMPORT));
+    SetWindowTextW(g.edit,L"13");
+    importPatch(header+budget+"=13");
+    check(g.editingDirty && textOf(g.edit)==L"13" && !pending().count(budget) && g.session->canRedo() &&
+          g.tab==4 && GetFocus()==ctl(PATCH_IMPORT),"A patch matching the typed draft preserves it and the redo branch");
+    for(const auto& invalid:{header+"bad assignment",header+budget+"=17\nBaseGame.Missing=1"}){
+        bool rejected=false;
+        try{importPatch(invalid);}catch(const std::exception&){rejected=true;}
+        check(rejected && g.editingDirty && textOf(g.edit)==L"13" && !pending().count(budget) &&
+              pending().size()==1 && g.session->canRedo() && g.tab==4,
+              "A malformed or partially valid patch leaves the draft, staged values and history intact");
+    }
+    importPatch(header+budget+"=17");
+    check(g.tab==5 && !g.editingDirty && g.review.at(budget)=="17" && g.review.at(wealth)=="9",
+          "The patch wins over a typed draft while preserving other staged fields");
+    command(HISTORY_UNDO,0);
+    check(pending().at(budget)=="13","Undoing the import restores the separately staged input");
+    command(HISTORY_UNDO,0);
+    check(!pending().count(budget) && pending().at(wealth)=="9" && readFile(sample)==original,
+          "Undoing the input restores the previous edit set without writing the save");
+}
+
 void testReviewShortcut(const fs::path& sample) {
     const auto source=readFile(sample);
     loadDocumentBytes(source,sample,0);
@@ -1789,6 +1839,7 @@ int main(int argc,char** argv){
         testPerTurnGuideSearch(fs::u8path(argv[2]));
         testEpaGuideSearch(fs::u8path(argv[1]).parent_path()/"fixture_all_main.json");
         testPublicOpinionSearch();
+        testPatchImport(fs::u8path(argv[1]));
         testReviewShortcut(fs::u8path(argv[1]));
         testReview(fs::u8path(argv[2]));
         testReviewCsv(fs::u8path(argv[2]),fs::u8path(argv[1]));
