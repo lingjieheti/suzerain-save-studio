@@ -69,32 +69,27 @@ inline void drawBackdrop(const State& s,HDC dc,const RECT& client){
     if(material)glass::wash(dc,client,Theme::bg);
     else ::fill(dc,client,Theme::bg);
     surface(s,dc,s.library,Theme::panel,Theme::line,22);
-    RECT live{},rail{};
+    // The live entry is its own lens. The practice instructions and the
+    // save table have a stable reading surface, even on the clear finish.
+    RECT live{};
     GetWindowRect(s.live,&live);
     MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&live),2);
-    UnionRect(&rail,&s.practice,&live);
+    surface(s,dc,s.practice,Theme::panel,Theme::line,28);
+    const COLORREF liveTint=glass::mix(Theme::sidebar,Theme::accent,Theme::dark()?.09:.12);
+    glass::surface(dc,live,liveTint,s.scale(s.stacked?20:24));
     if(material){
         glass::surface(dc,s.headerTools,Theme::sidebar,s.scale(20));
-        glass::surface(dc,rail,Theme::sidebar,s.scale(19));
         RECT appearance{};GetWindowRect(s.appearance,&appearance);
         MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&appearance),2);
         const int mid=(s.headerTools.top+s.headerTools.bottom)/2;
         RECT split{appearance.right+s.scale(3),mid-s.scale(7),appearance.right+s.scale(3)+1,mid+s.scale(7)};
         ::fill(dc,split,glass::mix(Theme::line,Theme::muted,.2));
-    }else surface(s,dc,rail,Theme::sidebar,Theme::line,22);
-    const auto rule=glass::mix(Theme::sidebar,Theme::muted,Theme::dark()?.32:.22);
-    if(s.stacked){
-        const int x=(s.practice.right+live.left)/2;
-        RECT divider{x,rail.top+s.scale(12),x+1,rail.bottom-s.scale(12)};
-        ::fill(dc,divider,rule);
-    }else{
-        const int sectionY=(live.bottom+s.practice.top)/2;
-        RECT section{rail.left+s.scale(16),sectionY,rail.right-s.scale(16),sectionY+1};
-        ::fill(dc,section,rule);
+    }
+    if(!s.stacked){
         RECT demo{};GetWindowRect(s.riziaDemo,&demo);
         MapWindowPoints(nullptr,s.win,reinterpret_cast<POINT*>(&demo),2);
         RECT divider{demo.left+s.scale(52),demo.top,demo.right-s.scale(9),demo.top+1};
-        ::fill(dc,divider,rule);
+        ::fill(dc,divider,Theme::line);
     }
     if(!IsRectEmpty(&s.headingIcon))archiveMark(s,dc);
     const int inset=material?s.library.left:0;
@@ -150,6 +145,47 @@ inline void chevron(const State& s,HDC dc,int x,int y,COLORREF color){
     LineTo(dc,x+s.scale(4),y-s.scale(2));
     SelectObject(dc,old);DeleteObject(pen);
 }
+
+inline void drawLiveEntry(const State& s,HDC dc,RECT box,const std::wstring& title,COLORREF ink){
+    const int centerX=(box.left+box.right)/2,centerY=(box.top+box.bottom)/2;
+    const int iconX=s.stacked?centerX:box.left+s.scale(31);
+    const int iconY=s.stacked?box.top+s.scale(21):centerY;
+    const int half=s.scale(s.stacked?14:18);
+    RECT disk{iconX-half,iconY-half,iconX+half,iconY+half};
+    surface(s,dc,disk,Theme::accent,Theme::accent,36);
+    symbol(s,dc,LIVE_MODE,iconX-s.scale(9),iconY-s.scale(9),Theme::onAccent);
+
+    RECT heading=box;
+    if(s.stacked){
+        heading.left+=s.scale(5);heading.right-=s.scale(5);
+        heading.top=iconY+half+s.scale(1);heading.bottom=heading.top+s.scale(21);
+    }else{
+        heading.left=disk.right+s.scale(10);heading.right-=s.scale(10);
+        heading.top=centerY-s.scale(20);heading.bottom=centerY+s.scale(1);
+    }
+    const UINT align=s.stacked?DT_CENTER:DT_LEFT;
+    const HFONT face=textWidth(dc,title,s.emphasis)<=heading.right-heading.left?s.emphasis:s.small;
+    lettering(dc,title,heading,face,ink,align);
+
+    // Keep the game's localized context, with the chord in one keycap.
+    // In the narrow layout both fit on separate centered lines.
+    const auto context=live_setup::inGameLabel();
+    const auto keys=live_setup::panelShortcut;
+    RECT line=heading;
+    line.top=heading.bottom;line.bottom=line.top+s.scale(20);
+    const int keyWidth=textWidth(dc,keys,s.small)+s.scale(12);
+    const int contextWidth=textWidth(dc,context,s.small);
+    RECT contextBox=line;
+    if(s.stacked)contextBox.bottom=contextBox.top+s.scale(16);
+    else contextBox.right=contextBox.left+contextWidth;
+    lettering(dc,context,contextBox,s.small,Theme::muted,align);
+    const int x=s.stacked?centerX-keyWidth/2:contextBox.right+s.scale(6);
+    const int y=s.stacked?contextBox.bottom+s.scale(1):line.top+s.scale(1);
+    RECT key{x,y,x+keyWidth,y+s.scale(18)};
+    const auto keyFace=glass::mix(Theme::panel,Theme::accent,.06);
+    surface(s,dc,key,keyFace,glass::mix(keyFace,Theme::accent,.28),9);
+    lettering(dc,keys,key,s.small,Theme::accentInk,DT_CENTER);
+}
 inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     const int id=d.CtlID;
     const bool primary=id==IDOK,live=id==LIVE_MODE;
@@ -165,26 +201,28 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
     RECT box=d.rcItem;
     childBackdrop(s,d);
     --box.right;--box.bottom;
-    const bool railItem=(demo||live)&&!s.stacked;
     const bool material=glass::enabled();
-    const bool inGlassGroup=material && (id==APPEARANCE||id==BROWSE||demo||live);
+    const bool inGlassGroup=material && (id==APPEARANCE||id==BROWSE);
     const bool quiet=id==IDCANCEL||id==RESCAN||id==ADD_FOLDER||id==SUPPORT||demo||live||inGlassGroup;
     const bool plain=quiet&&!hover&&!focus&&!pressed;
     if(id==SUPPORT&&plain)fg=Theme::muted;
     RECT segment=box;
-    if(inGlassGroup)InflateRect(&segment,-s.scale(3),-s.scale(3));
+    if(inGlassGroup||live||demo)InflateRect(&segment,-s.scale(3),-s.scale(3));
     if(!plain){
-        if(inGlassGroup && !disabled){
-            glass::tintSegment(d.hDC,segment,s.scale(13),Theme::accent,pressed?52:30);
+        if(material && (inGlassGroup||live||demo) && !disabled){
+            glass::tintSegment(d.hDC,segment,s.scale(live?20:13),Theme::accent,pressed?52:30);
         }else if(material && primary && !disabled){
             glass::surface(d.hDC,box,bg,s.scale(17),true);
         }else if(material && !disabled){
-            glass::surface(d.hDC,box,(hover||pressed||focus)?Theme::select:Theme::sidebar,
-                           s.scale(live&&s.stacked?16:14),pressed||hover);
+            glass::surface(d.hDC,box,(hover||pressed||focus)?Theme::select:Theme::sidebar,s.scale(14),pressed||hover);
+        }else if((live||demo)&&!disabled){
+            surface(s,d.hDC,segment,Theme::hover,focus?Theme::focus:Theme::line,24);
         }else surface(s,d.hDC,box,bg,focus?Theme::focus:edge,material?28:11,focus?2:1);
     }
-    if(material && hover && !disabled)
-        glass::glint(d.hDC,segment,s.scale(inGlassGroup?13:primary?17:14),glassPointer(d.hwndItem),pressed);
+    if(material && hover && !disabled && !demo){
+        const int radius=live?(s.stacked?20:24):inGlassGroup?13:primary?17:14;
+        glass::glint(d.hDC,live?box:segment,s.scale(radius),glassPointer(d.hwndItem),pressed);
+    }
     const int width=box.right-box.left;
     int hmid=(box.top+box.bottom)/2;
     auto label=textOf(d.hwndItem);
@@ -204,29 +242,17 @@ inline void drawButton(State& s,const DRAWITEMSTRUCT& d){
         if(labelWidth>textBox.right-textBox.left)label=Theme::name(Theme::index());
         lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
         chevron(s,d.hDC,box.right-s.scale(13),hmid,Theme::muted);
-    }else if(live&&s.stacked){
-        const int center=(box.left+box.right)/2;
-        symbol(s,d.hDC,id,center-s.scale(9),hmid-s.scale(28),Theme::accentInk);
-        RECT title=box,hint=box;
-        title.top=hmid-s.scale(9);title.bottom=hmid+s.scale(13);
-        hint.top=title.bottom;hint.bottom=box.bottom-s.scale(2);
-        lettering(d.hDC,label,title,font,fg,DT_CENTER);
-        lettering(d.hDC,live_setup::inGameShortcut(),hint,s.small,Theme::muted,DT_CENTER);
-    }else if(railItem){
-        const int tileX=box.left+s.scale(live?12:9), tileSize=s.scale(live?36:32);
+    }else if(live){
+        drawLiveEntry(s,d.hDC,box,label,fg);
+    }else if(demo&&!s.stacked){
+        const int tileX=box.left+s.scale(9),tileSize=s.scale(32);
         RECT tile{tileX,hmid-tileSize/2,tileX+tileSize,hmid+(tileSize+1)/2};
         const COLORREF badgeInk=campaignInk(id);
-        const auto tint=glass::mix(Theme::panel,badgeInk,(live||demo)&&(hover||pressed)?.22:live?.15:.11);
-        surface(s,d.hDC,tile,tint,tint,live?36:18);
+        const auto tint=glass::mix(Theme::panel,badgeInk,hover||pressed?.18:.10);
+        surface(s,d.hDC,tile,tint,tint,18);
         symbol(s,d.hDC,id,(tile.left+tile.right)/2-s.scale(9),hmid-s.scale(8),badgeInk);
         textBox.left=tile.right+s.scale(10);textBox.right-=s.scale(20);
-        if(live){
-            RECT top=textBox,bottom=textBox;
-            top.top=hmid-s.scale(20);top.bottom=hmid+s.scale(1);
-            bottom.top=hmid;bottom.bottom=hmid+s.scale(20);
-            lettering(d.hDC,label,top,font,fg,DT_LEFT);
-            lettering(d.hDC,live_setup::inGameShortcut(),bottom,s.small,Theme::muted,DT_LEFT);
-        }else lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
+        lettering(d.hDC,label,textBox,font,fg,DT_LEFT);
         HPEN pen=CreatePen(PS_SOLID,std::max(1,s.scale(1)),Theme::muted);
         auto old=SelectObject(d.hDC,pen);
         const int end=box.right-s.scale(11);

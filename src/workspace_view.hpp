@@ -47,12 +47,12 @@ void layout() {
     int pathWidth=themeRight-themeWidth-a.left-8;
     place(g.meta, a.left, a.shortScreen ? 39 : 54, pathWidth, 20);
     place(g.path, a.left+16, a.shortScreen ? 57 : 75, pathWidth-16, 19);
+    const auto rail=navigationRail(a);
     if (a.compactRail) place(ctl(LANGUAGE), toolbarEnd-116, a.shortScreen ? 43 : 57,116,300);
-    else place(ctl(LANGUAGE), 15, a.height - (a.shortScreen ? 39 : 73), a.rail-30, 300);
-    const int navInset=a.compactRail?8:13;
-    for (int i=0;i<8;++i) place(ctl(NAV_BASE+i),navInset,navY(a,i),a.rail-2*navInset,navStep(a)-4);
+    else place(ctl(LANGUAGE),rail.controlsLeft()+3,a.height-(a.shortScreen?39:73),rail.controlsWidth()-6,300);
+    for (int i=0;i<8;++i) place(ctl(NAV_BASE+i),rail.controlsLeft(),navY(a,i),rail.controlsWidth(),navStep(a)-4);
     const int supportY=a.height-(a.compactRail?42:(a.shortScreen?73:108));
-    place(ctl(SUPPORT_AUTHOR),navInset,supportY,a.rail-2*navInset,30);
+    place(ctl(SUPPORT_AUTHOR),rail.controlsLeft(),supportY,rail.controlsWidth(),30);
 
     int presetW = a.content < 610 ? 104 : 138;
     place(ctl(PRESET99), toolbarEnd-2*presetW-7, a.presetsY, presetW, 31);
@@ -321,28 +321,34 @@ void paint() {
     PAINTSTRUCT ps{}; auto dc=BeginPaint(g.win,&ps);
     paintWorkspaceChildBackdrop(dc,g.win);
     auto a=workspaceGeometry();
-    const int logoX=a.compactRail?11:19,logoY=a.shortScreen?12:20;
     const int logoSize=a.compactRail?34:38;
+    const auto rail=navigationRail(a);
+    const int textX=rail.controlsLeft()+8;
+    const int textWidth=rail.controlsWidth()-16;
+    const int logoX=a.compactRail?rail.left+(rail.width-logoSize)/2:textX;
+    const int logoY=rail.top+(a.shortScreen?7:12);
     // Use the same archive and ribbon as the executable and taskbar. The icon
     // resource supplies a size-appropriate bitmap when the monitor DPI changes.
     paintArchiveIcon(dc,px(logoX),px(logoY),px(logoSize));
     if (!a.compactRail) {
-        drawText(dc,L"Suzerain",rect(65,logoY-3,a.rail-70,27),g.brand,Theme::sideText);
-        drawText(dc,L"Save Studio",rect(66,logoY+19,a.rail-71,19),g.small,Theme::sideMuted);
+        const int brandX=logoX+logoSize+8;
+        const int brandWidth=rail.left+rail.width-rail.inset-brandX;
+        drawText(dc,L"Suzerain",rect(brandX,logoY-3,brandWidth,27),g.brand,Theme::sideText);
+        drawText(dc,L"Save Studio",rect(brandX+1,logoY+19,brandWidth-1,19),g.small,Theme::sideMuted);
         if (!a.shortScreen) {
-            fill(dc,rect(16,84,a.rail-32,1),Theme::sideLine);
-            drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(19,101,a.rail-32,26),g.font,Theme::sideMuted);
-            drawText(dc,L"工作区",rect(19,navY(a,5)-27,a.rail-32,22),g.small,Theme::sideMuted);
+            fill(dc,rect(textX,84,textWidth,1),Theme::sideLine);
+            drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(textX,101,textWidth,26),g.font,Theme::sideMuted);
+            drawText(dc,L"工作区",rect(textX,navY(a,5)-27,textWidth,22),g.small,Theme::sideMuted);
             const int supportRule=a.height-119;
             if(supportRule>navY(a,7)+navStep(a)+6)
-                fill(dc,rect(18,supportRule,a.rail-36,1),Theme::sideLine);
-            drawText(dc,std::wstring(L"v")+APP_VERSION,rect(16,a.height-37,a.rail-32,22),g.small,Theme::sideMuted);
+                fill(dc,rect(textX,supportRule,textWidth,1),Theme::sideLine);
+            drawText(dc,std::wstring(L"v")+APP_VERSION,rect(textX,a.height-39,textWidth,22),g.small,Theme::sideMuted);
         } else {
-            drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(17,55,a.rail-30,23),g.small,Theme::sideMuted);
+            drawText(dc,g.doc?campaignLabel(activeStory):tr(L"战役"),rect(textX,55,textWidth,23),g.small,Theme::sideMuted);
         }
     }
     if (a.shortScreen || a.compactRail)
-        fill(dc,rect(11,navY(a,5)-8,a.rail-22,1),Theme::sideLine);
+        fill(dc,rect(textX,navY(a,5)-8,textWidth,1),Theme::sideLine);
     int titleWidth=a.content-fileToolbarWidth(a)-12;
     drawText(dc,pageTitle(g.tab),rect(a.left,a.shortScreen?5:10,titleWidth,37),g.title,Theme::text);
     // A small document outline connects the filename with its campaign metadata.

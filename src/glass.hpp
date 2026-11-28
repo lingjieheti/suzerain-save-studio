@@ -73,8 +73,8 @@ inline void wash(HDC dc,const RECT& box,COLORREF canvas) {
         SetDCBrushColor(dc,old);
         return;
     }
-    // A broad fold turns toward the toolbar at the upper right. Its reflection
-    // stays in the canvas, so controls refract it in their own coordinates.
+    // The broad reflection enters at the left and turns under the toolbar.
+    // Its bright shoulder stays near navigation, leaving the reading area quiet.
     constexpr int width=320,height=208;
     static std::array<DWORD,width*height> pixels{};
     static COLORREF lastCanvas=CLR_INVALID;
@@ -89,21 +89,21 @@ inline void wash(HDC dc,const RECT& box,COLORREF canvas) {
         const bool dark=Theme::dark();
         for (int x=0;x<width;++x) {
             const double u=double(x)/(width-1);
-            const double crest=.126+.104*std::sin(6.4*u-.76)-.068*u;
-            const double foldWidth=.054+.065*bump((u-.42)/.39);
-            const double turning=bump((u-.76)/.27);
+            const double crest=.055+.31*bump((u+.17)/.41)+.165*bump((u-.60)/.235)-.075*u;
+            const double foldWidth=.036+.087*bump((u-.30)/.44);
+            const double turning=bump((u-.72)/.22);
             for (int y=0;y<height;++y) {
                 const double v=double(y)/(height-1);
-                auto c=mix(canvas,light[0],.69*bump((u+.04)/.51)*bump((v-.14)/.58));
-                c=mix(c,light[1],.72*bump((u-.79)/.49)*bump((v-.02)/.47));
-                c=mix(c,light[2],.24*bump((u-.08)/.68)*bump((v-.75)/.49));
+                auto c=mix(canvas,light[0],.69*bump((u+.045)/.43)*bump((v-.20)/.50));
+                c=mix(c,light[1],.56*bump((u-.86)/.44)*bump((v+.02)/.30));
+                c=mix(c,light[2],.19*bump((u-.08)/.64)*bump((v-.72)/.41));
                 const double d=v-crest;
-                c=mix(c,light[1],.33*bump((d+.034)/foldWidth));
-                c=mix(c,light[2],(dark?.28:.48)*bump((d-.026)/foldWidth));
+                c=mix(c,light[0],.28*bump((d+.048)/foldWidth));
+                c=mix(c,light[2],(dark?.28:.47)*bump((d-.031)/foldWidth));
                 // Where the fold faces the light its soft shoulder converges
                 // to a thin caustic. The rest of the canvas stays diffuse.
                 c=mix(c,dark?light[2]:RGB(255,255,255),
-                      (.10+.41*turning)*bump(d/(.025-.016*turning)));
+                      (.12+.44*turning)*bump(d/(.023-.014*turning)));
                 pixels[y*width+x]=rgbPixel(c);
             }
         }
@@ -325,6 +325,27 @@ inline const LensMap& lensMap(int w,int h,int radius) {
     return *map;
 }
 
+// Replicate the end pixels so diffusion cannot pull black into a rounded
+// edge. The same sliding window is used horizontally and vertically.
+inline void blurLine(const DWORD* source,DWORD* target,int length,int stride,int radius) {
+    const int count=2*radius+1;
+    int red=0,green=0,blue=0;
+    auto accumulate=[&](int index,int weight) {
+        const DWORD p=source[index*stride];
+        red+=int((p>>16)&255)*weight;
+        green+=int((p>>8)&255)*weight;
+        blue+=int(p&255)*weight;
+    };
+    accumulate(0,radius+1);
+    for(int i=1;i<=radius;++i)accumulate(i,1);
+    for(int i=0;i<length;++i) {
+        target[i*stride]=(DWORD((red+radius)/count)<<16) |
+                         (DWORD((green+radius)/count)<<8) | DWORD((blue+radius)/count);
+        accumulate(std::max(0,i-radius),-1);
+        accumulate(std::min(length-1,i+radius+1),1);
+    }
+}
+
 inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool active=false,
                     Finish finish=effectiveFinish()) {
     const int w=box.right-box.left,h=box.bottom-box.top;
@@ -355,31 +376,25 @@ inline void surface(HDC dc,const RECT& box,COLORREF tint,int radiusPixels,bool a
     // Preserve the stronger pigment of primary actions in both finishes.
     const unsigned clearDensity=active?(darkTint?244:202):(darkTint?128:82);
     const unsigned density=frosted?std::max(clearDensity,darkTint?216u:208u):clearDensity;
-    const int spread=frosted?3:1;
-    // Diffuse the already downsampled backdrop across the shoulder and keep
-    // its refracted color. Reading the four surrounding samples also softens
-    // hard background transitions as they pass under a floating control.
-    auto averagePixel=[](DWORD p,DWORD q) {
-        return (p&q)+(((p^q)&0x00fefefeu)>>1);
-    };
-    // Diffuse first so fractional lens coordinates can interpolate their
-    // four neighbors without repeatedly filtering the same source pixels.
-    std::array<DWORD,cols*rows> diffuse{};
-    for(int y=0;y<rows;++y) {
-        const auto* row=backdrop.data()+y*cols;
-        const auto* above=backdrop.data()+std::max(0,y-spread)*cols;
-        const auto* below=backdrop.data()+std::min(rows-1,y+spread)*cols;
-        for(int x=0;x<cols;++x) {
-            const auto horizontal=averagePixel(row[std::max(0,x-spread)],row[std::min(cols-1,x+spread)]);
-            diffuse[y*cols+x]=averagePixel(row[x],averagePixel(horizontal,averagePixel(above[x],below[x])));
-        }
-    }
+    // Work in device pixels before mapping back into the sampling grid. A
+    // tall navigation rail and a wide toolbar should diffuse light equally
+    // in both directions even though their textures have the same dimensions.
+    const double blurRadius=radius*(frosted?.54:.17);
+    const int spreadX=std::clamp(int(std::lround(blurRadius*cols/w)),1,cols/4);
+    const int spreadY=std::clamp(int(std::lround(blurRadius*rows/h)),1,rows/4);
+    // Average the whole footprint before refracting it. A bright detail
+    // behind frosted glass becomes one soft reflection without echo edges.
+    std::array<DWORD,cols*rows> horizontal{};
+    for(int y=0;y<rows;++y)
+        blurLine(backdrop.data()+y*cols,horizontal.data()+y*cols,cols,1,spreadX);
+    for(int x=0;x<cols;++x)
+        blurLine(horizontal.data()+x,backdrop.data()+x,rows,cols,spreadY);
     for(int y=0;y<rows;++y) {
         const double v=double(y)/(rows-1);
         const auto left=mix(base,crest,.14+.64*(1.-v)*(1.-v));
         const auto right=mix(base,crest,.12+.27*v);
         for(int x=0;x<cols;++x) {
-            const DWORD sample=sampleBackdrop(diffuse,optics.samples[y*cols+x]);
+            const DWORD sample=sampleBackdrop(backdrop,optics.samples[y*cols+x]);
             const COLORREF local=RGB((sample>>16)&255,(sample>>8)&255,sample&255);
             const auto color=mix(left,right,double(x)/(cols-1));
             // Increase tint only when the backdrop crosses toward the label

@@ -10,13 +10,13 @@
 
 在选档窗口底部或编辑器左侧点 **赞助作者**，可离线查看微信赞赏码、PayPal 和 USDT 收款码。USDT 使用 **TRON（TRC20）** 网络。
 
-**[下载 v0.23.7 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.23.7/SuzerainSaveStudio-0.23.7-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.23.7) · [♡ 赞助作者](SPONSOR.md)
+**[下载 v0.24.0 Windows 完整包](https://github.com/lingjieheti/suzerain-save-studio/releases/download/v0.24.0/SuzerainSaveStudio-0.24.0-Live-Preview-win-x64.zip)** · [发布说明与 SHA-256](https://github.com/lingjieheti/suzerain-save-studio/releases/tag/v0.24.0) · [♡ 赞助作者](SPONSOR.md)
 
 ![液态玻璃外观的 Windows 编辑器，里奇亚内置示例显示预算、权威和能源](docs/images/rizia-workspace.png)
 
-编辑器右上角有两组玻璃按钮。左边的「重新载入」和「文件夹」操作当前存档，右边的「手动打开」和「选择存档」用来换档。两组之间露出背景光带，圆角边缘会轻轻折射背景色。[查看新旧工具栏实拍](docs/images/file-toolbar.png)
+左侧的悬浮导航用一条短色标标出当前分类。缩窄窗口时，色标会随图标保留。右上角两组按钮分别用来操作当前存档和切换存档。启动时也可以直接选择「实时模式」，入口上标着游戏内快捷键 **Ctrl + F8**。[查看新版选档器](docs/images/save-picker.png)
 
-[三种材质实拍对比](docs/images/glass-finishes.png) · [按钮反光动图](docs/images/glass-hover.gif) · [四套配色与宽窄窗口](docs/images/appearances.png) · [存档选择器](docs/images/save-picker.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
+[三种材质实拍对比](docs/images/glass-finishes.png) · [按钮反光动图](docs/images/glass-hover.gif) · [四套配色与宽窄窗口](docs/images/appearances.png) · [游戏内面板的模拟预览](docs/images/live-glass-preview.png)
 
 ## 快速上手
 

@@ -9,6 +9,19 @@ struct WorkspaceGeometry {
 
 bool stackAdvancedFilters(const WorkspaceGeometry& a) { return g.tab==4 && a.list<560; }
 
+struct NavigationRail {
+    int left, top, width, height, inset;
+    int controlsLeft() const { return left+inset; }
+    int controlsWidth() const { return width-2*inset; }
+};
+
+NavigationRail navigationRail(const WorkspaceGeometry& a) {
+    const int left=a.compactRail?5:10;
+    const int top=a.compactRail?6:a.shortScreen?7:10;
+    const int right=a.rail+(a.compactRail?1:5);
+    return {left,top,right-left,a.height-2*top,a.compactRail?3:7};
+}
+
 WorkspaceGeometry workspaceGeometry() {
     RECT bounds{};
     GetClientRect(g.win, &bounds);
@@ -72,22 +85,8 @@ int fileActionGap(int id) { return id==FOLDER?fileGroupGap:fileButtonGap; }
 
 void drawWorkspaceBackdrop(HDC dc, const RECT& client, const WorkspaceGeometry& a) {
     glass::wash(dc,client,Theme::bg);
-    const RECT rail=rect(0,0,a.rail,a.height);
-    if(glass::enabled()) {
-        // A sidebar extends to the window edges. At its free edge a thin
-        // stripe samples the wash just outside the pane, like a ground edge.
-        const int lip=px(3);
-        const int saved=SaveDC(dc);
-        SetStretchBltMode(dc,HALFTONE);SetBrushOrgEx(dc,0,0,nullptr);
-        StretchBlt(dc,rail.right-lip,rail.top,lip,rail.bottom,dc,rail.right,rail.top,2*lip,rail.bottom,SRCCOPY);
-        RestoreDC(dc,saved);
-        const BYTE clearDensity=Theme::dark()?138:114;
-        const BYTE density=glass::effectiveFinish()==glass::Frosted?218:clearDensity;
-        glass::tintSegment(dc,rail,1,Theme::sidebar,density);
-    } else {
-        fill(dc,rail,Theme::sidebar);
-    }
-    fill(dc,rect(a.rail-1,0,1,a.height),Theme::sideLine);
+    const auto rail=navigationRail(a);
+    glass::surface(dc,rect(rail.left,rail.top,rail.width,rail.height),Theme::sidebar,px(a.compactRail?24:26));
     const int end=a.left+a.content;
     const int toolbarWidth=fileToolbarWidth(a);
     const int toolbarY=a.shortScreen?7:14;
@@ -213,8 +212,9 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         InflateRect(&lens,-px(2),-px(1));
     if(nav && (activeNav || hover || down)) {
         if(activeNav && material) {
-            const auto tint=glass::mix(Theme::select,Theme::accent,down?.28:.15);
-            glass::surface(d->hDC,lens,tint,lensRadius);
+            // Keep the rail's reflection continuous through the selection.
+            // Only its pigment, leading mark and type weight identify the page.
+            glass::tintSegment(d->hDC,lens,lensRadius,Theme::accent,down?54:35);
             fg=Theme::sideText;
         } else if(activeNav)
             glass::surface(d->hDC,lens,down?Theme::accentHover:Theme::accent,lensRadius,true);
@@ -249,7 +249,7 @@ void drawButton(const DRAWITEMSTRUCT* d) {
         workspaceCard(d->hDC,r,bg,border,9);
     }
     if(hover && !disabled && material && (grouped || id==APPEARANCE)) {
-        glass::glint(d->hDC,lens,px(15),glassPointer(d->hwndItem),down);
+        glass::glint(d->hDC,lens,nav?lensRadius:px(15),glassPointer(d->hwndItem),down);
     }
     if((id==LATEST || id==SAVE) && !primary && !disabled)fg=Theme::accentInk;
     RECT tx = r;
@@ -259,7 +259,12 @@ void drawButton(const DRAWITEMSTRUCT* d) {
             typography::width(d->hDC,g.font,textOf(d->hwndItem))>r.right-r.left-px(47);
         int glyphX = compact ? (r.right - px(18)) / 2 : px(longSupport?6:13);
         const int glyphY=(r.bottom-px(18))/2;
-        const auto iconInk=activeNav?fg:material?Theme::accentInk:Theme::sideMuted;
+        const auto iconInk=activeNav?(material?Theme::accentInk:fg):Theme::sideMuted;
+        if(activeNav) {
+            const int mid=r.bottom/2;
+            RECT mark{lens.left+px(5),mid-px(6),lens.left+px(8),mid+px(6)};
+            workspaceCard(d->hDC,mark,iconInk,iconInk,2);
+        }
         navSymbol(d->hDC,id==SUPPORT_AUTHOR?8:id-NAV_BASE,glyphX,glyphY,iconInk);
         if (!compact) {
             tx.left += px(longSupport?27:42); tx.right -= px(5);
