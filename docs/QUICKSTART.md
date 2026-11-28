@@ -6,6 +6,8 @@
 2. 使用自己的存档时，先在游戏里保存并退出。可在选档窗口输入“里奇亚 自动 第3回合”，也可输入“修改时间”列的日期或时分，例如 `18:45`。选中后核对文件名。编辑时按 **Ctrl+L** 重开选档器，会按完整路径选中当前文件；当前文件不在结果中时，选中最近修改的匹配项。在索德兰的“经济”或“高级字段”中，搜 `GB` 找政府预算，搜 `PW` 找私人资产。也可以粘贴攻略里的字段赋值来查找，例如 `["BaseGame.GovernmentBudget"]=20`。搜索只定位字段。
 3. 搜到字段后，按 **↓** 进入结果列表，用方向键选中一项，再按 **Enter**。数字会全选，可以直接输入新值并按 **Enter** 加入待保存项。对于“是／否”字段，焦点会落在当前选项。按 **Ctrl+S** 进入待修改列表，用 **↑ / ↓** 逐项对照原值和新值，核对完再选择“保存到原档”或“另存为”。回到游戏主菜单，手动读取刚才保存的文件。
 
+想在同一战役的另一份存档里复用一组修改，可在「修改预览」导出方案，再打开另一份存档，从「高级字段」导入。例如，方案里写的是政府预算 10，当前已经是 10，就会停在正在查看的字段。如果方案把预算改成 15，则会打开预览，供你核对后保存。
+
 要取出旧进度，可按 **Ctrl+O** 直接选择 Suzerain 的 `.bak` 备份，也可以把它拖到编辑器里。按 **Ctrl+S** 进入修改预览，再点“另存为”。例如，打开 `autosave.json.bak` 时，默认副本名为 `autosave.recovered.json`。已移到其他文件夹的备份也可以这样打开。没有修改数值时，输出的 JSON 与备份逐字节相同。
 
 想找人物关系时，打开里奇亚示例的“高级字段”，按 **Ctrl+F**，粘贴 `[\"RiziaDLC.Relations_`。结果会列出维娜、雨果等人的关系字段。
@@ -39,6 +41,8 @@
 按 **Ctrl+F8** 开启「按 Ctrl 查看选项结果」，然后关掉面板。鼠标指向选项时，轻按并松开任意一侧的 **Ctrl** 即可查看结果。再按一次或移开鼠标即可收起。移到另一个选项后，再按 Ctrl 查看。这个开关默认关闭，桌面端的「实时模式」也可以设置。
 
 ## English quick start
+
+To reuse a set of edits, export a patch from **Review changes**, then open another save from the same campaign and import it from **Advanced**. For example, if the patch sets the government budget to 10 and the editor already shows 10, you stay on the current field. If the patch changes it to 15, Review shows the change before you save.
 
 In a campaign, press **Ctrl+F8** to see the internal public opinion score if available. To look it up in a save, search Advanced for `PO`.
 

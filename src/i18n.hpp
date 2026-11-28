@@ -166,6 +166,8 @@ L"未保存|Unsaved|未保存|저장되지 않음|Nicht gespeichert|Non enregist
 L"已应用，待保存|Applied, not saved|適用済み・未保存|적용됨, 저장 필요|Angewendet, ungespeichert|Appliqué, non enregistré|Aplicado, sin guardar|Aplicado, não salvo|Применено, не сохранено|Uygulandı, kaydedilmedi",
 L"资源已调整，待保存|Resources changed, not saved|資源変更済み・未保存|자원 변경됨, 저장 필요|Ressourcen geändert, ungespeichert|Ressources modifiées, non enregistrées|Recursos cambiados, sin guardar|Recursos alterados, não salvos|Ресурсы изменены, не сохранены|Kaynaklar değişti, kaydedilmedi",
 L"方案已导入，待保存|Patch imported, not saved|設定取込済み・未保存|설정 가져옴, 저장 필요|Patch importiert, ungespeichert|Importé, non enregistré|Ajustes importados, sin guardar|Ajustes importados, não salvos|Изменения импортированы|Yama alındı, kaydedilmedi",
+L"方案未改变当前数值|Patch made no changes|変更はありません|적용할 변경 사항 없음|Patch ohne Änderungen|Aucune modification apportée|Los ajustes no cambiaron los valores|Os ajustes não alteraram os valores|Значения не изменились|Yama değerleri değiştirmedi",
+L"已恢复原值，无需保存|Saved values restored|元の値に戻りました|원래 값으로 복원됨|Gespeicherte Werte wiederhergestellt|Valeurs enregistrées rétablies|Valores guardados restablecidos|Valores salvos restaurados|Исходные значения восстановлены|Kayıtlı değerler geri yüklendi",
 L"已撤销上一步修改|Change undone|元に戻しました|변경 취소됨|Rückgängig gemacht|Modification annulée|Cambio deshecho|Alteração desfeita|Изменение отменено|Değişiklik geri alındı",
 L"已重做上一步修改|Change redone|やり直しました|변경 다시 실행됨|Wiederholt|Modification rétablie|Cambio rehecho|Alteração refeita|Изменение повторено|Değişiklik yinelendi",
 L"字段名已复制|Key copied|変数名をコピー|필드명 복사됨|Schlüssel kopiert|Clé copiée|Clave copiada|Chave copiada|Ключ скопирован|Anahtar kopyalandı",

@@ -1,6 +1,16 @@
-# v0.23.6 Preview — Windows validation
+# v0.23.7 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.6 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.23.7 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Importing an unchanged patch in 0.23.7
+
+We opened a synthetic Sordland save with government budget 10 in the published 0.23.6 Windows executable. Importing a patch with the single assignment `BaseGame.GovernmentBudget=10` switched to an empty Review page and reported changes waiting to be saved. The save and undo buttons were disabled, and the source bytes were identical after the operation.
+
+In the 0.23.7 ZIP executable, importing that same patch through the Windows file picker kept the budget search and row selected. Keyboard focus returned to Import. Importing 17 opened Review with one change. Repeating that import added no undo step, and importing 10 after Undo preserved Redo.
+
+The release executable passed 15 file-dialog cases. Restoring the only pending field to 10 left Review empty with Save disabled and Undo available. A canceled or invalid import preserved the typed draft and the existing redo history. With a typed budget of 13 followed by an imported 17, two Undo actions showed 13 then 10, and two Redo actions showed 13 then 17. The source file kept its original contents and modification time.
+
+Using the final Windows application source with isolated preferences, we checked the unchanged-import action in all four themes at 1,200 × 790, 800 × 620 and 680 × 485 DIP. Both new status messages fit the footer in all eleven languages at each size. These tests exercised the desktop editor with synthetic data.
 
 ## Opening backup files in 0.23.6
 
