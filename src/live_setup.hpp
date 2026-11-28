@@ -4,11 +4,11 @@ namespace live_setup {
 constexpr wchar_t pluginName[] = L"SuzerainSaveStudio.Live.dll";
 constexpr int chooseGameAction=701;
 
-inline const wchar_t* inGameShortcut(){
+inline constexpr wchar_t panelShortcut[]=L"Ctrl + F8";
+inline const wchar_t* inGameLabel(){
     static const wchar_t* const labels[]={
-        L"游戏内 Ctrl + F8",L"遊戲內 Ctrl + F8",L"In game · Ctrl + F8",L"ゲーム内 Ctrl + F8",
-        L"게임 내 Ctrl + F8",L"Im Spiel · Ctrl + F8",L"En jeu · Ctrl + F8",L"En el juego · Ctrl + F8",
-        L"No jogo · Ctrl + F8",L"В игре · Ctrl + F8",L"Oyunda · Ctrl + F8"
+        L"游戏内",L"遊戲內",L"In game",L"ゲーム内",L"게임 내",L"Im Spiel",
+        L"En jeu",L"En el juego",L"No jogo",L"В игре",L"Oyunda"
     };
     return labels[i18n::language];
 }

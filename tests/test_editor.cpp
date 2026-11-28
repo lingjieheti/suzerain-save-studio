@@ -952,6 +952,18 @@ void testTypography(const fs::path& path) {
 }
 
 void testGlassFinishes(){
+    // A bright line behind a frosted control should spread continuously,
+    // both across a toolbar and down a narrow navigation rail.
+    constexpr DWORD reflection=0x00ff783c, diffused=0x0033180c;
+    std::array<DWORD,14> stripe{},filtered{};
+    stripe[6]=reflection;
+    glass::blurLine(stripe.data(),filtered.data(),7,2,2);
+    check(filtered==std::array<DWORD,14>{0,0,diffused,0,diffused,0,diffused,0,diffused,0,diffused,0,0,0},
+          "Frost spreads a bright detail evenly along the sampled column");
+    stripe.fill(reflection);
+    glass::blurLine(stripe.data(),filtered.data(),14,1,3);
+    check(filtered==stripe,"Uniform light retains its color at both ends of a pane");
+
     std::array<DWORD,glass::LensMap::cols*glass::LensMap::rows> backdrop{};
     const int stride=glass::LensMap::cols;
     backdrop[1]=0x00ff0000;backdrop[stride]=0x0000ff00;backdrop[stride+1]=0x000000ff;

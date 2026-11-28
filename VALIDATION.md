@@ -1,6 +1,12 @@
-# v0.23.7 Preview — Windows validation
+# v0.24.0 Preview — Windows validation
 
-The Windows x64 archive includes the 0.23.7 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+The Windows x64 archive includes the 0.24.0 desktop editor and the 0.22.0 in-game plugin. The desktop uses Windows GDI and GDI+ to render its own material and icons.
+
+## Floating navigation and the save picker in 0.24.0
+
+We opened the built-in Rizia example from the Windows executable at 192 DPI. The navigation rail stayed inside the window at 1,200 × 790, 800 × 620 and 680 × 485 DIP. The eight page buttons, language control and sponsor button remained reachable. Tests using the release executable and a build with isolated Windows preferences covered 24 window and appearance combinations and 192 page selections. The isolated default view matched the release screenshot pixel for pixel. We also captured Paper, Forest, Fjord and Midnight in the same campaign, plus the Clear, Frosted and Solid finishes.
+
+In the release save picker we filtered to four synthetic campaign files, opened the live setup dialog with Tab and Space, and loaded the Sordland example. All four fixture hashes stayed the same. We measured the live entry title, localized shortcut context and Ctrl + F8 keycap in all eleven languages at four control widths and 96, 144 and 192 DPI. All 132 combinations fit. The updated material tests cover continuous diffusion across a column and color preservation at a pane's boundaries. All eleven local native suites passed, including 1,763 editor checks. The optional in-game DLL matches the 0.23.7 package byte for byte.
 
 ## Importing an unchanged patch in 0.23.7
 
